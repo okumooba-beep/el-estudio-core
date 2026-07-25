@@ -4,16 +4,17 @@ import { useIdeas } from '@modules/work-table/public'
 import { useHabitChecks } from '@modules/habits/public'
 
 /**
- * Build Core V1 — vistazo de hábitos: mismos datos que HabitosScreen
- * (Ideas con destino 'habitos' + useHabitChecks), reducidos al estado
- * de HOY solamente — la grilla semanal completa sigue viviendo solo en
- * el Tablero de Hábitos (mismo criterio que Misión Principal: acá se
- * señala, nunca se duplica la lógica de marcar). Tocar cualquier fila
- * lleva al Tablero, donde sí se puede tocar cada círculo.
+ * Core V2 — el punto de cada hábito deja de ser un ícono mudo y pasa a
+ * ser el mismo botón que ya usa el Tablero (HabitosScreen.tsx: mismo
+ * `toggle(habitId, fecha, checked)` de useHabitChecks, mismo criterio
+ * optimista) para marcar HOY sin salir del Umbral. La grilla semanal
+ * completa sigue viviendo solo en el Tablero — acá nunca se duplica esa
+ * lógica, solo se extiende el mismo toggle a un solo día. El nombre del
+ * hábito sigue llevando al Tablero, como antes.
  */
 export function HabitsGlance() {
   const { ideas, ready } = useIdeas()
-  const { checks, ready: checksReady } = useHabitChecks()
+  const { checks, ready: checksReady, toggle } = useHabitChecks()
   const navigate = useNavigate()
 
   const habitos = useMemo(() => ideas.filter((idea) => idea.destino === 'habitos'), [ideas])
@@ -21,28 +22,40 @@ export function HabitsGlance() {
 
   if (!ready || !checksReady || habitos.length === 0) return null
 
+  const marcadoHoy = (habitoId: string) => checks.some((c) => c.habitId === habitoId && c.fecha === hoyISO && c.checked)
+  const todosMarcados = habitos.every((habito) => marcadoHoy(habito.id))
+
   return (
     <section className="pb-6">
       <h2 className="mb-2 font-mono text-[11px] uppercase tracking-wide text-ink-faint">Hábitos de hoy</h2>
-      <button
-        type="button"
-        onClick={() => navigate('/habitos')}
-        className="group flex w-full flex-col gap-2.5 appearance-none border-0 bg-transparent p-0 text-left"
-      >
+      <div className="flex flex-col gap-2.5">
         {habitos.map((habito) => {
-          const marcado = checks.some((c) => c.habitId === habito.id && c.fecha === hoyISO && c.checked)
+          const marcado = marcadoHoy(habito.id)
           return (
             <div key={habito.id} className="flex items-center gap-2.5">
-              <span aria-hidden="true" className={marcado ? 'text-accent' : 'text-ink-faint'}>
-                {marcado ? '●' : '○'}
-              </span>
-              <span className="line-clamp-1 text-[15px] text-ink-dim transition-colors duration-150 group-hover:text-ink group-active:text-ink">
+              <button
+                type="button"
+                onClick={() => toggle(habito.id, hoyISO, !marcado)}
+                aria-pressed={marcado}
+                aria-label={`${habito.texto}, ${marcado ? 'hecho hoy' : 'marcar hoy'}`}
+                className={`habito-punto${marcado ? ' habito-punto-marcado' : ''}`}
+              >
+                <span aria-hidden="true">{marcado ? '●' : '○'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/habitos')}
+                className="line-clamp-1 flex-1 text-left text-[15px] text-ink-dim transition-colors duration-150 active:text-ink"
+              >
                 {habito.texto}
-              </span>
+              </button>
             </div>
           )
         })}
-      </button>
+      </div>
+      {todosMarcados ? (
+        <p className="mt-3 text-[13.5px] text-ink-faint">Ya hiciste lo que tenías que hacer hoy.</p>
+      ) : null}
     </section>
   )
 }

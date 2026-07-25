@@ -36,7 +36,7 @@ export function MisionPrincipal() {
   return (
     <section className="pb-6">
       <h2 className="mb-2 font-mono text-[11px] uppercase tracking-wide text-ink-faint">
-        Misión principal
+        Lo que más importa hoy
       </h2>
       {principal ? (
         <button
@@ -47,7 +47,9 @@ export function MisionPrincipal() {
           <p className="line-clamp-2 text-[15px] text-ink-dim transition-colors duration-150 group-hover:text-ink group-active:text-ink">
             {principal.texto}
           </p>
-          <p className="mt-1 text-[13.5px] text-ink-faint">Esperando desde {describeDay(principal.fecha)}</p>
+          <p className="mt-1 text-[13.5px] text-ink-faint">
+            Es lo que espera hace más tiempo — desde {describeDay(principal.fecha)}
+          </p>
         </button>
       ) : ready ? (
         <>

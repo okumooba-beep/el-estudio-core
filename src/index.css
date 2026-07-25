@@ -1676,6 +1676,43 @@ html.light-boot *::after {
 }
 
 /*
+ * Core V2 — HabitsGlance: mismo par color/transform que .habito-dia,
+ * en un botón redondo en vez de una columna con letra de día (acá no
+ * hay semana, solo el punto de hoy).
+ */
+.habito-punto {
+  display: flex;
+  width: 1.75rem;
+  height: 1.75rem;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--ink-faint);
+  transition: color 150ms, transform 100ms;
+}
+
+.habito-punto:active {
+  transform: scale(0.88);
+}
+
+.habito-punto-marcado {
+  color: var(--accent);
+  transform: scale(1.08);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .habito-punto {
+    transition: color 150ms;
+  }
+
+  .habito-punto:active,
+  .habito-punto-marcado {
+    transform: none;
+  }
+}
+
+/*
   Sprint "The Spatial Studio": la cámara reemplaza al layout. En vez de
   apilar secciones verticalmente, hay UNA escena (.scene-camera, más
   grande que su marco) que se desplaza y escala con transform para mirar

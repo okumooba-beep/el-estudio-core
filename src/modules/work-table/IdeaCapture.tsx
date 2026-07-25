@@ -219,7 +219,7 @@ export function IdeaCapture() {
       ) : null}
       <form
         onSubmit={handleSubmit}
-        className="flex items-center gap-3 border-b border-border/60 pb-3 transition-colors duration-200 focus-within:border-accent/70"
+        className="flex items-center gap-3 border-b border-border/60 pb-4 transition-[border-color,box-shadow] duration-300 ease-out focus-within:border-accent/70 focus-within:shadow-[0_1px_0_0_rgba(206,150,92,0.3)] motion-reduce:transition-none"
       >
         <input
           type="text"
@@ -229,7 +229,7 @@ export function IdeaCapture() {
           onBlur={() => setGaze(null)}
           aria-label="Idea"
           placeholder="¿Qué tenés en mente?"
-          className="min-w-0 flex-1 bg-transparent px-1 py-3 text-[17px] text-ink outline-none placeholder:text-ink-faint"
+          className="min-w-0 flex-1 bg-transparent px-1 py-3.5 text-[19px] leading-snug tracking-tight text-ink caret-accent outline-none placeholder:text-ink-faint"
         />
         {value.trim() ? (
           <button

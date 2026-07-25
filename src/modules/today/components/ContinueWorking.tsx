@@ -11,7 +11,20 @@ import { DESTINO_TO_SPACE } from './spaceRegistry'
  * tan vieja sea — a diferencia de Misión Principal (que ordena al
  * revés, por lo que más tiempo espera), esto señala lo último que se
  * tocó. Mismo campo que ya usa moveSheet/update, ningún dato nuevo.
+ *
+ * Core V2 — la etiqueta deja de ser un rótulo fijo ("Seguir con esto")
+ * y pasa a describir el mismo dato de siempre (`describeDay` sobre
+ * `updatedAt`, igual que ya hace RecentActivity) como una frase en
+ * primera persona. Nunca inventa un día: si `describeDay` dice "hoy",
+ * la frase dice "hoy"; si dice "el 2026-07-20", la frase lo cita tal
+ * cual, igual que ya hacía la versión anterior.
  */
+function fraseContinuar(dia: string): string {
+  if (dia === 'hoy') return 'Hoy volviste a esto'
+  if (dia === 'ayer') return 'Ayer estabas pensando en esto'
+  return `Estabas en esto ${dia}`
+}
+
 export function ContinueWorking() {
   const { ideas } = useIdeas()
   const navigate = useNavigate()
@@ -28,19 +41,19 @@ export function ContinueWorking() {
   if (!activa || !espacio) return null
 
   return (
-    <section className="pb-6">
-      <h2 className="mb-2 font-mono text-[11px] uppercase tracking-wide text-ink-faint">Seguir con esto</h2>
+    <section>
       <button
         type="button"
         onClick={() => navigate(espacio.path)}
         className="group block w-full appearance-none border-0 bg-transparent p-0 text-left"
       >
-        <p className="line-clamp-2 text-[15px] text-ink-dim transition-colors duration-150 group-hover:text-ink group-active:text-ink">
+        <p className="font-mono text-[11px] uppercase tracking-wide text-ink-faint">
+          {fraseContinuar(describeDay(activa.updatedAt.slice(0, 10)))}
+        </p>
+        <p className="mt-1.5 line-clamp-2 text-[17px] text-ink-dim transition-colors duration-150 group-hover:text-ink group-active:text-ink">
           {activa.texto}
         </p>
-        <p className="mt-1 text-[13.5px] text-ink-faint">
-          {espacio.label} · {describeDay(activa.fecha)}
-        </p>
+        <p className="mt-1 text-[13.5px] text-ink-faint">{espacio.label}</p>
       </button>
     </section>
   )

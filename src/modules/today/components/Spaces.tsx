@@ -20,13 +20,16 @@ export function Spaces() {
           <Link
             key={espacio.path}
             to={espacio.path}
-            className="flex min-h-16 items-center justify-between py-2 text-ink-dim transition-colors active:text-ink motion-reduce:transition-none"
+            className="group flex min-h-16 items-center justify-between py-2 text-ink-dim transition-colors active:text-ink motion-reduce:transition-none"
           >
             <span className="flex flex-col">
               <span className="text-[15px]">{espacio.label}</span>
               {espacio.proposito ? <span className="mt-0.5 text-[13px] text-ink-faint">{espacio.proposito}</span> : null}
             </span>
-            <span aria-hidden="true" className="text-ink-faint">
+            <span
+              aria-hidden="true"
+              className="text-ink-faint transition-transform duration-150 group-active:translate-x-0.5 motion-reduce:transition-none motion-reduce:transform-none"
+            >
               ›
             </span>
           </Link>

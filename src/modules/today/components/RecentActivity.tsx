@@ -31,13 +31,13 @@ export function RecentActivity() {
 
   return (
     <section className="pb-6">
-      <h2 className="mb-2 font-mono text-[11px] uppercase tracking-wide text-ink-faint">Actividad reciente</h2>
+      <h2 className="mb-2 font-mono text-[11px] uppercase tracking-wide text-ink-faint">Memoria</h2>
       <ul className="flex flex-col divide-y divide-border/40 border-t border-border/40">
         {recientes.map((idea) => {
           const espacio = DESTINO_TO_SPACE[idea.destino]
           if (!espacio) return null
           const ultimoEvento = idea.history[idea.history.length - 1]
-          const verbo = ultimoEvento?.evento === 'movida' ? 'se movió a' : 'llegó a'
+          const verbo = ultimoEvento?.evento === 'movida' ? 'Lo llevaste a' : 'Lo empezaste en'
           return (
             <li key={idea.id}>
               <button

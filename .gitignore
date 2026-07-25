@@ -30,3 +30,6 @@ dist-ssr
 # Graphify (local python venv + interpreter pointer, not the graph output)
 .venv-graphify
 graphify-out/.graphify_python
+
+.vercel
+.env*

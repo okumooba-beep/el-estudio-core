@@ -12,13 +12,13 @@ export interface Space {
   path: string
   label: string
   /**
-   * Columna "Propósito" de docs/EL_ESTUDIO_CORE.md §5 (Information
-   * Architecture) citada tal cual, nunca redactada de nuevo acá —
-   * ese documento ya es la especificación oficial de qué es cada
-   * módulo. Misiones no aparece como fila propia en esa tabla (el
-   * documento la describe como parte de la Pizarra/Calendar,
-   * todavía sin construir): por eso queda sin propósito en vez de
-   * inventarle uno.
+   * Core V2 — cada Espacio pasa a tener personalidad propia, no una
+   * descripción funcional (Sprint "Build Core V1" citaba la columna
+   * "Propósito" de docs/EL_ESTUDIO_CORE.md §5 tal cual; acá se
+   * reemplaza por la frase que el propio brief de este sprint dio
+   * palabra por palabra para cada módulo — nunca inventada acá). Sigue
+   * sin fabricarse una para Misiones en versiones previas: este sprint
+   * sí la agrega porque el brief la incluyó explícitamente.
    */
   proposito: string | null
 }
@@ -38,21 +38,21 @@ export interface Space {
  * decisión explícita en el reporte de este sprint, no en silencio.
  */
 export const SPACES: readonly Space[] = [
-  { destino: null, path: diario.path, label: diario.label, proposito: 'Escritura rápida, memoria por asociación' },
-  { destino: 'misiones', path: misiones.path, label: misiones.label, proposito: null },
-  { destino: 'habitos', path: habitos.path, label: habitos.label, proposito: 'Consistencia mínima, sin gamificación' },
-  { destino: 'trading', path: trading.path, label: trading.label, proposito: 'Reemplazo del diario de trading externo' },
+  { destino: null, path: diario.path, label: diario.label, proposito: 'Pensá con claridad.' },
+  { destino: 'misiones', path: misiones.path, label: misiones.label, proposito: 'Lo que merece acción.' },
+  { destino: 'habitos', path: habitos.path, label: habitos.label, proposito: 'Un día a la vez.' },
+  { destino: 'trading', path: trading.path, label: trading.label, proposito: 'Operá con disciplina.' },
   {
     destino: 'finanzas',
     path: finanzas.path,
     label: finanzas.label,
-    proposito: 'Conciencia de dinero sin complejidad contable',
+    proposito: 'Entendé tu dinero.',
   },
   {
     destino: 'biblioteca',
     path: biblioteca.path,
     label: biblioteca.label,
-    proposito: 'Referencias y citas acumuladas, curadas',
+    proposito: 'Todo lo que aprendiste.',
   },
 ]
 

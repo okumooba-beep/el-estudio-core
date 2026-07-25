@@ -36,19 +36,34 @@ import { Spaces } from './components/Spaces'
  * ("delete obsolete presentation code... never preserve something
  * because it already exists") y `npx tsc -b` confirmó cero imports
  * rotos tras borrarlo.
+ *
+ * Core V2 — jerarquía visual: antes las 6 secciones cargaban el mismo
+ * `gap-8` entre todas, así que nada se leía como más importante que lo
+ * demás. Ahora hay tres grupos con distinto aire entre ellos: el grupo
+ * "hoy" (saludo, voz, Umbral, Seguir con esto) respira junto porque es
+ * un solo momento; el grupo "de fondo" (Misión, Hábitos, Memoria) queda
+ * más apretado entre sí porque son apoyo, no protagonistas; Espacios
+ * cierra con más distancia porque es la salida, no parte del flujo del
+ * día. Ningún componente cambió su propio spacing interno (cada uno
+ * sigue con su `pb-6`) — el cambio es solo cuánto aire separa a los
+ * grupos entre sí.
  */
 export function HoyScreen() {
   return (
-    <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10">
-      <div>
-        <HoyHeader />
-        <PhraseSlot />
+    <div className="mx-auto flex max-w-xl flex-col gap-10 pb-10">
+      <div className="flex flex-col gap-6">
+        <div>
+          <HoyHeader />
+          <PhraseSlot />
+        </div>
+        <IdeaCapture />
+        <ContinueWorking />
       </div>
-      <IdeaCapture />
-      <ContinueWorking />
-      <MisionPrincipal />
-      <HabitsGlance />
-      <RecentActivity />
+      <div className="flex flex-col">
+        <MisionPrincipal />
+        <HabitsGlance />
+        <RecentActivity />
+      </div>
       <Spaces />
     </div>
   )
