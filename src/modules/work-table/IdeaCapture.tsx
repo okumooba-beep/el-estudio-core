@@ -1,0 +1,245 @@
+import { useEffect, useRef, useState } from 'react'
+import { readJSON, writeJSON } from '@shared-kernel/storage/localStorage'
+import { useIdeas } from './useIdeas'
+import { DeskPaperStack } from './DeskPaperStack'
+import { IdeaSheet } from './IdeaSheet'
+import { comprehensionEngine } from '@/app/shell/comprehensionEngine'
+import { normalizeTexto } from '@cognitive-engine/providers/rule-based/RuleBasedClassifier'
+import { learnCorrection } from '@cognitive-engine/providers/rule-based/memory'
+import { recordClassification } from '@cognitive-engine/providers/rule-based/log'
+import { MUEBLES } from '@world/studio/muebles'
+import { setGaze } from '@world/world/gaze'
+import { WORLD_PLACES } from '@world/world/worldMap'
+import { DESTINO_TO_FURNITURE, FURNITURE_TO_DESTINO } from './destinoFurniture'
+import type { ClassificationReason } from '@cognitive-engine/ports/ClassificationEngine'
+import type { IdeaDestino } from '@/types/idea'
+import type { FurnitureId } from '@world/studio/furniture'
+
+const DRAFT_KEY = 'idea-draft'
+
+/** Cuánto descansa una idea recién guardada antes de que aparezca la propuesta, en silencio. */
+const PROPOSAL_DELAY_MS = 2200
+/** Si nadie la toca, la propuesta se retira sola — el destino ya elegido queda como está. */
+const PROPOSAL_TIMEOUT_MS = 9000
+
+/**
+ * Sprint 3.6 (revisión), parte 6: solo los muebles que ya existen de
+ * verdad — nunca Biblioteca ni Finanzas, todavía reservados. "Diario"
+ * reemplaza a "Hoy": elegirlo no muda a ningún mueble especial, porque
+ * la hoja ya vive para siempre en el Diario (ver moveSheet/history).
+ */
+const CORRECCION_DESTINOS: readonly { id: FurnitureId; label: string }[] = [
+  { id: 'tablero', label: 'Misiones' },
+  { id: 'habitos', label: 'Hábitos' },
+  { id: 'mesa-analisis', label: 'Trading' },
+  { id: 'escritorio', label: 'Diario' },
+]
+
+const DESTINO_LABEL: Record<IdeaDestino, string> = {
+  hoy: 'Hoy',
+  misiones: 'Misiones',
+  habitos: 'Hábitos',
+  trading: 'Trading',
+  finanzas: 'Finanzas',
+  biblioteca: 'Biblioteca',
+  archivo: 'Archivo',
+}
+
+interface Proposal {
+  ideaId: string
+  texto: string
+  destinoPropuesto: IdeaDestino
+  reason: ClassificationReason
+  expanded: boolean
+}
+
+/**
+ * Esta es la única puerta (Sprint 2.2, regla "Todo pensamiento entra
+ * por una sola puerta"): nunca va a existir un formulario propio para
+ * Misiones, Hábitos, Trading, Finanzas o Biblioteca. Todo empieza acá
+ * como una Idea sin hogar, y el Escritorio (antes "Hoy" — ver
+ * src/packages/world/studio/muebles.ts) es el mueble donde vive mientras tanto.
+ *
+ * Desde Sprint 2.1 el Estudio ya no pregunta primero — observa el texto
+ * con el Motor de Comprensión (ver src/packages/cognitive-engine/) y, solo si
+ * reconoce algo, propone en silencio dónde cree que vive. Si no
+ * reconoce nada, no dice nada — la idea se queda en el Escritorio sin
+ * comentario (el Estudio nunca adivina), y ahí se queda para siempre si
+ * nadie la mueve: el Motor clasifica una sola vez, al nacer la Idea, y
+ * nunca vuelve más tarde a insistir con una que ya lleva días sin hogar
+ * (Sprint 2.2, punto 07 — el Estudio nunca presiona).
+ *
+ * Tocar la propuesta despliega la corrección — solo Hoy, Misiones,
+ * Hábitos y Trading (los únicos destinos con evidencia real todavía).
+ * Corregir enseña esa preferencia en este dispositivo, nunca más allá
+ * (ver src/packages/cognitive-engine/providers/rule-based/memory.ts), para la próxima vez que
+ * aparezca el mismo texto exacto.
+ *
+ * El Escritorio no es una lista (Sprint 2.2, punto 02 — cierre de la
+ * auditoría del Sprint 2.1): puede haber varias Ideas sin hogar a la
+ * vez, y todas siguen vivas en IndexedDB, pero acá solo se ve una pila
+ * física de hasta 4 (ver DeskPaperStack). Cuando una Idea encuentra
+ * hogar no hace fade ni se borra — su `destino` cambia y simplemente
+ * deja de pertenecer a esta pila, porque ya vive en otro mueble.
+ *
+ * Sprint "The Gaze": onFocus en el input, no onChange — la mirada se
+ * decide al entrar por la única puerta, antes de escribir la primera
+ * letra (ver src/packages/world/world/gaze.ts). Todavía no mueve ni anima nada;
+ * solo dice que la atención ya pertenece al Escritorio.
+ *
+ * Sprint "Crossing the Threshold": onBlur es el regreso — dejar esta
+ * puerta limpia la mirada, nunca un botón "salir" ni una ruta nueva.
+ * El destino usa WORLD_PLACES.escritorio.id (ver
+ * src/packages/world/world/worldMap.ts), nunca el literal 'escritorio' suelto:
+ * el mapa del mundo es la fuente de verdad de qué lugares existen,
+ * este archivo solo la consulta.
+ */
+export function IdeaCapture() {
+  const { ideas, add, moveSheet } = useIdeas()
+  const [value, setValue] = useState(() => readJSON(DRAFT_KEY, ''))
+  const [proposal, setProposal] = useState<Proposal | null>(null)
+  const [openedId, setOpenedId] = useState<string | null>(null)
+  const proposalTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const hoyIdeas = ideas.filter((idea) => idea.destino === 'hoy')
+  const propuesta = proposal ? ideas.find((idea) => idea.id === proposal.ideaId) : undefined
+  const abierta = openedId ? hoyIdeas.find((idea) => idea.id === openedId) : undefined
+  const activa = propuesta ?? abierta ?? hoyIdeas[0]
+
+  useEffect(() => {
+    return () => {
+      if (proposalTimer.current) clearTimeout(proposalTimer.current)
+      if (dismissTimer.current) clearTimeout(dismissTimer.current)
+    }
+  }, [])
+
+  function clearProposalState() {
+    setProposal(null)
+    if (proposalTimer.current) clearTimeout(proposalTimer.current)
+    if (dismissTimer.current) clearTimeout(dismissTimer.current)
+  }
+
+  function handleChange(text: string) {
+    setValue(text)
+    writeJSON(DRAFT_KEY, text)
+    if (text.trim() && proposal) clearProposalState()
+  }
+
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault()
+    const texto = value.trim()
+    if (!texto) return
+
+    clearProposalState()
+    setOpenedId(null)
+
+    const created = await add(texto)
+    setValue('')
+    writeJSON(DRAFT_KEY, '')
+
+    const { destino, reason } = comprehensionEngine.classify(texto)
+    if (destino === 'hoy') return
+
+    proposalTimer.current = setTimeout(() => {
+      // La propuesta siempre debe aparecer, incluso si mover la hoja
+      // falla o tarda (Sprint 3.2, prioridad 2) — por eso ya no se
+      // espera assignDestino antes de mostrarla.
+      setProposal({ ideaId: created.id, texto, destinoPropuesto: destino, reason, expanded: false })
+      moveSheet(created, DESTINO_TO_FURNITURE[destino]).catch((error) => {
+        console.error('No se pudo mover la hoja al mueble propuesto', error)
+      })
+      dismissTimer.current = setTimeout(() => {
+        recordClassification({
+          texto,
+          destinoPropuesto: destino,
+          destinoElegido: destino,
+          reason,
+          fecha: new Date().toISOString(),
+        })
+        setProposal(null)
+      }, PROPOSAL_TIMEOUT_MS)
+    }, PROPOSAL_DELAY_MS)
+  }
+
+  function handleToggleExpand() {
+    if (dismissTimer.current) clearTimeout(dismissTimer.current)
+    setProposal((current) => (current ? { ...current, expanded: !current.expanded } : current))
+  }
+
+  async function handleCorreccion(furniture: FurnitureId) {
+    if (!proposal) return
+    const idea = ideas.find((i) => i.id === proposal.ideaId)
+    if (!idea) return
+    if (dismissTimer.current) clearTimeout(dismissTimer.current)
+
+    const destino = FURNITURE_TO_DESTINO[furniture] ?? idea.destino
+    await moveSheet(idea, furniture)
+    if (destino !== proposal.destinoPropuesto) {
+      learnCorrection(normalizeTexto(proposal.texto), destino)
+    }
+    recordClassification({
+      texto: proposal.texto,
+      destinoPropuesto: proposal.destinoPropuesto,
+      destinoElegido: destino,
+      reason: proposal.reason,
+      fecha: new Date().toISOString(),
+    })
+    setProposal(null)
+  }
+
+  return (
+    <div className="flex flex-col gap-3" data-mueble={MUEBLES.hoy}>
+      {activa ? (
+        <DeskPaperStack ideas={hoyIdeas} activeId={activa.id} onOpen={setOpenedId}>
+          <IdeaSheet idea={activa} open={Boolean(propuesta)} />
+          {propuesta && proposal ? (
+            <p className="idea-proposal">
+              Creo que esto pertenece a{' '}
+              <button type="button" className="idea-proposal-target" onClick={handleToggleExpand}>
+                {DESTINO_LABEL[proposal.destinoPropuesto]}
+              </button>
+            </p>
+          ) : null}
+          {propuesta && proposal?.expanded ? (
+            <div className="idea-destinos" role="group" aria-label="Corregir destino">
+              {CORRECCION_DESTINOS.map((destino) => (
+                <button
+                  key={destino.id}
+                  type="button"
+                  className="idea-destino"
+                  onClick={() => handleCorreccion(destino.id)}
+                >
+                  {destino.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </DeskPaperStack>
+      ) : null}
+      <form
+        onSubmit={handleSubmit}
+        className="flex items-center gap-3 border-b border-border/60 pb-3 transition-colors duration-200 focus-within:border-accent/70"
+      >
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => handleChange(e.target.value)}
+          onFocus={() => setGaze(WORLD_PLACES.escritorio.id)}
+          onBlur={() => setGaze(null)}
+          aria-label="Idea"
+          placeholder="¿Qué tenés en mente?"
+          className="min-w-0 flex-1 bg-transparent px-1 py-3 text-[17px] text-ink outline-none placeholder:text-ink-faint"
+        />
+        {value.trim() ? (
+          <button
+            type="submit"
+            className="shrink-0 px-2 py-3 text-[13.5px] text-accent transition-colors duration-150 hover:text-ink active:text-ink"
+          >
+            Guardar
+          </button>
+        ) : null}
+      </form>
+    </div>
+  )
+}

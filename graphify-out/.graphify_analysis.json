@@ -1,0 +1,926 @@
+{
+  "communities": {
+    "0": [
+      "ref_dom",
+      "ref_es2023",
+      "ref_src",
+      "ref_src_modules",
+      "ref_src_packages_cognitive_engine",
+      "ref_src_packages_estudio_design_system",
+      "ref_src_packages_shared_kernel",
+      "ref_src_packages_world",
+      "ref_vite_client",
+      "tsconfig_app",
+      "tsconfig_app_compileroptions",
+      "tsconfig_app_compileroptions_allowarbitraryextensions",
+      "tsconfig_app_compileroptions_allowimportingtsextensions",
+      "tsconfig_app_compileroptions_erasablesyntaxonly",
+      "tsconfig_app_compileroptions_exactoptionalpropertytypes",
+      "tsconfig_app_compileroptions_jsx",
+      "tsconfig_app_compileroptions_lib",
+      "tsconfig_app_compileroptions_module",
+      "tsconfig_app_compileroptions_moduledetection",
+      "tsconfig_app_compileroptions_moduleresolution",
+      "tsconfig_app_compileroptions_noemit",
+      "tsconfig_app_compileroptions_nofallthroughcasesinswitch",
+      "tsconfig_app_compileroptions_noimplicitreturns",
+      "tsconfig_app_compileroptions_nouncheckedindexedaccess",
+      "tsconfig_app_compileroptions_nounusedlocals",
+      "tsconfig_app_compileroptions_nounusedparameters",
+      "tsconfig_app_compileroptions_paths",
+      "tsconfig_app_compileroptions_skiplibcheck",
+      "tsconfig_app_compileroptions_strict",
+      "tsconfig_app_compileroptions_target",
+      "tsconfig_app_compileroptions_tsbuildinfofile",
+      "tsconfig_app_compileroptions_types",
+      "tsconfig_app_compileroptions_verbatimmodulesyntax",
+      "tsconfig_app_include",
+      "tsconfig_app_paths_cognitive_engine",
+      "tsconfig_app_paths_design_system",
+      "tsconfig_app_paths_modules",
+      "tsconfig_app_paths_shared_kernel",
+      "tsconfig_app_paths_world"
+    ],
+    "1": [
+      "ref_react",
+      "src_app",
+      "src_app_app",
+      "src_components_room_ambientparticles",
+      "src_components_room_ambientparticles_ambientparticles",
+      "src_components_room_ambientparticles_motes",
+      "src_components_room_objects_libreta",
+      "src_components_room_objects_libreta_libreta",
+      "src_components_room_objects_libreta_libretaprops",
+      "src_components_room_roombackground",
+      "src_components_room_roombackground_roombackground",
+      "src_features_dev_designsystemgallery",
+      "src_features_dev_designsystemgallery_designsystemgallery",
+      "src_features_dev_designsystemgallery_section",
+      "src_features_dev_designsystemgallery_swatch",
+      "src_features_habitos_habitosscreen",
+      "src_features_habitos_habitosscreen_dias_semana",
+      "src_features_habitos_habitosscreen_fechassemanaactual",
+      "src_features_habitos_habitosscreen_habitosscreen",
+      "src_features_hoy_components_hoyheader",
+      "src_features_hoy_components_hoyheader_hoyheader",
+      "src_features_hoy_components_misionprincipal",
+      "src_features_hoy_components_misionprincipal_misionprincipal",
+      "src_features_hoy_components_phraseslot",
+      "src_features_hoy_components_phraseslot_phraseslot",
+      "src_features_hoy_hoyscreen",
+      "src_features_hoy_hoyscreen_hoyscreen",
+      "src_features_idea_deskpaperstack",
+      "src_features_idea_deskpaperstack_deskpaperstack",
+      "src_features_idea_deskpaperstack_deskpaperstackprops",
+      "src_features_idea_ideasheet",
+      "src_features_idea_ideasheet_ideasheet",
+      "src_features_idea_ideasheet_ideasheetprops",
+      "src_features_misiones_misionesscreen",
+      "src_features_misiones_misionesscreen_estado_label",
+      "src_features_misiones_misionesscreen_misionesscreen",
+      "src_features_workspace_workspace",
+      "src_features_workspace_workspace_workspace",
+      "src_main"
+    ],
+    "2": [
+      "src_features_trading_checklisttemplate",
+      "src_features_trading_checklisttemplate_buildchecklistfromtemplate",
+      "src_features_trading_checklisttemplate_checklisttemplateitem",
+      "src_features_trading_checklisttemplate_getchecklisttemplate",
+      "src_features_trading_checklisttemplate_newtemplateitem",
+      "src_features_trading_checklisttemplate_savechecklisttemplate",
+      "src_features_trading_operacionrepository",
+      "src_features_trading_operacionrepository_dexieoperacionrepository",
+      "src_features_trading_operacionrepository_dexieoperacionrepository_add",
+      "src_features_trading_operacionrepository_dexieoperacionrepository_list",
+      "src_features_trading_operacionrepository_dexieoperacionrepository_update",
+      "src_features_trading_operacionrepository_nuevaoperacion",
+      "src_features_trading_operacionrepository_operacionrepository",
+      "src_features_trading_operacionrepository_operacionrepository_add",
+      "src_features_trading_operacionrepository_operacionrepository_update",
+      "src_features_trading_tradingscreen",
+      "src_features_trading_tradingscreen_checklisteditor",
+      "src_features_trading_tradingscreen_expedientecaptura",
+      "src_features_trading_tradingscreen_expedientecard",
+      "src_features_trading_tradingscreen_fecha_corta",
+      "src_features_trading_tradingscreen_formatfechacorta",
+      "src_features_trading_tradingscreen_formatsignedpts",
+      "src_features_trading_tradingscreen_formatsignedusd",
+      "src_features_trading_tradingscreen_instrumentos",
+      "src_features_trading_tradingscreen_lado_label",
+      "src_features_trading_tradingscreen_nuevaoperacionform",
+      "src_features_trading_tradingscreen_tradingscreen",
+      "src_features_trading_useoperaciones",
+      "src_features_trading_useoperaciones_useoperaciones"
+    ],
+    "3": [
+      "claude_skills_graphify_skill",
+      "claude_skills_graphify_skill_for_graphify_add_and_watch",
+      "claude_skills_graphify_skill_for_graphify_query",
+      "claude_skills_graphify_skill_for_the_commit_hook_and_native_claude_md_integration",
+      "claude_skills_graphify_skill_for_update_and_cluster_only",
+      "claude_skills_graphify_skill_graphify",
+      "claude_skills_graphify_skill_honesty_rules",
+      "claude_skills_graphify_skill_interpreter_guard_for_subcommands",
+      "claude_skills_graphify_skill_part_a_structural_extraction_for_code_files",
+      "claude_skills_graphify_skill_part_b_semantic_extraction_parallel_subagents",
+      "claude_skills_graphify_skill_part_c_merge_ast_semantic_into_final_extraction",
+      "claude_skills_graphify_skill_powershell_5_1_vertical_scrolling_stops_working",
+      "claude_skills_graphify_skill_step_0_github_repos_and_multi_path_merge_only_if_a_url_or_several_paths",
+      "claude_skills_graphify_skill_step_1_ensure_graphify_is_installed",
+      "claude_skills_graphify_skill_step_2_5_video_and_audio_only_if_video_files_detected",
+      "claude_skills_graphify_skill_step_2_detect_files",
+      "claude_skills_graphify_skill_step_3_extract_entities_and_relationships",
+      "claude_skills_graphify_skill_step_4_5_graph_health_check_read_only_integrity_gate",
+      "claude_skills_graphify_skill_step_4_build_graph_cluster_analyze_generate_outputs",
+      "claude_skills_graphify_skill_step_5_label_communities",
+      "claude_skills_graphify_skill_step_6_generate_obsidian_vault_opt_in_html",
+      "claude_skills_graphify_skill_step_9_save_manifest_update_cost_tracker_clean_up_and_report",
+      "claude_skills_graphify_skill_steps_6b_8_wiki_neo4j_falkordb_svg_graphml_mcp_benchmark_only_on_their_flags",
+      "claude_skills_graphify_skill_troubleshooting",
+      "claude_skills_graphify_skill_usage",
+      "claude_skills_graphify_skill_what_graphify_is_for",
+      "claude_skills_graphify_skill_what_you_must_do_when_invoked"
+    ],
+    "4": [
+      "src_packages_cognitive_engine_ports_classificationengine",
+      "src_packages_cognitive_engine_ports_classificationengine_classificationengine",
+      "src_packages_cognitive_engine_ports_classificationengine_classificationengine_classify",
+      "src_packages_cognitive_engine_ports_classificationengine_classificationreason",
+      "src_packages_cognitive_engine_ports_classificationengine_classificationresult",
+      "src_packages_cognitive_engine_ports_classificationengine_classificationrule",
+      "src_packages_cognitive_engine_providerregistry",
+      "src_packages_cognitive_engine_providerregistry_providerregistry",
+      "src_packages_cognitive_engine_providerregistry_providerregistry_getactive",
+      "src_packages_cognitive_engine_providerregistry_providerregistry_register",
+      "src_packages_cognitive_engine_providerregistry_providerregistry_select",
+      "src_packages_cognitive_engine_providers_rule_based_log",
+      "src_packages_cognitive_engine_providers_rule_based_log_classificationlogentry",
+      "src_packages_cognitive_engine_providers_rule_based_log_recordclassification",
+      "src_packages_cognitive_engine_providers_rule_based_memory",
+      "src_packages_cognitive_engine_providers_rule_based_memory_getlearneddestino",
+      "src_packages_cognitive_engine_providers_rule_based_memory_learncorrection",
+      "src_packages_cognitive_engine_providers_rule_based_memory_memoria",
+      "src_packages_cognitive_engine_providers_rule_based_rulebasedclassifier",
+      "src_packages_cognitive_engine_providers_rule_based_rulebasedclassifier_normalizetexto",
+      "src_packages_cognitive_engine_providers_rule_based_rulebasedclassifier_rulebasedclassifier",
+      "src_packages_cognitive_engine_providers_rule_based_rulebasedclassifier_rulebasedclassifier_classify",
+      "src_packages_cognitive_engine_providers_rule_based_rules",
+      "src_packages_cognitive_engine_providers_rule_based_rules_destino",
+      "src_packages_cognitive_engine_providers_rule_based_rules_rules"
+    ],
+    "5": [
+      "src_packages_estudio_design_system_tokens_colors",
+      "src_packages_estudio_design_system_tokens_colors_colors",
+      "src_packages_estudio_design_system_tokens_colors_colortokens",
+      "src_packages_estudio_design_system_tokens_index",
+      "src_packages_estudio_design_system_tokens_materials",
+      "src_packages_estudio_design_system_tokens_materials_materials",
+      "src_packages_estudio_design_system_tokens_materials_materialtokens",
+      "src_packages_estudio_design_system_tokens_materials_paperink",
+      "src_packages_estudio_design_system_tokens_materials_paperinktokens",
+      "src_packages_estudio_design_system_tokens_motion",
+      "src_packages_estudio_design_system_tokens_motion_motion",
+      "src_packages_estudio_design_system_tokens_motion_motiontoken",
+      "src_packages_estudio_design_system_tokens_motion_motiontokens",
+      "src_packages_estudio_design_system_tokens_radius",
+      "src_packages_estudio_design_system_tokens_radius_radius",
+      "src_packages_estudio_design_system_tokens_radius_radiustokens",
+      "src_packages_estudio_design_system_tokens_shadows",
+      "src_packages_estudio_design_system_tokens_shadows_shadows",
+      "src_packages_estudio_design_system_tokens_shadows_shadowtokens",
+      "src_packages_estudio_design_system_tokens_spacing",
+      "src_packages_estudio_design_system_tokens_spacing_spacing",
+      "src_packages_estudio_design_system_tokens_spacing_spacingtokens",
+      "src_packages_estudio_design_system_tokens_typography",
+      "src_packages_estudio_design_system_tokens_typography_typography",
+      "src_packages_estudio_design_system_tokens_typography_typographytokens"
+    ],
+    "6": [
+      "src_features_idea_destinofurniture",
+      "src_features_idea_destinofurniture_destino_to_furniture",
+      "src_features_idea_destinofurniture_furniture_to_destino",
+      "src_features_idea_draftidea",
+      "src_features_idea_draftidea_draftidea",
+      "src_features_idea_ideacapture",
+      "src_features_idea_ideacapture_correccion_destinos",
+      "src_features_idea_ideacapture_destino_label",
+      "src_features_idea_ideacapture_ideacapture",
+      "src_features_idea_ideacapture_proposal",
+      "src_features_idea_idearepository",
+      "src_features_idea_idearepository_addoptions",
+      "src_features_idea_idearepository_dexieidearepository",
+      "src_features_idea_idearepository_dexieidearepository_add",
+      "src_features_idea_idearepository_dexieidearepository_list",
+      "src_features_idea_idearepository_dexieidearepository_update",
+      "src_features_idea_idearepository_idearepository",
+      "src_features_idea_idearepository_idearepository_add",
+      "src_features_idea_idearepository_idearepository_update",
+      "src_features_idea_movesheet",
+      "src_features_idea_movesheet_movesheet",
+      "src_features_idea_useideas",
+      "src_features_idea_useideas_useideas"
+    ],
+    "7": [
+      "dexie",
+      "package",
+      "package_dependencies",
+      "package_dependencies_dexie",
+      "package_dependencies_react",
+      "package_dependencies_react_dom",
+      "package_dependencies_react_router_dom",
+      "package_dependencies_supabase_supabase_js",
+      "package_name",
+      "package_private",
+      "package_scripts",
+      "package_scripts_build",
+      "package_scripts_dev",
+      "package_scripts_lint",
+      "package_scripts_preview",
+      "package_type",
+      "package_version",
+      "react",
+      "react_dom",
+      "react_router_dom",
+      "supabase_supabase_js"
+    ],
+    "8": [
+      "oxlint",
+      "package_devdependencies",
+      "package_devdependencies_oxlint",
+      "package_devdependencies_tailwindcss",
+      "package_devdependencies_tailwindcss_vite",
+      "package_devdependencies_types_node",
+      "package_devdependencies_types_react",
+      "package_devdependencies_types_react_dom",
+      "package_devdependencies_typescript",
+      "package_devdependencies_vite",
+      "package_devdependencies_vite_plugin_pwa",
+      "package_devdependencies_vitejs_plugin_react",
+      "tailwindcss",
+      "tailwindcss_vite",
+      "types_node",
+      "types_react",
+      "types_react_dom",
+      "typescript",
+      "vite",
+      "vite_plugin_pwa",
+      "vitejs_plugin_react"
+    ],
+    "9": [
+      "ref_node",
+      "ref_vite_config_ts",
+      "tsconfig_node",
+      "tsconfig_node_compileroptions",
+      "tsconfig_node_compileroptions_allowimportingtsextensions",
+      "tsconfig_node_compileroptions_erasablesyntaxonly",
+      "tsconfig_node_compileroptions_lib",
+      "tsconfig_node_compileroptions_module",
+      "tsconfig_node_compileroptions_moduledetection",
+      "tsconfig_node_compileroptions_noemit",
+      "tsconfig_node_compileroptions_nofallthroughcasesinswitch",
+      "tsconfig_node_compileroptions_nounusedlocals",
+      "tsconfig_node_compileroptions_nounusedparameters",
+      "tsconfig_node_compileroptions_skiplibcheck",
+      "tsconfig_node_compileroptions_target",
+      "tsconfig_node_compileroptions_tsbuildinfofile",
+      "tsconfig_node_compileroptions_types",
+      "tsconfig_node_compileroptions_verbatimmodulesyntax",
+      "tsconfig_node_include",
+      "tsconfig_node_json_ref_es2023"
+    ],
+    "10": [
+      "src_features_room_scenestage",
+      "src_features_room_scenestage_candles",
+      "src_features_room_scenestage_desk_drawers",
+      "src_features_room_scenestage_forest_trees",
+      "src_features_room_scenestage_furniture",
+      "src_features_room_scenestage_monitorscreen",
+      "src_features_room_scenestage_plant_leaves",
+      "src_features_room_scenestage_scenestage",
+      "src_features_room_scenestage_scenestageprops",
+      "src_features_room_scenestage_shelf_books",
+      "src_features_room_scenestage_tree_shapes",
+      "src_features_room_scenestage_trend_points",
+      "src_features_room_usecamerarig",
+      "src_features_room_usecamerarig_cameraphase",
+      "src_features_room_usecamerarig_usecamerarig",
+      "src_packages_world_world_stations",
+      "src_packages_world_world_stations_station",
+      "src_packages_world_world_stations_stations"
+    ],
+    "11": [
+      "src_packages_world_studio_furniture",
+      "src_packages_world_studio_furniture_furniture",
+      "src_packages_world_studio_furniture_furnitureid",
+      "src_packages_world_studio_furniture_historyentry",
+      "src_packages_world_studio_furniture_historyevento",
+      "src_packages_world_studio_materials",
+      "src_packages_world_studio_materials_implemented_materials",
+      "src_packages_world_studio_materials_materialid",
+      "src_packages_world_studio_materials_materialprofile",
+      "src_packages_world_studio_materials_materials",
+      "src_packages_world_world_gaze",
+      "src_packages_world_world_gaze_getgaze",
+      "src_packages_world_world_gaze_setgaze",
+      "src_packages_world_world_worldmap",
+      "src_packages_world_world_worldmap_world_places",
+      "src_packages_world_world_worldmap_worldplace",
+      "src_packages_world_world_worldmap_worldplaceid",
+      "src_packages_world_world_worldmap_worldplaceposition"
+    ],
+    "12": [
+      "docs_libro_01_biblia_del_estudio",
+      "docs_libro_01_biblia_del_estudio_01_qu\u00e9_es_el_estudio",
+      "docs_libro_01_biblia_del_estudio_02_leyes_del_mundo",
+      "docs_libro_01_biblia_del_estudio_03_materiales",
+      "docs_libro_01_biblia_del_estudio_04_los_objetos",
+      "docs_libro_01_biblia_del_estudio_05_el_tiempo",
+      "docs_libro_01_biblia_del_estudio_06_el_sonido",
+      "docs_libro_01_biblia_del_estudio_07_la_luz",
+      "docs_libro_01_biblia_del_estudio_08_los_olores",
+      "docs_libro_01_biblia_del_estudio_09_la_temperatura",
+      "docs_libro_01_biblia_del_estudio_10_la_voz",
+      "docs_libro_01_biblia_del_estudio_11_las_cosas_que_nunca_existir\u00e1n",
+      "docs_libro_01_biblia_del_estudio_12_el_prop\u00f3sito",
+      "docs_libro_01_biblia_del_estudio_libro_01_la_biblia_del_estudio"
+    ],
+    "13": [
+      "docs_estudio_master_context",
+      "docs_estudio_master_context_10_lo_que_el_estudio_nunca_ser\u00e1",
+      "docs_estudio_master_context_1_qu\u00e9_es_el_estudio",
+      "docs_estudio_master_context_2_problema_que_resuelve",
+      "docs_estudio_master_context_3_filosof\u00eda",
+      "docs_estudio_master_context_4_estado_actual_del_proyecto",
+      "docs_estudio_master_context_5_qu\u00e9_todav\u00eda_no_existe",
+      "docs_estudio_master_context_6_descubrimientos_importantes",
+      "docs_estudio_master_context_7_roadmap_resumido",
+      "docs_estudio_master_context_8_c\u00f3mo_debe_trabajar_cualquier_ia_en_este_proyecto",
+      "docs_estudio_master_context_9_pr\u00f3ximo_objetivo",
+      "docs_estudio_master_context_estudio_master_context"
+    ],
+    "14": [
+      "src_packages_world_light_applylight",
+      "src_packages_world_light_applylight_applylight",
+      "src_packages_world_light_lightengine",
+      "src_packages_world_light_lightengine_computelight",
+      "src_packages_world_light_lightengine_daylightat",
+      "src_packages_world_light_lightengine_lerp",
+      "src_packages_world_light_lightengine_lerprgb",
+      "src_packages_world_light_lightengine_lerprgba",
+      "src_packages_world_light_lightengine_lightstate",
+      "src_packages_world_light_lightengine_rgb",
+      "src_packages_world_light_useambientlight",
+      "src_packages_world_light_useambientlight_useambientlight"
+    ],
+    "15": [
+      "docs_install_guide",
+      "docs_install_guide_android_paso_a_paso",
+      "docs_install_guide_antes_de_empezar_generar_la_versi\u00f3n_de_producci\u00f3n",
+      "docs_install_guide_camino_a_t\u00fanel_https_temporal_para_probar_hoy",
+      "docs_install_guide_camino_b_hosting_permanente_para_el_uso_diario",
+      "docs_install_guide_checklist_f\u00edsica_la_ten\u00e9s_que_marcar_vos",
+      "docs_install_guide_desktop_chrome_y_edge",
+      "docs_install_guide_gu\u00eda_de_instalaci\u00f3n",
+      "docs_install_guide_iphone_paso_a_paso",
+      "docs_install_guide_lo_primero_que_hay_que_entender_si_no_le\u00e9s_nada_m\u00e1s_le\u00e9_esto",
+      "docs_install_guide_verificaciones_de_configuraci\u00f3n_ya_hechas_quedan_documentadas_ac\u00e1"
+    ],
+    "16": [
+      "oxlintrc",
+      "oxlintrc_overrides",
+      "oxlintrc_plugins",
+      "oxlintrc_rules",
+      "oxlintrc_rules_react_only_export_components",
+      "oxlintrc_rules_react_rules_of_hooks",
+      "oxlintrc_schema",
+      "ref_oxc",
+      "ref_typescript",
+      "ref_warn"
+    ],
+    "17": [
+      "claude_skills_graphify_references_exports",
+      "claude_skills_graphify_references_exports_graphify_reference_extra_exports_and_benchmark",
+      "claude_skills_graphify_references_exports_step_6b_wiki_only_if_wiki_flag",
+      "claude_skills_graphify_references_exports_step_7_neo4j_export_only_if_neo4j_or_neo4j_push_flag",
+      "claude_skills_graphify_references_exports_step_7a_falkordb_export_only_if_falkordb_or_falkordb_push_flag",
+      "claude_skills_graphify_references_exports_step_7b_svg_export_only_if_svg_flag",
+      "claude_skills_graphify_references_exports_step_7c_graphml_export_only_if_graphml_flag",
+      "claude_skills_graphify_references_exports_step_7d_mcp_server_only_if_mcp_flag",
+      "claude_skills_graphify_references_exports_step_8_token_reduction_benchmark_only_if_total_words_5000"
+    ],
+    "18": [
+      "src_components_room_objects_planta",
+      "src_components_room_objects_planta_planta",
+      "src_components_room_objects_planta_plantaprops",
+      "src_components_room_roomobjects",
+      "src_components_room_roomobjects_object_renderers",
+      "src_components_room_roomobjects_objectrendererprops",
+      "src_components_room_roomobjects_roomobjects",
+      "src_components_room_roomobjectsregistry",
+      "src_components_room_roomobjectsregistry_room_objects"
+    ],
+    "19": [
+      "src_packages_world_phrases_phraseengine",
+      "src_packages_world_phrases_phraseengine_datekey",
+      "src_packages_world_phrases_phraseengine_daysbetween",
+      "src_packages_world_phrases_phraseengine_default_state",
+      "src_packages_world_phrases_phraseengine_gettodaysphrase",
+      "src_packages_world_phrases_phraseengine_phrasestate",
+      "src_packages_world_phrases_phraseengine_pickindex",
+      "src_packages_world_phrases_phrases",
+      "src_packages_world_phrases_phrases_phrases"
+    ],
+    "20": [
+      "src_types_historymark",
+      "src_types_historymark_historymark",
+      "src_types_roomobject",
+      "src_types_roomobject_roomobjectanimation",
+      "src_types_roomobject_roomobjectcondition",
+      "src_types_roomobject_roomobjectdefinition",
+      "src_types_roomobject_roomobjectkind",
+      "src_types_roomobject_roomobjectposition",
+      "src_types_roomobject_roomobjectstate"
+    ],
+    "21": [
+      "docs_future_furniture",
+      "docs_future_furniture_archivador",
+      "docs_future_furniture_biblioteca",
+      "docs_future_furniture_calendario_de_pared",
+      "docs_future_furniture_libro_contable",
+      "docs_future_furniture_mapa_mental",
+      "docs_future_furniture_mesa_de_planificaci\u00f3n",
+      "docs_future_furniture_pr\u00f3ximos_muebles"
+    ],
+    "22": [
+      "src_features_habitos_habitcheckrepository",
+      "src_features_habitos_habitcheckrepository_dexiehabitcheckrepository",
+      "src_features_habitos_habitcheckrepository_dexiehabitcheckrepository_list",
+      "src_features_habitos_habitcheckrepository_dexiehabitcheckrepository_setchecked",
+      "src_features_habitos_habitcheckrepository_habitcheckrepository",
+      "src_features_habitos_habitcheckrepository_habitcheckrepository_setchecked",
+      "src_features_habitos_usehabitchecks",
+      "src_features_habitos_usehabitchecks_usehabitchecks"
+    ],
+    "23": [
+      "src_lib_voice_voiceengine",
+      "src_lib_voice_voiceengine_getestudiosignal",
+      "src_lib_voice_voiceengine_getfraseentry",
+      "src_lib_voice_voiceengine_getmemoriaviva",
+      "src_lib_voice_voiceengine_getsabiduria",
+      "src_lib_voice_voiceengine_resolvevoice",
+      "src_lib_voice_voiceengine_voiceentry",
+      "src_lib_voice_voiceengine_voicesource"
+    ],
+    "24": [
+      "src_packages_shared_kernel_events_appevents",
+      "src_packages_shared_kernel_events_appevents_appeventmap",
+      "src_packages_shared_kernel_events_appevents_eventbus",
+      "src_packages_shared_kernel_events_eventbus",
+      "src_packages_shared_kernel_events_eventbus_eventbus",
+      "src_packages_shared_kernel_events_eventbus_eventbus_emit",
+      "src_packages_shared_kernel_events_eventbus_eventbus_on",
+      "src_packages_shared_kernel_events_eventbus_listener"
+    ],
+    "25": [
+      "src_packages_world_studio_sheetphysics",
+      "src_packages_world_studio_sheetphysics_getsheetplacement",
+      "src_packages_world_studio_sheetphysics_offsets_x",
+      "src_packages_world_studio_sheetphysics_offsets_y",
+      "src_packages_world_studio_sheetphysics_rotations",
+      "src_packages_world_studio_sheetphysics_sheetestado",
+      "src_packages_world_studio_sheetphysics_sheetphysics"
+    ],
+    "26": [
+      "claude_skills_graphify_references_query",
+      "claude_skills_graphify_references_query_for_graphify_explain",
+      "claude_skills_graphify_references_query_for_graphify_path",
+      "claude_skills_graphify_references_query_graphify_reference_query_path_explain",
+      "claude_skills_graphify_references_query_step_0_constrained_query_expansion_required_before_traversal",
+      "claude_skills_graphify_references_query_step_1_traversal"
+    ],
+    "27": [
+      "src_lib_db_db",
+      "src_lib_db_db_db",
+      "src_lib_db_db_legacynota",
+      "src_lib_db_db_lifeosdb",
+      "src_lib_db_db_lifeosdb_constructor"
+    ],
+    "28": [
+      "src_lib_room_historymarks",
+      "src_lib_room_historymarks_gethistorymarks",
+      "src_lib_room_historymarks_libreta_thresholds",
+      "src_lib_room_objectage",
+      "src_lib_room_objectage_dayssincepresent"
+    ],
+    "29": [
+      "src_packages_world_light_seasons",
+      "src_packages_world_light_seasons_getseason",
+      "src_packages_world_light_seasons_getseasonalmodifier",
+      "src_packages_world_light_seasons_season",
+      "src_packages_world_light_seasons_seasonallightmodifier"
+    ],
+    "30": [
+      "src_types_operacion",
+      "src_types_operacion_checklistitem",
+      "src_types_operacion_operacion",
+      "src_types_operacion_operacionchecklist",
+      "src_types_operacion_operacionlado"
+    ],
+    "31": [
+      "venv_graphify_scripts_activate",
+      "venv_graphify_scripts_activate_get_pyvenvconfig",
+      "venv_graphify_scripts_activate_global_deactivate",
+      "venv_graphify_scripts_activate_global_old_virtual_prompt",
+      "venv_graphify_scripts_activate_global_prompt"
+    ],
+    "32": [
+      "claude_skills_graphify_references_add_watch",
+      "claude_skills_graphify_references_add_watch_for_graphify_add",
+      "claude_skills_graphify_references_add_watch_for_watch",
+      "claude_skills_graphify_references_add_watch_graphify_reference_add_a_url_and_watch_a_folder"
+    ],
+    "33": [
+      "claude_skills_graphify_references_hooks",
+      "claude_skills_graphify_references_hooks_for_git_commit_hook",
+      "claude_skills_graphify_references_hooks_for_native_claude_md_integration",
+      "claude_skills_graphify_references_hooks_graphify_reference_commit_hook_and_native_claude_md_integration"
+    ],
+    "34": [
+      "claude_skills_graphify_references_update",
+      "claude_skills_graphify_references_update_for_cluster_only",
+      "claude_skills_graphify_references_update_for_update_incremental_re_extraction",
+      "claude_skills_graphify_references_update_graphify_reference_incremental_update_and_cluster_only"
+    ],
+    "35": [
+      "docs_vision",
+      "docs_vision_c\u00f3mo_usar_esto",
+      "docs_vision_lo_que_eso_significa_en_la_pr\u00e1ctica",
+      "docs_vision_visi\u00f3n"
+    ],
+    "36": [
+      "readme",
+      "readme_expanding_the_oxlint_configuration",
+      "readme_react_compiler",
+      "readme_react_typescript_vite"
+    ],
+    "37": [
+      "src_lib_room_objectusage",
+      "src_lib_room_objectusage_getusagecount",
+      "src_lib_room_objectusage_recorduse",
+      "src_lib_room_objectusage_usagelog"
+    ],
+    "38": [
+      "src_packages_shared_kernel_persistence_repository",
+      "src_packages_shared_kernel_persistence_repository_repository",
+      "src_packages_shared_kernel_persistence_repository_repository_list",
+      "src_packages_shared_kernel_persistence_repository_syncableentity"
+    ],
+    "39": [
+      "claude_skills_graphify_references_github_and_merge",
+      "claude_skills_graphify_references_github_and_merge_graphify_reference_github_clone_and_cross_repo_merge",
+      "claude_skills_graphify_references_github_and_merge_step_0_clone_github_repo_s_only_if_a_github_url_was_given"
+    ],
+    "40": [
+      "claude_skills_graphify_references_transcribe",
+      "claude_skills_graphify_references_transcribe_graphify_reference_transcribe_video_and_audio",
+      "claude_skills_graphify_references_transcribe_step_2_5_transcribe_video_audio_files_only_if_video_files_detected"
+    ],
+    "41": [
+      "docs_experience_log",
+      "docs_experience_log_experience_log",
+      "docs_experience_log_plantilla"
+    ],
+    "42": [
+      "src_app_modules",
+      "src_app_modules_moduledef",
+      "src_app_modules_modules"
+    ],
+    "43": [
+      "src_app_shell_comprehensionengine",
+      "src_app_shell_comprehensionengine_comprehensionengine",
+      "src_app_shell_comprehensionengine_registry"
+    ],
+    "44": [
+      "src_components_layout_appshell",
+      "src_components_layout_appshell_appshell",
+      "src_components_layout_appshell_linkclass"
+    ],
+    "45": [
+      "src_components_ui_emptystate",
+      "src_components_ui_emptystate_emptystate",
+      "src_components_ui_emptystate_emptystateprops"
+    ],
+    "46": [
+      "src_packages_shared_kernel_storage_localstorage",
+      "src_packages_shared_kernel_storage_localstorage_readjson",
+      "src_packages_shared_kernel_storage_localstorage_writejson"
+    ],
+    "47": [
+      "src_packages_world_studio_muebles",
+      "src_packages_world_studio_muebles_destino",
+      "src_packages_world_studio_muebles_muebles"
+    ],
+    "48": [
+      "src_packages_world_world_worldrules",
+      "src_packages_world_world_worldrules_world_rules",
+      "src_packages_world_world_worldrules_worldrule"
+    ],
+    "49": [
+      "src_types_ambientparticle",
+      "src_types_ambientparticle_ambientparticledefinition",
+      "src_types_ambientparticle_ambientparticleposition"
+    ],
+    "50": [
+      "src_types_idea",
+      "src_types_idea_idea",
+      "src_types_idea_ideadestino"
+    ],
+    "51": [
+      "tsconfig",
+      "tsconfig_files",
+      "tsconfig_references"
+    ],
+    "52": [
+      "claude_claude",
+      "claude_claude_graphify"
+    ],
+    "53": [
+      "claude_skills_graphify_references_extraction_spec",
+      "claude_skills_graphify_references_extraction_spec_graphify_reference_extraction_subagent_prompt"
+    ],
+    "54": [
+      "docs_furniture_map",
+      "docs_furniture_map_mapa_de_muebles"
+    ],
+    "55": [
+      "src_features_dev_materialinspector",
+      "src_features_dev_materialinspector_materialinspector"
+    ],
+    "56": [
+      "src_features_diario_diarioscreen",
+      "src_features_diario_diarioscreen_diarioscreen"
+    ],
+    "57": [
+      "src_features_idea_silentsave",
+      "src_features_idea_silentsave_schedulesilentsave"
+    ],
+    "58": [
+      "src_features_memoria_memorylayer",
+      "src_features_memoria_memorylayer_memorylayer"
+    ],
+    "59": [
+      "src_features_placeholder_moduleplaceholder",
+      "src_features_placeholder_moduleplaceholder_moduleplaceholder"
+    ],
+    "60": [
+      "src_features_trading_defaulttradingchecklist",
+      "src_features_trading_defaulttradingchecklist_default_trading_checklist"
+    ],
+    "61": [
+      "src_lib_room_deskmemory",
+      "src_lib_room_deskmemory_getdeskmemorymarks"
+    ],
+    "62": [
+      "src_lib_room_objectevolution",
+      "src_lib_room_objectevolution_evolveobjectstate"
+    ],
+    "63": [
+      "src_lib_supabase_client",
+      "src_lib_supabase_client_issupabaseconfigured"
+    ],
+    "64": [
+      "src_lib_trading_patterns",
+      "src_lib_trading_patterns_patterns"
+    ],
+    "65": [
+      "src_lib_trading_reviewscore",
+      "src_lib_trading_reviewscore_reviewscore"
+    ],
+    "66": [
+      "src_packages_shared_kernel_date_describeday",
+      "src_packages_shared_kernel_date_describeday_describeday"
+    ],
+    "67": [
+      "src_packages_shared_kernel_id",
+      "src_packages_shared_kernel_id_generateid"
+    ],
+    "68": [
+      "src_types_deskmemory",
+      "src_types_deskmemory_deskmemorymark"
+    ],
+    "69": [
+      "src_types_habitcheck",
+      "src_types_habitcheck_habitcheck"
+    ],
+    "70": [
+      "src_light_bootstrap"
+    ],
+    "71": [
+      "src_packages_cognitive_engine_index"
+    ],
+    "72": [
+      "src_packages_estudio_design_system_index"
+    ],
+    "73": [
+      "src_packages_shared_kernel_index"
+    ],
+    "74": [
+      "src_packages_world_index"
+    ],
+    "75": [
+      "vite_config"
+    ]
+  },
+  "cohesion": {
+    "0": 0.05128205128205128,
+    "1": 0.058029689608636977,
+    "2": 0.11083743842364532,
+    "3": 0.07407407407407407,
+    "4": 0.15333333333333332,
+    "5": 0.13666666666666666,
+    "6": 0.14624505928853754,
+    "7": 0.09523809523809523,
+    "8": 0.09523809523809523,
+    "9": 0.1,
+    "10": 0.13071895424836602,
+    "11": 0.1437908496732026,
+    "12": 0.14285714285714285,
+    "13": 0.16666666666666666,
+    "14": 0.30303030303030304,
+    "15": 0.18181818181818182,
+    "16": 0.2,
+    "17": 0.2222222222222222,
+    "18": 0.2777777777777778,
+    "19": 0.3333333333333333,
+    "20": 0.2777777777777778,
+    "21": 0.25,
+    "22": 0.32142857142857145,
+    "23": 0.39285714285714285,
+    "24": 0.2857142857142857,
+    "25": 0.2857142857142857,
+    "26": 0.3333333333333333,
+    "27": 0.4,
+    "28": 0.6,
+    "29": 0.4,
+    "30": 0.4,
+    "31": 0.4,
+    "32": 0.5,
+    "33": 0.5,
+    "34": 0.5,
+    "35": 0.5,
+    "36": 0.5,
+    "37": 0.5,
+    "38": 0.5,
+    "39": 0.6666666666666666,
+    "40": 0.6666666666666666,
+    "41": 0.6666666666666666,
+    "42": 0.6666666666666666,
+    "43": 0.6666666666666666,
+    "44": 1.0,
+    "45": 0.6666666666666666,
+    "46": 0.6666666666666666,
+    "47": 0.6666666666666666,
+    "48": 0.6666666666666666,
+    "49": 0.6666666666666666,
+    "50": 0.6666666666666666,
+    "51": 0.6666666666666666,
+    "52": 1.0,
+    "53": 1.0,
+    "54": 1.0,
+    "55": 1.0,
+    "56": 1.0,
+    "57": 1.0,
+    "58": 1.0,
+    "59": 1.0,
+    "60": 1.0,
+    "61": 1.0,
+    "62": 1.0,
+    "63": 1.0,
+    "64": 1.0,
+    "65": 1.0,
+    "66": 1.0,
+    "67": 1.0,
+    "68": 1.0,
+    "69": 1.0,
+    "70": 1.0,
+    "71": 1.0,
+    "72": 1.0,
+    "73": 1.0,
+    "74": 1.0,
+    "75": 1.0
+  },
+  "gods": [
+    {
+      "id": "tsconfig_app_compileroptions",
+      "label": "compilerOptions",
+      "degree": 23
+    },
+    {
+      "id": "ref_react",
+      "label": "react",
+      "degree": 21
+    },
+    {
+      "id": "tsconfig_node_compileroptions",
+      "label": "compilerOptions",
+      "degree": 15
+    },
+    {
+      "id": "docs_libro_01_biblia_del_estudio_libro_01_la_biblia_del_estudio",
+      "label": "LIBRO 01 \u2014 La Biblia del Estudio",
+      "degree": 13
+    },
+    {
+      "id": "claude_skills_graphify_skill_what_you_must_do_when_invoked",
+      "label": "What You Must Do When Invoked",
+      "degree": 12
+    },
+    {
+      "id": "claude_skills_graphify_skill_graphify",
+      "label": "/graphify",
+      "degree": 11
+    },
+    {
+      "id": "docs_estudio_master_context_estudio_master_context",
+      "label": "ESTUDIO MASTER CONTEXT",
+      "degree": 11
+    },
+    {
+      "id": "docs_install_guide_gu\u00eda_de_instalaci\u00f3n",
+      "label": "Gu\u00eda de instalaci\u00f3n",
+      "degree": 10
+    },
+    {
+      "id": "claude_skills_graphify_references_exports_graphify_reference_extra_exports_and_benchmark",
+      "label": "graphify reference: extra exports and benchmark",
+      "degree": 8
+    },
+    {
+      "id": "docs_future_furniture_pr\u00f3ximos_muebles",
+      "label": "Pr\u00f3ximos muebles",
+      "degree": 7
+    }
+  ],
+  "surprises": [
+    {
+      "source": "getHistoryMarks()",
+      "target": "daysSincePresent()",
+      "source_files": [
+        "src/lib/room/historyMarks.ts",
+        "src/lib/room/objectAge.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "cross-file semantic connection"
+    },
+    {
+      "source": "RoomObjectDefinition",
+      "target": "HistoryMark",
+      "source_files": [
+        "src/types/roomObject.ts",
+        "src/types/historyMark.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "references",
+      "why": "cross-file semantic connection"
+    },
+    {
+      "source": "IdeaCapture()",
+      "target": "useIdeas()",
+      "source_files": [
+        "src/features/idea/IdeaCapture.tsx",
+        "src/features/idea/useIdeas.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "cross-file semantic connection"
+    },
+    {
+      "source": "SceneStageProps",
+      "target": "CameraPhase",
+      "source_files": [
+        "src/features/room/SceneStage.tsx",
+        "src/features/room/useCameraRig.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "references",
+      "why": "cross-file semantic connection"
+    },
+    {
+      "source": "SceneStage()",
+      "target": "STATIONS",
+      "source_files": [
+        "src/features/room/SceneStage.tsx",
+        "src/packages/world/world/stations.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "references",
+      "why": "cross-file semantic connection"
+    }
+  ],
+  "tokens": {
+    "input": 0,
+    "output": 0
+  }
+}

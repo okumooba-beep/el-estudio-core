@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="es" class="light-boot">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
+    <meta name="theme-color" content="#120F0C" />
+    <meta name="description" content="LifeOS — un sistema operativo personal. Hoy es el único lugar donde puedes actuar." />
+    <!--
+      La app se abre como un lugar, no como una página: sin barra de
+      navegador, con su propio tono en la barra de estado (el color real
+      lo corrige src/lib/light/applyLight.ts antes del primer paint).
+    -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="LifeOS" />
+    <title>LifeOS</title>
+  </head>
+  <body>
+    <!--
+      La habitación (ver src/components/room/RoomBackground.tsx) ya existe
+      acá, en el HTML, antes de que React monte nada: mismas clases
+      .room-layer-* que ya pinta el motor de luz, sin script propio. Así
+      el espacio ya está iluminado con la hora real (applyLight corre
+      antes del primer paint) cuando la información recién empieza a
+      montarse dentro de #root — la habitación aparece primero, nunca al
+      revés (Sprint "Arrival").
+    -->
+    <div aria-hidden class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+      <div class="room-layer room-layer-window absolute inset-0"></div>
+      <div class="room-layer room-layer-lamp absolute inset-0"></div>
+      <div class="room-layer-grain absolute inset-0"></div>
+    </div>
+    <div id="root"></div>
+    <script type="module" src="/src/light-bootstrap.ts"></script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

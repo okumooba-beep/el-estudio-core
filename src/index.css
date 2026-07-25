@@ -1,0 +1,3113 @@
+@import "tailwindcss";
+
+/*
+  Design tokens. --canvas, --surface, --ink, --border, --accent y los
+  semánticos (--good/--warn/--critical) ya no son estáticos ni dependen de
+  prefers-color-scheme: los escribe en tiempo real el motor de luz
+  (src/packages/world/light) según la hora del día. Los valores de aquí son solo el
+  arranque, hasta que light-bootstrap.ts corre (antes del primer paint).
+  El @theme block mapea todo a la escala de Tailwind, así que utilidades
+  como `bg-surface` o `text-ink-dim` quedan sincronizadas automáticamente.
+
+  Son los tonos de noche a propósito (no los de mediodía): coinciden con
+  el ícono y con background_color del manifest (ver vite.config.ts), así
+  que el instante entre el splash del sistema operativo y el primer frame
+  real de la app nunca da un salto de oscuro a claro — solo cuando
+  light-bootstrap.ts corrige al valor real de la hora, casi siempre antes
+  de que el ojo note nada.
+*/
+
+:root {
+  --canvas: #120F0C;
+  --surface: #1B1612;
+  --surface-2: #241D17;
+  --border: #2E261F;
+  --ink: #EDE5DA;
+  --ink-dim: #B0A395;
+  --ink-faint: #786D60;
+  --accent: #CE965C;
+  --accent-soft: rgba(206, 150, 92, 0.12);
+  --good: #6FAE85;
+  --warn: #C99A55;
+  --critical: #C97A73;
+  --window-opacity: 0.3;
+  --lamp-opacity: 0.3;
+
+  --font-sans: -apple-system, "Segoe UI", system-ui, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", "Segoe UI Mono", "SF Mono", Consolas, monospace;
+
+  /*
+    Cada radio usa cuatro valores, no uno solo: un rectángulo con el
+    mismo número redondeado en las cuatro esquinas se lee como un
+    componente de UI (Implementación 07). La diferencia entre esquinas
+    es mínima a propósito — no busca notarse, busca que ningún borde
+    sea perfectamente circular.
+  */
+  --radius-sm: 7px 9px 8px 9px;
+  --radius-md: 12px 16px 13px 15px;
+  --radius-lg: 19px 25px 20px 24px;
+}
+
+@theme {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-ink: var(--ink);
+  --color-ink-dim: var(--ink-dim);
+  --color-ink-faint: var(--ink-faint);
+  --color-accent: var(--accent);
+  --color-good: var(--good);
+  --color-warn: var(--warn);
+  --color-critical: var(--critical);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+}
+
+html {
+  color-scheme: light dark;
+  background: var(--canvas);
+}
+
+/*
+  La habitación estaba apagada (hallazgo de Sprint "Framing the
+  Studio"): <body> no crea su propio contexto de apilamiento (no está
+  posicionado), así que su propio fondo pinta en el mismo contexto raíz
+  que la habitación (ver .room-layer-*, -z-10 en index.html) — y ahí,
+  un fondo sólido de <body> pinta POR ENCIMA de cualquier hijo con
+  z-index negativo, sin importar cuán atrás quede ese z-index. <html> ya
+  lleva el mismo tono (arriba) y ya evita cualquier destello blanco
+  antes del primer paint — el de acá era una copia redundante que
+  además tapaba en silencio la ventana y la lámpara detrás de todo:
+  ninguna de las dos se veía nunca, en ningún sprint anterior.
+*/
+body {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/*
+  Acercarse es una relación, no un gesto del objeto (Sprint "Shifting
+  Perspective", corrigiendo "Lean In"): el escritorio nunca sabe que
+  existe una persona mirándolo — :hover y :focus-within se leen sobre
+  .workspace solo como sensor, vía :has(), pero quien gana presencia es
+  <body>, la escena completa (habitación + escritorio + todo lo demás).
+  Así "acercarse" cambia la relación entre la persona y el lugar, nunca
+  el objeto mismo — el mismo asentamiento largo que ya usa .libreta al
+  soltarse, para que se sienta como la física del resto del lugar.
+
+  html[data-gaze="escritorio"] (Sprint "Crossing the Threshold") es el
+  primer cruce de umbral real: no un efecto nuevo, el mismo
+  asentamiento de arriba, ahora también con una causa que viene del
+  mundo (ver src/packages/world/world/gaze.ts + worldMap.ts) y no solo del DOM.
+  :hover y :focus-within siguen siendo sensores ambientes de cualquier
+  contacto con el escritorio; data-gaze en cambio solo se enciende
+  cuando la intención de habitar el Escritorio ya quedó decidida (al
+  entrar por la única puerta, Sprint "The Gaze") y se apaga al salir
+  de ella (el regreso) — hoy coinciden en el mismo instante porque
+  Escritorio es el único lugar navegable, pero son señales distintas:
+  una es presencia física, la otra es intención del mundo.
+*/
+body:has(.workspace:hover),
+body:has(.workspace:focus-within),
+html[data-gaze="escritorio"] body {
+  transform: scale(1.006);
+}
+
+#root {
+  position: relative;
+  min-height: 100dvh;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/*
+  La deriva de la luz es lenta y global (background-color, color): que se
+  note al volver, nunca mientras se mira. border-color y opacity quedan
+  fuera a propósito, para que el foco de un input o el estado de un botón
+  sigan respondiendo al instante — esas reglas, al ser más específicas
+  (una clase contra el universal `*`), ya ganan por su cuenta.
+*/
+*,
+*::before,
+*::after {
+  transition: background-color 60s linear, color 60s linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none;
+  }
+
+  body:has(.workspace:hover),
+  body:has(.workspace:focus-within),
+  html[data-gaze="escritorio"] body {
+    transform: none;
+  }
+}
+
+/*
+  El mundo ya estaba aquí al abrir (Implementación 09): la deriva de 60s
+  de arriba existe para que la luz cambie mientras la app permanece
+  abierta, nunca al abrirla. Sin esto, la primera vez que
+  src/light-bootstrap.ts escribe el valor real de la luz, la transición
+  universal de arriba lo tomaría como "un cambio" y lo animaría durante
+  60 segundos — la habitación parecería encenderse gradualmente en vez
+  de estar ya iluminada. <html> nace con esta clase; light-bootstrap.ts
+  la saca en el mismo tick en el que ya escribió la luz correcta, así
+  que ninguna transición llega a dispararse.
+*/
+html.light-boot,
+html.light-boot *,
+html.light-boot *::before,
+html.light-boot *::after {
+  transition: none !important;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/*
+  La habitación: una ventana fría y una lámpara cálida, siempre las dos
+  presentes, nunca una luz central. Solo su opacidad cambia con la hora
+  (ver src/packages/world/light) — la forma y posición del gradiente es fija.
+*/
+.room-layer {
+  transition: opacity 60s linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .room-layer {
+    transition: none;
+  }
+}
+
+/*
+  Sprint "Framing the Studio": la ventana deja de ser un resplandor sin
+  forma y pasa a ser arquitectura — un vano real con marco y parteluces,
+  no solo luz ambiente. Sigue viviendo en el mismo div de siempre
+  (.room-layer-window, sin cambios en index.html) y sigue reaccionando
+  solo a --window-opacity: la forma y la posición quedan fijas, igual
+  que antes, coherente con worldMap.ventana (x:17, y:15). El blur es la
+  distancia: la ventana es el plano más lejano del cuarto, nunca debe
+  competir en nitidez con la veta de madera del escritorio, el plano más
+  cercano al ojo.
+*/
+.room-layer-window {
+  background:
+    linear-gradient(180deg, rgba(215, 228, 255, 0.9), rgba(180, 202, 240, 0.4) 75%, transparent 100%),
+    radial-gradient(ellipse 70% 60% at 50% 35%, rgba(190, 210, 255, 0.55), transparent 70%);
+  background-repeat: no-repeat, no-repeat;
+  background-position:
+    6% 5%,
+    17% 15%;
+  background-size:
+    24% 44%,
+    61% 48%;
+  filter: blur(2.5px);
+  /*
+    x0.55 (hallazgo post-arreglo del bug de apilamiento de <body>, mismo
+    Sprint "Framing the Studio"): esta ventana nunca había sido visible en
+    la app real, así que este techo de brillo nunca se había puesto a
+    prueba contra el nav fijo de AppShell.tsx, que vive en el mismo ancho
+    de viewport (aside md:w-52, ver AppShell.tsx). Al mediodía real
+    (--window-opacity ≈0.63) el resplandor sin atenuar lavaba el contraste
+    de los links no activos (text-ink-faint) del nav — un lugar no debería
+    apagar la puerta por la que se entra a él. El resplandor sigue
+    reaccionando 1:1 a la hora real, solo que ahora nunca compite con la
+    legibilidad del resto de la casa.
+  */
+  opacity: calc(var(--window-opacity, 0.3) * 0.55);
+  animation: light-breathe-window 71s ease-in-out infinite;
+}
+
+.room-layer-window::before,
+.room-layer-window::after {
+  content: '';
+  position: absolute;
+  background: rgba(18, 15, 12, 0.4);
+}
+
+.room-layer-window::before {
+  left: 17.6%;
+  top: 5%;
+  width: 3px;
+  height: 44%;
+}
+
+.room-layer-window::after {
+  left: 6%;
+  top: 26%;
+  width: 24%;
+  height: 3px;
+}
+
+.room-layer-lamp {
+  background: radial-gradient(ellipse 66% 54% at 83% 87%, rgba(255, 190, 120, 0.85), transparent 60%);
+  /*
+    Build Core V1: la lámpara era la única luz sin distancia (sin blur,
+    a diferencia de la ventana — ver comentario de .room-layer-window).
+    Ahora que el cuarto pasa a ser solo atmósfera detrás de una
+    aplicación real, ninguna de las dos luces puede leerse más nítida
+    que el texto que vive encima.
+  */
+  filter: blur(3px);
+  opacity: var(--lamp-opacity, 0.3);
+  animation: light-breathe-lamp 56s ease-in-out infinite;
+}
+
+/*
+  La ventana nunca tapa la puerta (hallazgo de Sprint "Framing the
+  Studio", el mismo que la hizo visible por primera vez): AppShell.tsx
+  fija un nav a la izquierda (aside md:w-52, dentro de un contenedor
+  mx-auto max-w-6xl) desde md hacia arriba — el mismo lado frío del
+  cuarto donde vive esta ventana (17%, 15%). Antes esto era invisible
+  (ver el fix de <body> más arriba), así que este choque nunca se había
+  probado contra texto real. El recorte replica el borde real del aside
+  (mitad del margen sobrante del contenedor + su ancho + padding) para
+  que el resplandor exista pero nunca dentro de esa columna.
+*/
+@media (min-width: 768px) {
+  .room-layer-window {
+    clip-path: inset(0 0 0 calc(max(0px, (100vw - 72rem) / 2) + 15rem));
+  }
+}
+
+/*
+  El piso: sin esta capa el escritorio flotaba en un fondo sin
+  profundidad. Un solo degradado vertical, fijo, que oscurece el tercio
+  inferior de la escena — el mismo truco de "viñeta como profundidad"
+  que ya usan juegos 2.5D con fondos planos (Firewatch, Spirit City):
+  no es un piso dibujado, es la sombra que un piso real proyectaría.
+  Vive en #root::before (nunca en index.html) para no sumar un cuarto
+  div estático: el contenido real sigue por delante porque #root no
+  declara su propio z-index, así que este pseudo-elemento (-1) queda
+  entre la habitación (-10) y todo lo demás (auto).
+*/
+/*
+  Build Core V1: la misma técnica gana un tercer punto arriba —
+  antes Hoy era casi vacío, así que la ventana nunca competía con
+  texto real; el Core nuevo abre con el saludo justo donde el brillo de
+  la ventana es más fuerte. 8% es apenas perceptible (nunca un
+  "cabezal oscuro" nuevo), solo asienta el título antes de que la luz
+  real del día lo lave.
+*/
+#root::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.16) 0%, transparent 18%, transparent 62%, rgba(0, 0, 0, 0.32) 100%);
+}
+
+/*
+  No respira la habitación: respira la luz. La forma y la posición del
+  degradado quedan fijas — moverlas sería la habitación misma
+  desplazándose. Lo único que oscila es la intensidad, y tan poco y tan
+  despacio que no debería leerse como una animación (Implementación 09,
+  punto 07 — "si el usuario nota claramente la animación, es
+  demasiado"): períodos largos y no redondos (71s y 56s) para que nunca
+  coincidan ni se sientan cíclicos, y una amplitud mínima, como una nube
+  fina que apenas atenúa la ventana o una lámpara que tiembla un poco.
+  Cada keyframe multiplica la opacidad que ya escribe el motor de luz
+  (var(--window-opacity) / var(--lamp-opacity)) en vez de reemplazarla,
+  para que la respiración nunca contradiga la hora del día real.
+
+  Sprint "Ambient Life Engine v1.0" (window_light_shift, ver
+  ambientEvents.ts): la ventana no solo respira parejo — el pozo del
+  medio se estira (35%→68%) en vez de un único pico en 50%, para que se
+  sienta más como una nube real cruzando despacio que como un pulso
+  mecánico. Sigue siendo la misma animación de siempre, mismo nombre,
+  mismo elemento: solo más forma en el medio.
+*/
+@keyframes light-breathe-window {
+  0%,
+  100% {
+    opacity: var(--window-opacity, 0.3);
+  }
+  35% {
+    opacity: calc(var(--window-opacity, 0.3) * 0.97);
+  }
+  50% {
+    opacity: calc(var(--window-opacity, 0.3) * 0.92);
+  }
+  68% {
+    opacity: calc(var(--window-opacity, 0.3) * 0.96);
+  }
+}
+
+@keyframes light-breathe-lamp {
+  0%,
+  100% {
+    opacity: var(--lamp-opacity, 0.3);
+  }
+  50% {
+    opacity: calc(var(--lamp-opacity, 0.3) * 1.035);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .room-layer-window,
+  .room-layer-lamp {
+    animation: none;
+  }
+}
+
+/*
+  El escritorio: la superficie sobre la que descansan Idea, Misión,
+  Memoria y el resto (ver src/features/workspace/Workspace.tsx). No es
+  una tarjeta flotando sobre la habitación — por eso no tiene un borde
+  dibujado (ninguna mesa real tiene un contorno de 1px alrededor). Nace
+  del fondo por diferencia de profundidad, no por un límite marcado: el
+  tono viene de los mismos tokens que ya mueve el motor de luz, y el
+  resplandor de ::before reacciona a --window-opacity y --lamp-opacity:
+  un canal de datos entre la habitación y el escritorio, nunca de código.
+
+  La invitación silenciosa (Sprint "Invitation"): antes ::before solo
+  escuchaba --window-opacity, así que de noche — cuando la lámpara es la
+  luz real de la habitación — el escritorio se apagaba en vez de
+  encenderse. Ahora el resplandor cálido responde a --lamp-opacity y el
+  frío a --window-opacity, cada uno a la fuente que le corresponde: de
+  noche el escritorio queda visiblemente más tibio que el resto del
+  cuarto, como la única mesa con lámpara encendida en una habitación en
+  penumbra — nadie se lo dice, pero ahí es donde uno se sienta. La sombra
+  exterior también gana apenas más peso, para que el escritorio se lea
+  más cerca del ojo que la habitación, nunca al mismo plano.
+
+  Madera de verdad (Sprint "The Desk"): .material-wood (reservada para
+  este momento desde el Sprint 2.4) no se puede aplicar tal cual —
+  vive fija en dos tonos de nogal oscuro, pero acá adentro descansa
+  texto real (Idea, Misión) directo sobre la superficie, sin hoja de
+  papel propia debajo, y --ink se vuelve oscuro al mediodía porque
+  --surface se vuelve claro (ver src/packages/world/light/lightEngine.ts): el
+  contraste que ya garantiza esa pareja de tokens es lo único que
+  mantiene legible lo que se escribe acá a cualquier hora. Por eso la
+  veta se toma prestada de .material-wood (las mismas líneas repetidas
+  y el mismo resplandor cálido) pero el tono de base sigue siendo
+  color-mix(surface, canvas): la madera cambia de textura, nunca de
+  contraste con la tinta que ya vive arriba de ella.
+*/
+.workspace {
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  background:
+    repeating-linear-gradient(92deg, rgba(0, 0, 0, 0.05) 0px, rgba(0, 0, 0, 0.05) 1px, transparent 3px, transparent 9px),
+    radial-gradient(70% 45% at 22% 0%, rgba(255, 224, 180, 0.05), transparent 65%),
+    color-mix(in srgb, var(--surface) 58%, var(--canvas) 42%);
+  padding: 1.75rem 1.25rem;
+  /*
+    Sprint "Framing the Studio": el escritorio deja de ser una tarjeta
+    del alto de su contenido y pasa a ocupar la escena — min-height en
+    dvh, no en rem, para que sea el cuarto (el viewport) quien decide su
+    tamaño, nunca su propio contenido. HoyScreen.tsx ya lo vuelve flex-1
+    dentro de una columna con altura de escena; este mínimo es el piso
+    para cuando el contenido es corto.
+  */
+  min-height: min(58dvh, 32rem);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 34px 46px -34px rgba(0, 0, 0, 0.12),
+    inset 0 -10px 16px -12px rgba(0, 0, 0, 0.3),
+    0 28px 56px -30px rgba(0, 0, 0, 0.32);
+  transition:
+    box-shadow 60s linear,
+    background-color 60s linear;
+}
+
+@media (min-width: 768px) {
+  .workspace {
+    padding: 3.25rem 2.5rem;
+    min-height: min(64dvh, 38rem);
+  }
+}
+
+.workspace::before,
+.workspace::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.workspace::before {
+  background:
+    linear-gradient(180deg, rgba(255, 205, 140, 0.16), transparent 14%),
+    radial-gradient(ellipse 65% 45% at 18% 0%, rgba(255, 255, 255, 0.55), transparent 60%),
+    radial-gradient(ellipse 55% 45% at 88% 100%, rgba(255, 190, 120, 0.14), transparent 65%);
+  opacity: calc(0.3 + var(--window-opacity, 0.3) * 0.25 + var(--lamp-opacity, 0.3) * 0.35);
+  transition: opacity 60s linear;
+}
+
+.workspace::after {
+  opacity: 0.05;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='w2'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9 0.06' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23w2)'/%3E%3C/svg%3E");
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace,
+  .workspace::before {
+    transition: none;
+  }
+}
+
+/*
+  Grano casi imperceptible: rompe la planitud matemática del degradado
+  para que la habitación no se sienta renderizada. Nada aleatorio en
+  tiempo de ejecución — es una textura fija, solo su opacidad es baja
+  a propósito (~3%).
+*/
+.room-layer-grain {
+  opacity: 0.035;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/*
+  La primera libreta: un objeto, no un botón de UI. Su superficie ahora
+  es .material-leather (Sprint 2.4, punto 05) — acá solo queda lo que
+  es de ESTA libreta, no del cuero en general: tamaño, posición,
+  reposo, y cómo reacciona al toque. La rotación de reposo es fija y
+  deliberada — una libreta apoyada, no alineada a una grilla — nunca
+  animada ni aleatoria.
+
+  El clic no la "presiona" como un botón: un empuje real la desplaza
+  apenas unos milímetros y la inclina un poco, como si un dedo la
+  hubiera corrido — nunca escala ni rebota. Por eso el "vuelto" (al
+  soltar la clase .libreta-pressed) usa una curva de desaceleración
+  larga (fricción) mientras el gesto de entrada es corto y directo — un
+  objeto real reacciona rápido y se asienta despacio, nunca al revés.
+*/
+.libreta {
+  position: absolute;
+  /* Sprint "Framing the Studio": +40% para seguir siendo del tamaño de la mesa que crece. */
+  width: 5rem;
+  height: 6.8rem;
+  padding: 0;
+  border: none;
+  border-radius: 2px 6px 7px 3px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    inset 0 -12px 16px -12px rgba(0, 0, 0, 0.6);
+  transform: rotate(-2.4deg);
+  cursor: pointer;
+  transition: transform 340ms cubic-bezier(0.16, 1, 0.3, 1), filter 200ms ease;
+}
+
+.libreta:hover {
+  filter: brightness(1.08);
+}
+
+.libreta:active,
+.libreta.libreta-pressed {
+  transform: rotate(-1.7deg) translate(1px, 1.5px);
+  transition: transform 120ms ease-out, filter 200ms ease;
+}
+
+/*
+  La costura: el cuero no tiene páginas visibles, tiene un pespunte —
+  puntadas claras muy pequeñas cerca del borde izquierdo, como el
+  hilo de una encuadernación real.
+*/
+.libreta-seam {
+  position: absolute;
+  inset: 0.4rem auto 0.4rem 0.34rem;
+  width: 2px;
+  border-radius: 1px;
+  background: repeating-linear-gradient(
+    180deg,
+    rgba(230, 210, 180, 0.4) 0,
+    rgba(230, 210, 180, 0.4) 2px,
+    transparent 2px,
+    transparent 7px
+  );
+  opacity: 0.5;
+}
+
+/*
+  Lomo con tensión (Sprint 2.2, punto 08): la banda elástica tira
+  siempre del mismo lado, y el cuero cerca de ese punto se ve apenas
+  comprimido — un filo de luz fino donde el material se estira, una
+  sombra angosta donde se pliega contra sí mismo. Estático, nunca
+  animado: es tensión estructural real, no un gesto de interacción.
+*/
+.libreta-spine {
+  position: absolute;
+  left: 37%;
+  top: 6%;
+  bottom: 6%;
+  width: 2px;
+  border-radius: 1px;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.32), rgba(255, 240, 220, 0.14) 45%, rgba(0, 0, 0, 0.28));
+  opacity: 0.6;
+}
+
+/*
+  La banda elástica que cierra la libreta: más oscura que el cuero,
+  con un filo de luz a cada lado que sugiere la tensión del elástico.
+*/
+.libreta-band {
+  position: absolute;
+  left: 40%;
+  top: -2%;
+  bottom: -2%;
+  width: 11%;
+  border-radius: 1px;
+  background: linear-gradient(90deg, rgba(220, 200, 180, 0.12), rgba(0, 0, 0, 0.55) 20%, rgba(0, 0, 0, 0.4) 80%, rgba(220, 200, 180, 0.1));
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+}
+
+/*
+  365 días: una cinta marcadora que ya encontró su lugar afuera de las
+  páginas y quedó asomando (Sprint 2.0, punto 07/08) — la primera
+  History Mark de la libreta que agrega un elemento nuevo en vez de
+  solo intensificar uno que ya existía.
+*/
+.libreta-ribbon {
+  position: absolute;
+  left: 58%;
+  bottom: -0.4rem;
+  width: 3px;
+  height: 0.55rem;
+  border-radius: 0 0 1px 1px;
+  background: linear-gradient(180deg, rgba(150, 32, 28, 0.6), rgba(88, 16, 14, 0.7));
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
+}
+
+/*
+  Desgaste real, no decorativo (Sprint 2.0, punto 07/08): día 1 el
+  cuero está perfecto (opacity 0) — esta capa entera es una marca
+  History Mark, no una textura de base. Cada umbral (ver
+  src/lib/room/historyMarks.ts, LIBRETA_THRESHOLDS) la hace más
+  visible, nunca al revés: una vez ganada, una marca no retrocede.
+  La transición es deliberadamente larga (misma escala que la luz, ver
+  la regla global 60s de este archivo) — el desgaste tampoco debería
+  poder verse "aparecer".
+*/
+.libreta-wear {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  mix-blend-mode: soft-light;
+  opacity: 0;
+  transition: opacity 60s linear;
+  background:
+    radial-gradient(18px 18px at 100% 100%, rgba(214, 186, 150, 0.4), transparent 70%),
+    radial-gradient(12px 12px at 100% 0%, rgba(214, 186, 150, 0.18), transparent 70%),
+    radial-gradient(10px 10px at 0% 100%, rgba(214, 186, 150, 0.14), transparent 70%);
+}
+
+/* 30 días: "apenas una esquina suavizada" (Sprint 2.0, punto 07). */
+.libreta-mark-esquina .libreta-wear {
+  opacity: 0.4;
+}
+
+/* 90 días: marcas de dónde se agarra siempre de la misma forma. */
+.libreta-mark-agarre .libreta-wear {
+  opacity: 0.65;
+}
+
+/* 180 días: el cuero ya perdió brillo de forma pareja. */
+.libreta-mark-lomo .libreta-wear {
+  opacity: 0.9;
+}
+
+/*
+  Un pliegue, no un rasguño: el cuero de tapa dura se dobla siempre en
+  el mismo lugar cuando se lo sostiene años seguidos — una línea ancha
+  y difusa, nunca nítida, apenas más clara que el cuero de alrededor.
+  Es lo que distingue "gastada" de "sucia" (Implementación 09, punto 06).
+  Recién aparece a los 180 días reales (Sprint 2.0, punto 07: "el lomo
+  comienza a doblarse") — antes de eso el lomo todavía es recto.
+*/
+.libreta-crease {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  opacity: 0;
+  transition: opacity 60s linear;
+  background: linear-gradient(
+    100deg,
+    transparent 38%,
+    rgba(0, 0, 0, 0.22) 47%,
+    rgba(255, 240, 220, 0.1) 50%,
+    transparent 58%
+  );
+}
+
+.libreta-mark-lomo .libreta-crease {
+  opacity: 0.5;
+}
+
+/*
+  El canto de páginas comprimidas del lado derecho (Sprint 2.0, punto
+  06: "fotografiada, no ilustrada") — no una única línea de papel, sino
+  muchas hojas finas prensadas entre sí, sugeridas con una banda
+  repetida en vez de un degradado liso.
+*/
+.libreta-pages-edge {
+  position: absolute;
+  right: -1px;
+  top: 7%;
+  bottom: 7%;
+  width: 2px;
+  border-radius: 1px;
+  opacity: 0.55;
+  background:
+    repeating-linear-gradient(
+      180deg,
+      rgba(224, 214, 194, 0.55) 0,
+      rgba(224, 214, 194, 0.55) 1px,
+      rgba(180, 168, 148, 0.3) 1px,
+      rgba(180, 168, 148, 0.3) 2px
+    ),
+    linear-gradient(180deg, rgba(224, 214, 194, 0.5), rgba(224, 214, 194, 0.22) 50%, rgba(224, 214, 194, 0.5));
+}
+
+/*
+  180 días: "algunas hojas ya no están perfectamente alineadas" (Sprint
+  2.0, punto 07) — el canto se vuelve un poco más irregular, nunca
+  desprolijo.
+*/
+.libreta-mark-lomo .libreta-pages-edge {
+  right: -1.5px;
+  width: 2.5px;
+  opacity: 0.7;
+}
+
+.libreta-light {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.35), transparent 55%);
+  opacity: calc(var(--lamp-opacity, 0.3) * 0.55);
+  transition: opacity 200ms ease;
+}
+
+.libreta:focus-visible .libreta-light {
+  opacity: calc(var(--lamp-opacity, 0.3) * 0.55 + 0.2);
+}
+
+/*
+  Sombra de contacto, no de tarjeta: apenas se despega del borde inferior
+  del libro y nunca se mueve ni crece con el hover — un objeto apoyado no
+  se levanta al mirarlo. Lo único que responde es cuánto se nota, como si
+  la luz de al lado se corriera un poco.
+*/
+.libreta-shadow {
+  position: absolute;
+  left: 14%;
+  right: 10%;
+  bottom: -0.4rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(15, 10, 5, 0.4), transparent 70%);
+  filter: blur(1.5px);
+  opacity: 0.82;
+  transition: opacity 200ms ease;
+}
+
+.libreta:hover .libreta-shadow,
+.libreta:focus-visible .libreta-shadow {
+  opacity: 1;
+}
+
+/*
+  Entreabierta (Sprint "Room Memory v1.0"): si el Diario quedó abierto la
+  última vez, esta libreta cerrada no vuelve a un descanso perfecto — la
+  banda elástica se ve floja, como si ya no cerrara del todo, y el canto
+  de hojas se nota apenas más ancho y más claro, como si las páginas no
+  hubieran terminado de asentarse. Ninguna animación: es la pose de
+  reposo la que cambió, no un gesto que alguien vería ocurrir.
+*/
+.libreta--ajar .libreta-band {
+  opacity: 0.4;
+  transform: translateX(2px);
+}
+
+.libreta--ajar .libreta-pages-edge {
+  right: -2px;
+  width: 3.5px;
+  opacity: 0.85;
+}
+
+/*
+  La planta (Sprint "The First Five Seconds"): un objeto vivo, no
+  interactivo — nunca un botón, nunca abre nada. Existe para que la
+  habitación se sienta conectada con algo que crece con su propio
+  ritmo, la misma idea que ya describe Presence Engine para "Objetos
+  vivos". Cada hoja se mece por separado y despacísimo (rango de apenas
+  ~1.2deg, duraciones largas y no redondas, igual que .room-layer):
+  si alguien nota conscientemente el movimiento, ya es demasiado.
+*/
+.planta {
+  position: absolute;
+  /* Sprint "Framing the Studio": +40% para seguir siendo del tamaño de la mesa que crece. */
+  width: 3.6rem;
+  height: 4.7rem;
+  transform-origin: 50% 100%;
+  animation: planta-sway 44s ease-in-out infinite;
+}
+
+.planta-pot {
+  position: absolute;
+  left: 22%;
+  right: 22%;
+  bottom: 0;
+  height: 38%;
+  border-radius: 2px 2px 5px 5px;
+  background: linear-gradient(180deg, rgba(150, 92, 58, 0.92), rgba(104, 62, 37, 0.95));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -6px 8px -6px rgba(0, 0, 0, 0.5);
+}
+
+.planta-leaf {
+  position: absolute;
+  bottom: 32%;
+  left: 50%;
+  width: 0.55rem;
+  border-radius: 50% 50% 50% 0%;
+  background: linear-gradient(200deg, rgba(120, 148, 106, 0.88), rgba(62, 90, 56, 0.92));
+  transform: translateX(-50%) rotate(var(--leaf-angle));
+  transform-origin: 50% 100%;
+  animation-name: planta-leaf-sway;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+.planta-leaf-1 {
+  --leaf-angle: -19deg;
+  height: 2.6rem;
+  animation-duration: 51s;
+}
+
+.planta-leaf-2 {
+  --leaf-angle: 3deg;
+  height: 2.9rem;
+  animation-duration: 63s;
+  animation-direction: reverse;
+}
+
+.planta-leaf-3 {
+  --leaf-angle: 23deg;
+  height: 2.3rem;
+  animation-duration: 58s;
+}
+
+@keyframes planta-sway {
+  0%,
+  100% {
+    transform: rotate(-0.6deg);
+  }
+  50% {
+    transform: rotate(0.6deg);
+  }
+}
+
+@keyframes planta-leaf-sway {
+  0%,
+  100% {
+    transform: translateX(-50%) rotate(var(--leaf-angle));
+  }
+  50% {
+    transform: translateX(-50%) rotate(calc(var(--leaf-angle) + 1.2deg));
+  }
+}
+
+.planta-shadow {
+  position: absolute;
+  left: 18%;
+  right: 18%;
+  bottom: -0.3rem;
+  height: 0.35rem;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(15, 10, 5, 0.35), transparent 70%);
+  filter: blur(1.5px);
+  opacity: 0.75;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .planta,
+  .planta-leaf {
+    animation: none;
+  }
+}
+
+/*
+  Sprint "Desk Experience P0" (P0.1): la taza — a diferencia de la
+  planta, no se mece (una taza no tiene ritmo propio) — solo el vapor
+  se mueve, altísimo y lento, participando del Ambient Life Engine
+  (taza-vapor-rise, ver ambientEvents.ts) con el mismo criterio que
+  .planta-leaf: si el movimiento se nota, ya es demasiado. No existe
+  para llamar la atención — existe para que el escritorio comunique
+  "alguien se sienta acá" antes de que se lea una sola palabra.
+*/
+.taza {
+  position: absolute;
+  width: 1.5rem;
+  height: 1.7rem;
+}
+
+.taza-cuerpo {
+  position: absolute;
+  left: 0;
+  right: 0.35rem;
+  bottom: 0;
+  height: 68%;
+  border-radius: 1px 1px 3px 3px;
+  background: linear-gradient(180deg, rgba(233, 227, 216, 0.95), rgba(198, 190, 174, 0.92));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -4px 5px -4px rgba(0, 0, 0, 0.35);
+}
+
+.taza-asa {
+  position: absolute;
+  right: -0.1rem;
+  bottom: 24%;
+  width: 0.45rem;
+  height: 0.55rem;
+  border: 2px solid rgba(198, 190, 174, 0.9);
+  border-left: none;
+  border-radius: 0 50% 50% 0;
+}
+
+.taza-vapor {
+  position: absolute;
+  bottom: 68%;
+  width: 2px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+  opacity: 0;
+  animation-name: taza-vapor-rise;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+.taza-vapor-1 {
+  left: 28%;
+  height: 0.9rem;
+  animation-duration: 9s;
+}
+
+.taza-vapor-2 {
+  left: 55%;
+  height: 0.7rem;
+  animation-duration: 11s;
+  animation-delay: -4s;
+}
+
+@keyframes taza-vapor-rise {
+  0%,
+  100% {
+    opacity: 0;
+    transform: translateY(0) scaleY(0.85);
+  }
+  35% {
+    opacity: 0.14;
+  }
+  75% {
+    opacity: 0;
+    transform: translateY(-0.6rem) scaleY(1.15);
+  }
+}
+
+.taza-shadow {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: -0.15rem;
+  height: 0.2rem;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(15, 10, 5, 0.3), transparent 70%);
+  filter: blur(1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .taza-vapor {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+/*
+  El polvo (Sprint "The First Five Seconds"): motas casi invisibles que
+  solo se notan porque cruzan el resplandor de la ventana. Cada una
+  aparece y se desvanece de nuevo — nunca queda fija ni se acumula — con
+  una deriva mínima, así que ninguna se lee como "una partícula que se
+  mueve" sino como polvo que la luz revela por un instante.
+*/
+.ambient-particle {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 240, 210, 0.9);
+  opacity: 0;
+  animation-name: ambient-particle-drift;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+@keyframes ambient-particle-drift {
+  0%,
+  100% {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+  50% {
+    opacity: var(--mote-max-opacity, 0.1);
+    transform: translate(5px, -9px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ambient-particles {
+    display: none;
+  }
+}
+
+/*
+  La hoja que queda apoyada: la última Idea nunca desaparece al volver
+  a abrir la aplicación (Implementación 08) — se lee como algo que ya
+  estaba sobre el escritorio, no como un registro dentro de una lista.
+  Sin borde, con una leve rotación fija (la misma convención que la
+  libreta) y una sombra de contacto, nunca de tarjeta.
+*/
+.idea-hoja {
+  position: relative;
+  margin: 0;
+  padding: 0.8rem 1rem;
+  box-shadow: 0 8px 14px -12px rgba(0, 0, 0, 0.5);
+  color: var(--ink-dim);
+  font-size: 14px;
+  line-height: 1.55;
+  transform: rotate(-0.5deg);
+  transition: transform 420ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.idea-hoja-time {
+  display: block;
+  margin-top: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  color: var(--ink-faint);
+}
+
+/*
+  La libreta se abre apenas para recibir la pregunta (Sprint 2.0, punto
+  01): un giro mínimo, nunca una tarjeta que se levanta.
+*/
+.idea-hoja-open {
+  transform: rotate(-1.1deg) translateY(-1px);
+}
+
+/*
+  Una misión terminada (Sprint 3.2, prioridad 6): no desaparece de
+  golpe, queda apagada un poco — como un papel al que ya no hay que
+  volver — con un check chico al lado del texto. Nunca una barra de
+  progreso, nunca una recompensa: solo evidencia.
+*/
+.idea-hoja-completed {
+  opacity: 0.6;
+}
+
+.idea-hoja-check {
+  margin-right: 0.35rem;
+  color: var(--ink-dim);
+}
+
+/*
+  "¿Dónde debería vivir esto?" — nunca un modal, nunca botones con
+  borde: palabras en voz baja que aparecen debajo de la hoja, con el
+  mismo peso visual que el resto del escritorio.
+*/
+.idea-destinos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.9rem;
+  padding: 0.65rem 0.2rem 0.1rem;
+  animation: idea-destinos-in 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes idea-destinos-in {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.idea-destino {
+  padding: 0.15rem 0;
+  border: none;
+  background: none;
+  font-size: 12.5px;
+  color: var(--ink-faint);
+  cursor: pointer;
+  transition: color 150ms ease;
+}
+
+.idea-destino:hover,
+.idea-destino:focus-visible {
+  color: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .idea-destinos {
+    animation: none;
+  }
+}
+
+/*
+  La propuesta del Estudio (Sprint 2.1, punto 02): una sola línea en
+  voz baja, sin animación propia (punto 11 — nada de esto es nuevo,
+  solo texto quieto). El destino es lo único que invita a tocar —
+  subrayado apenas, nunca un botón con borde.
+*/
+.idea-proposal {
+  margin: 0.5rem 0 0;
+  font-size: 12.5px;
+  color: var(--ink-faint);
+}
+
+.idea-proposal-target {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: var(--ink-dim);
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 255, 255, 0.18);
+  text-underline-offset: 2px;
+  cursor: pointer;
+  transition: color 150ms ease;
+}
+
+.idea-proposal-target:hover,
+.idea-proposal-target:focus-visible {
+  color: var(--ink);
+}
+
+/*
+  El Escritorio apila, no lista (Sprint 2.2, punto 03 — cierre de la
+  auditoría del Sprint 2.1). Hasta 3 hojas más viejas siguen detrás de
+  la activa, cada una del mismo tamaño que ella pero corrida hacia
+  abajo y rotada un poco más — por eso solo se les nota el borde: el
+  resto queda tapado por la hoja de encima, como un escritorio real.
+  Sin contador, sin numeración, sin scroll: las que no entran acá
+  siguen viviendo en IndexedDB exactamente igual.
+*/
+.desk-paper-stack {
+  position: relative;
+  margin-bottom: 0.85rem;
+}
+
+.desk-paper-sheet {
+  position: absolute;
+  inset: 0;
+  border: none;
+  padding: 0;
+  box-shadow: 0 6px 10px -10px rgba(0, 0, 0, 0.5);
+  transform: translateY(calc(var(--stack-i) * 0.3rem)) rotate(calc(var(--stack-i) * -0.6deg));
+  z-index: calc(2 - var(--stack-i));
+  cursor: pointer;
+}
+
+.desk-paper-sheet-active {
+  position: relative;
+  z-index: 3;
+}
+
+/*
+  BIBLIOTECA DE MATERIALES (Sprint 2.4, punto 01) — el lenguaje físico
+  del Estudio. Cada .material-* de acá abajo responde las mismas seis
+  preguntas en src/packages/world/studio/materials.ts (luz, envejecimiento,
+  sombra, foco, tiempo, uso) y ninguno fija `position`: eso es siempre
+  del mueble que lo usa (.libreta, .tablero, .chincheta), nunca del
+  material. Ningún objeto nuevo debería escribir su propio fondo — debe
+  nacer desde uno de estos, o ampliar esta biblioteca si de verdad hace
+  falta un material nuevo.
+*/
+
+/*
+  Corcho (puntos 01, 03 y 07): nunca un marrón plano ni un patrón de
+  manchas repetido. Una base cálida y oscura, un puñado de zonas apenas
+  más claras u oscuras que un corcho real siempre tiene, y grano fino
+  con la misma técnica de feTurbulence que .room-layer-grain — pero con
+  su propia frecuencia y octavas, para que no se sienta copiado. Ya no
+  fija su propia posición (punto 03: debe poder vivir en un tablero, en
+  una caja, en una carpeta, en cualquier objeto futuro sin arrastrar
+  supuestos de layout).
+*/
+.material-cork {
+  background:
+    radial-gradient(55% 45% at 18% 12%, rgba(255, 228, 190, 0.05), transparent 62%),
+    radial-gradient(48% 42% at 82% 78%, rgba(0, 0, 0, 0.2), transparent 65%),
+    radial-gradient(38% 32% at 68% 8%, rgba(255, 228, 190, 0.04), transparent 60%),
+    radial-gradient(30% 40% at 8% 82%, rgba(0, 0, 0, 0.14), transparent 60%),
+    linear-gradient(155deg, #4c3b28 0%, #3d3020 55%, #332818 100%);
+}
+
+.material-cork::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0.5;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='c'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.78' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23c)'/%3E%3C/svg%3E");
+}
+
+/*
+  Metal (puntos 01, 06 y 07): ya no es solo la chincheta — cualquier
+  objeto metálico futuro (Archivador, clips, bisagras, portalápices)
+  debe poder vestir esta misma clase, tenga la forma que tenga. Por eso
+  el brillo es direccional (una veta clara arriba a la izquierda, fría
+  hacia el borde opuesto) en vez de un único punto centrado: un punto
+  centrado solo lee bien en un círculo pequeño, una veta diagonal lee
+  bien en cualquier forma.
+*/
+.material-metal {
+  background:
+    linear-gradient(115deg, rgba(255, 255, 255, 0.75) 0%, transparent 32%),
+    radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.55), transparent 45%),
+    linear-gradient(155deg, #c7cbd1 0%, #9a9fa7 45%, #55595f 100%);
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.55), inset 0 -1px 1px rgba(0, 0, 0, 0.35);
+}
+
+/*
+  Papel (punto 02): dejó de ser un div con un solo degradado. Ahora
+  tiene variación tonal en dos esquinas distintas (nunca un único
+  degradado limpio de punta a punta), un borde apenas irregular — nunca
+  perfectamente redondeado en las cuatro esquinas por igual — y fibra
+  finísima con feTurbulence a una opacidad mucho más baja que el corcho
+  o el cuero: el papel es la superficie más liviana de la biblioteca,
+  su textura tiene que notarse mucho menos que la de un objeto pesado.
+
+  Sprint 3.3, tarea 5: usaba --surface-2, un gris azulado pensado para
+  paneles de interfaz — por eso la hoja leía a tarjeta, no a objeto. El
+  papel es la única superficie clara del Estudio (una hoja bajo la luz
+  de la lámpara, no un panel más del cuarto oscuro), así que necesita
+  su propio tono cálido y su propia tinta oscura — nunca --ink-dim,
+  pensada para texto claro sobre fondos oscuros.
+*/
+.material-paper {
+  --paper-ink: #3c3327;
+  --paper-ink-faint: #7d6e56;
+  --paper-border: rgba(60, 51, 39, 0.16);
+  border-radius: 2px 4px 3px 5px;
+  color: var(--paper-ink);
+  background:
+    radial-gradient(38% 30% at 22% 18%, rgba(255, 255, 255, 0.5), transparent 65%),
+    radial-gradient(30% 26% at 78% 84%, rgba(0, 0, 0, 0.05), transparent 65%),
+    linear-gradient(155deg, rgba(255, 255, 255, 0.3), transparent 60%),
+    #e5d9c0;
+}
+
+.material-paper .idea-hoja-time,
+.material-paper .idea-hoja-check {
+  color: var(--paper-ink-faint);
+}
+
+.material-paper::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0.06;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cfilter id='pf'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23pf)'/%3E%3C/svg%3E");
+}
+
+/*
+  Madera (punto 04): callada a propósito — sin barniz, sin brillo
+  direccional fuerte, nada que la haga sentir "bonita". La veta se
+  arma con dos técnicas nunca usadas juntas antes en esta biblioteca:
+  bandas repetidas casi imperceptibles para las líneas de la veta, y
+  una textura de ruido anisotrópica (baseFrequency con dos valores
+  distintos en x/y) para que el grano se sienta estirado en una
+  dirección en vez de moteado como el corcho. Sin mueble real todavía
+  que la use (Escritorio, Mesa de Análisis y Biblioteca la usarán más
+  adelante) — existe primero como material, después como superficie.
+*/
+.material-wood {
+  background:
+    repeating-linear-gradient(
+      92deg,
+      rgba(0, 0, 0, 0.05) 0px,
+      rgba(0, 0, 0, 0.05) 1px,
+      transparent 3px,
+      transparent 9px
+    ),
+    radial-gradient(70% 55% at 30% 20%, rgba(255, 224, 180, 0.05), transparent 65%),
+    linear-gradient(100deg, #5a4430 0%, #4a3826 50%, #3c2e1f 100%);
+}
+
+.material-wood::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0.12;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='w'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9 0.06' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23w)'/%3E%3C/svg%3E");
+}
+
+/*
+  Cuero (punto 05 — el más importante de este sprint): la libreta
+  seguía pareciendo CSS con cinco capas de degradado. La respuesta no
+  fue agregar una sexta — fue sacar las dos que menos aportaban: dos
+  brillos blancos fabricados en esquinas distintas que ningún cuero
+  real tiene a la vez. Queda un único origen de luz (el degradado
+  direccional) más una mancha — la misma "imperfección de nacimiento"
+  del Sprint 2.2, ahora parte del material y no un detalle exclusivo de
+  la libreta — y el grano real, sin tocar. Pensar como fotógrafo: una
+  fuente de luz, no cuatro.
+*/
+.material-leather {
+  background:
+    radial-gradient(6px 4px at 64% 26%, rgba(0, 0, 0, 0.16), transparent 75%),
+    linear-gradient(158deg, #5c4634 0%, #46362a 45%, #2c2119 100%);
+}
+
+.material-leather::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0.4;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Cfilter id='l'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23l)'/%3E%3C/svg%3E");
+}
+
+.chincheta {
+  position: absolute;
+  top: -0.32rem;
+  left: var(--chincheta-x, 1.1rem);
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  transform: rotate(-6deg);
+  pointer-events: none;
+}
+
+/*
+  El Tablero de Corcho: el primer mueble real del Estudio además del
+  Escritorio (Sprint 2.3). No es una lista con fondo marrón — por eso
+  no hay bordes duros ni tarjetas, solo la misma hoja (.idea-hoja, ver
+  src/modules/work-table/IdeaSheet.tsx, sin ningún cambio) clavada con una
+  chincheta. El orden es el que ya trae la lista de Ideas — más
+  reciente arriba, más vieja abajo — nunca una prioridad nueva.
+
+  Sprint 3.3, tarea 4: dejó de ocupar la pantalla entera (era
+  min-height: 70dvh, borde a borde). La habitación (RoomBackground) ya
+  vive detrás de cada ruta — acá solo hacía falta dejar de taparla:
+  ahora el corcho es un objeto de tamaño acotado, centrado, con la
+  habitación respirando alrededor, como algo colgado en la pared.
+*/
+.tablero {
+  position: relative;
+  max-width: 30rem;
+  margin-inline: auto;
+  padding: 1.75rem 1.5rem 2.25rem;
+  border-radius: var(--radius-lg);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.3),
+    inset 0 40px 60px -46px rgba(0, 0, 0, 0.6),
+    0 24px 44px -34px rgba(0, 0, 0, 0.55);
+}
+
+.tablero-hojas {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  max-width: 30rem;
+}
+
+.tablero-hoja-wrap {
+  position: relative;
+  transform: rotate(var(--rotation, 0deg)) translate(var(--offset-x, 0px), var(--offset-y, 0px));
+}
+
+.tablero-hoja-wrap .idea-hoja {
+  margin: 0;
+}
+
+.tablero-hoja-meta {
+  margin: 0.4rem 0.3rem 0;
+  font-size: 12.5px;
+  color: var(--ink-faint);
+}
+
+/*
+  La Mesa de Análisis (Sprint 3.5): Trading deja de vivir en hojas
+  sueltas. .material-wood ya estaba reservada para esta mesa desde el
+  Sprint 2.4 ("Escritorio, Mesa de Análisis y Biblioteca la usarán más
+  adelante") — hoy es ese "más adelante". Cada operación es un
+  expediente de .material-paper que descansa encima, con la misma
+  física de dispersión que ya usa el Tablero (getSheetPlacement, sin
+  reescribir nada) en vez de una lista prolija.
+*/
+.mesa-analisis {
+  position: relative;
+  padding: 1.75rem 1.5rem 2.25rem;
+  border-radius: var(--radius-lg);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.3),
+    inset 0 40px 60px -46px rgba(0, 0, 0, 0.6),
+    0 24px 44px -34px rgba(0, 0, 0, 0.55);
+}
+
+.mesa-expedientes {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.expediente-wrap {
+  position: relative;
+  transform: rotate(var(--rotation, 0deg)) translate(var(--offset-x, 0px), var(--offset-y, 0px));
+}
+
+.expediente {
+  position: relative;
+  margin: 0;
+  padding: 0.85rem 1.05rem;
+  box-shadow: 0 8px 14px -12px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+  transition: transform 420ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* La misma convención que .idea-hoja-open: calmar el giro al abrir, nunca levantar una tarjeta. */
+.expediente-open {
+  transform: rotate(-0.4deg) translateY(-1px);
+  cursor: default;
+}
+
+.expediente-resumen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.3rem 0.7rem;
+  font-size: 14px;
+}
+
+.expediente-resultado-usd {
+  color: var(--paper-ink-faint);
+}
+
+.expediente-fecha {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  color: var(--paper-ink-faint);
+}
+
+.expediente-detalle {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  margin-top: 1rem;
+  cursor: default;
+}
+
+.expediente-bloque {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--paper-border);
+}
+
+.expediente-bloque:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.expediente-bloque-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--paper-ink-faint);
+}
+
+.expediente-faint {
+  color: var(--paper-ink-faint);
+}
+
+.expediente-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+/* Sprint 3.6.1, parte 4: la fila entera es clickeable, no solo el cuadrado. */
+.checklist-fila {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  font-size: 13.5px;
+  line-height: 1.5;
+  text-align: left;
+  color: var(--paper-ink);
+  cursor: pointer;
+}
+
+.checklist-fila span:first-child {
+  font-family: var(--font-mono);
+  color: var(--paper-ink-faint);
+}
+
+.checklist-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.checklist-editor-fila {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.checklist-editor-input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--paper-border);
+  padding-bottom: 0.2rem;
+  font-size: 13.5px;
+  color: var(--paper-ink);
+  outline: none;
+}
+
+.expediente-plantilla {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 1rem 1.1rem;
+  border-radius: 3px;
+}
+
+/* Sprint 3.6.1, parte 1: instrumento fijo por chips, nunca texto libre. */
+.expediente-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.expediente-chip {
+  padding: 0.25rem 0.65rem;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  letter-spacing: 0.03em;
+  color: var(--paper-ink-faint);
+  border: 1px solid var(--paper-border);
+  border-radius: 3px;
+  transition: color 150ms, border-color 150ms;
+}
+
+.expediente-chip-activo {
+  color: var(--paper-ink);
+  border-color: var(--paper-ink-faint);
+}
+
+/* Sprint 3.6.1, parte 1: lado como radio real — una sola marca activa. */
+.expediente-radios {
+  display: flex;
+  gap: 1.25rem;
+}
+
+.expediente-radio {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 13.5px;
+  color: var(--paper-ink-faint);
+}
+
+.expediente-radio-marca {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid var(--paper-ink-faint);
+}
+
+.expediente-radio-marca-activa {
+  background: var(--paper-ink);
+  border-color: var(--paper-ink);
+}
+
+.expediente-textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 3.4rem;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: inherit;
+}
+
+.expediente-imagen {
+  display: block;
+  max-width: 100%;
+  border-radius: var(--radius-sm);
+}
+
+/*
+ * Sprint 3.6 — Hábitos deja de ser una lista de hojas: cada hábito
+ * pasa a mostrar su registro semanal de círculos, todo CSS, sin
+ * imágenes. Warm paper tokens (--paper-ink, --paper-ink-faint), nunca
+ * gris frío ni blanco puro (parte 10).
+ */
+.habito-lista {
+  display: flex;
+  flex-direction: column;
+}
+
+.habito-registro {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.9rem 0;
+  border-bottom: 1px solid var(--paper-border, rgba(60, 51, 39, 0.16));
+}
+
+.habito-registro:last-child {
+  border-bottom: none;
+}
+
+.habito-semana {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.habito-dia {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.3rem 0;
+  color: var(--paper-ink-faint, #7d6e56);
+  border-radius: 3px;
+  transition: color 150ms, background-color 150ms, transform 100ms;
+}
+
+.habito-dia:active {
+  transform: scale(0.92);
+}
+
+.habito-dia-letra {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+}
+
+.habito-circulo {
+  font-size: 15px;
+  line-height: 1;
+  transition: transform 150ms;
+}
+
+.habito-dia-marcado {
+  color: var(--paper-ink, #3c3327);
+}
+
+.habito-dia-marcado .habito-circulo {
+  transform: scale(1.08);
+}
+
+.habito-dia-hoy {
+  background: var(--accent-soft, rgba(206, 150, 92, 0.12));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .habito-dia {
+    transition: color 150ms, background-color 150ms;
+  }
+
+  .habito-dia:active {
+    transform: none;
+  }
+
+  .habito-circulo {
+    transition: none;
+  }
+
+  .habito-dia-marcado .habito-circulo {
+    transform: none;
+  }
+}
+
+/*
+  Sprint "The Spatial Studio": la cámara reemplaza al layout. En vez de
+  apilar secciones verticalmente, hay UNA escena (.scene-camera, más
+  grande que su marco) que se desplaza y escala con transform para mirar
+  distintos muebles — el mismo truco de cualquier motor 2.5D (paneo +
+  zoom sobre capas planas), sin motor 3D nuevo. .scene-stage es la
+  ventana fija (overflow hidden); .scene-camera es lo que de verdad se
+  mueve. Los muebles (.scene-piece) son placeholders de color a la
+  espera de fotos reales — cambiar su `background` no toca la cámara.
+*/
+.scene-stage {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  max-height: 70dvh;
+  border-radius: var(--radius-lg);
+  background: #0c0a08;
+}
+
+/*
+  Sprint "Presence Engine": 1050ms + una curva ease-in-out con peso
+  (arranca y frena, nunca lineal, nunca un salto) en vez del expo-out
+  anterior — se siente más a dolly de cámara real que a un snap de UI.
+  Este mismo número (1050) vive también en useCameraRig.ts (TRANSITION_MS)
+  y en .scene-layer--foreground / [data-transition] más abajo: los tres
+  tienen que quedar sincronizados, porque TRANSITION_MS es lo que decide
+  cuándo la fase pasa a 'focused' (cuándo es seguro que el módulo ya
+  llegó) — si estos números se desincronizan, el módulo aparece antes o
+  después de que la cámara realmente frene.
+*/
+.scene-camera {
+  position: absolute;
+  inset: -25%;
+  transform: scale(var(--cam-scale, 1)) translate(calc(50% - var(--cam-x, 50%)), calc(50% - var(--cam-y, 48%)));
+  transform-origin: center center;
+  transition: transform 1050ms cubic-bezier(0.65, 0, 0.35, 1);
+  will-change: transform;
+}
+
+/*
+  Sprint "Desk Experience v1.0": "camera should feel like walking toward
+  the desk then sitting down" — el resto de las estaciones (pizarra,
+  corcho, archivador) siguen con el ease-in-out simétrico de Presence
+  Engine sin que este bloque las toque; data-station solo distingue
+  'escritorio' (ver SceneStage.tsx, active.id). La curva no es simétrica:
+  arranca más lenta que la genérica (primer tramo casi plano, como el
+  primer paso antes de decidirse a cruzar el cuarto) y llega con un
+  asentamiento muy leve — 4% de sobrepaso, nunca un rebote — como el
+  peso del cuerpo terminando de acomodarse en la silla. La duración
+  (1050ms, TRANSITION_MS) no cambia: solo cambia CÓMO se recorre, nunca
+  cuánto tarda, así que el resto de la sincronización de la llegada
+  (scene-desk-content, wake-up de los monitores) no se desalinea.
+*/
+.scene-camera[data-station='escritorio'] {
+  transition-timing-function: cubic-bezier(0.42, 0.06, 0.22, 1.04);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scene-camera {
+    transition: none;
+  }
+
+  .scene-layer--foreground {
+    transition: none;
+  }
+
+  .scene-layer--ambient {
+    animation: none;
+    opacity: 0.6;
+  }
+
+  .scene-hotspot,
+  .scene-hotspot::before {
+    transition: opacity 120ms ease;
+  }
+
+  .scene-desk-content[data-transition] {
+    animation: none;
+  }
+
+  .journal-shadow,
+  .journal-book,
+  .journal-page-left,
+  .journal-page-right,
+  .journal-cover {
+    animation: none;
+  }
+
+  .journal-interface {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+.scene-layer {
+  position: absolute;
+  inset: 0;
+}
+
+/*
+  Fase 2 (El Estudio): la North Star aprobada reemplaza el arte
+  dibujado a mano. La foto vive como `background` de esta misma capa,
+  dimensionada exacto 1:1 contra `.scene-camera` (inset -25%, 150% del
+  stage) — por eso .scene-stage fuerza aspect-ratio 3/2 (la proporción
+  real de la foto): así background-size:cover nunca recorta ni distorsiona,
+  y cada estación en STATIONS puede usar el % real de la foto como su
+  propia coordenada de cámara, sin conversión. La arquitectura de la
+  cámara (useCameraRig, el transform de acá abajo) no se tocó.
+*/
+.scene-layer--photo {
+  background-image: url('/room/estudio-hero.png');
+  background-size: cover;
+  background-position: center;
+}
+
+/*
+  Profundidad (Sprint "Presence Engine"): el fondo (foto) y el primer
+  plano (viñeta) son capas hermanas dentro de .scene-camera, así que hoy
+  se mueven exactamente igual — cero paralaje. Sumarle a esta capa un
+  10%/5% extra del mismo desplazamiento/zoom que ya aplica el padre (no
+  uno nuevo) hace que el primer plano reaccione un poco más que el fondo,
+  como pasaría si de verdad estuviera más cerca del lente. Casi
+  imperceptible a propósito — es textura, no un efecto para notar.
+*/
+.scene-layer--foreground {
+  background:
+    radial-gradient(ellipse 130% 70% at 50% 108%, rgba(0, 0, 0, 0.62), transparent 55%),
+    radial-gradient(ellipse 90% 60% at 50% -10%, rgba(0, 0, 0, 0.35), transparent 55%),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.28) 0%, transparent 12%, transparent 88%, rgba(0, 0, 0, 0.28) 100%);
+  pointer-events: none;
+  transform:
+    translate(calc((50% - var(--cam-x, 50%)) * 0.06), calc((50% - var(--cam-y, 48%)) * 0.06))
+    scale(calc(1 + (var(--cam-scale, 1) - 1) * 0.05));
+  transition: transform 1050ms cubic-bezier(0.65, 0, 0.35, 1);
+  will-change: transform;
+}
+
+/*
+  Luz (Sprint "Presence Engine"): el cuarto respira — variación de luz
+  de día muy sutil cerca de la ventana y un glow tibio de monitor/lámpara
+  cerca del escritorio (misma coordenada que STATIONS.escritorio en
+  stations.ts). Solo opacity, nunca filter — la capa ya existe siempre
+  en el DOM, lo único que cambia es cuánto se nota.
+*/
+.scene-layer--ambient {
+  background:
+    radial-gradient(ellipse 46% 34% at 61% 55%, rgba(255, 196, 120, 0.12), transparent 70%),
+    radial-gradient(ellipse 55% 40% at 22% 18%, rgba(200, 220, 255, 0.06), transparent 70%);
+  opacity: 0.6;
+  animation: studio-breathe 17s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes studio-breathe {
+  from {
+    opacity: 0.45;
+  }
+  to {
+    opacity: 0.78;
+  }
+}
+
+/*
+  El escritorio interactivo nunca viaja adentro de .scene-camera (Sprint
+  "The Spatial Studio"): esa capa se escala/traslada para simular la
+  cámara acercándose al mueble, así que cualquier UI real ahí adentro
+  queda gigante y descentrada en cuanto cam-scale sube (le pasó a
+  Workspace la primera vez: terminaba 2000px de ancho y 400px fuera de
+  cuadro). El escritorio (Workspace y todo lo que vive adentro) es
+  hermano de .scene-camera, no hijo: se monta ya al tamaño real del
+  viewport en cuanto la cámara termina de llegar, nunca escalado.
+*/
+.scene-desk-content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 2rem;
+  overflow: auto;
+}
+
+/*
+  "El módulo crece desde el objeto" (Sprint "Presence Engine"):
+  transform-origin se fija inline (ver SceneStage.tsx, stagePercent del
+  mueble activo) al punto exacto donde está ese mueble en la escena, así
+  que crece/encoge desde ahí, no desde el centro genérico de la
+  pantalla. data-transition="enter" arranca ni bien se hace click (a la
+  par de que la cámara empieza a viajar, no cuando termina), y "exit" es
+  la MISMA animación con animation-direction:reverse — cerrar de verdad
+  reproduce la apertura al revés, no un fade distinto. 1050ms para que
+  quede sincronizado con .scene-camera / TRANSITION_MS.
+*/
+.scene-desk-content[data-transition='enter'] {
+  animation: module-emerge 1050ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.scene-desk-content[data-transition='exit'] {
+  animation: module-emerge 1050ms cubic-bezier(0.7, 0, 0.84, 0) reverse both;
+}
+
+@keyframes module-emerge {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.scene-hotspot {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.scene-hotspot:hover,
+.scene-hotspot:focus-visible {
+  transform: translate(-50%, -50%) translateY(-2px) scale(1.015);
+}
+
+/*
+  El mueble no es un elemento propio — vive horneado en la foto — así
+  que "el objeto se ilumina" se reconstruye con backdrop-filter sobre su
+  propia región en vez de pedir un asset nuevo: brightness/saturate le
+  suben un poco a los píxeles reales de la foto que caen bajo el glow.
+*/
+.scene-hotspot::before {
+  content: '';
+  position: absolute;
+  inset: -12%;
+  border-radius: var(--radius-lg);
+  background: radial-gradient(ellipse 60% 60% at 50% 50%, rgba(255, 210, 150, 0.28), transparent 75%);
+  backdrop-filter: brightness(1) saturate(1);
+  box-shadow: 0 8px 24px -12px rgba(255, 200, 140, 0);
+  opacity: 0;
+  transition: opacity 240ms ease, backdrop-filter 240ms ease, box-shadow 240ms ease;
+}
+
+.scene-hotspot:hover::before,
+.scene-hotspot:focus-visible::before {
+  opacity: 1;
+  backdrop-filter: brightness(1.08) saturate(1.06);
+  box-shadow: 0 10px 28px -10px rgba(255, 200, 140, 0.35);
+}
+
+/*
+  El teléfono no tiene :hover — un glow que solo aparece al pasar el
+  mouse es invisible en touch. La etiqueta vive siempre encendida
+  (opacity baja) y sube de intensidad al tocar/enfocar, así el hotspot
+  se descubre con la vista, no con el gesto.
+*/
+.scene-hotspot-label {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-md);
+  background: rgba(12, 10, 8, 0.68);
+  backdrop-filter: blur(6px);
+  white-space: nowrap;
+  opacity: 0.85;
+  transition: opacity 220ms ease, transform 220ms ease;
+  pointer-events: none;
+}
+
+.scene-hotspot:hover .scene-hotspot-label,
+.scene-hotspot:focus-visible .scene-hotspot-label {
+  opacity: 1;
+  transform: translate(-50%, -50%) translateY(-2px) scale(1.04);
+}
+
+.scene-hotspot-label-title {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.scene-hotspot-label-subtitle {
+  font-family: var(--font-sans);
+  font-size: 10.5px;
+  line-height: 1.3;
+  color: var(--ink-dim);
+}
+
+.scene-return {
+  position: absolute;
+  left: 1.5rem;
+  bottom: 1.5rem;
+  border: none;
+  background: transparent;
+  color: var(--ink-faint);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0.5rem 0.25rem;
+  transition: color 150ms;
+}
+
+.scene-return:hover,
+.scene-return:focus-visible {
+  color: var(--ink);
+}
+
+/*
+  Sprint "Journal Experience v1.0": el Diario es el primer objeto que se
+  abre de verdad, no un módulo que aparece encima de la habitación. Reutiliza
+  .material-leather/.material-paper (el mismo cuero/papel de toda la
+  biblioteca, punto 04/05) para la tapa y las hojas — lo único nuevo acá es
+  la coreografía física (elevarse, la tapa gira sobre su propio lomo, las
+  hojas se separan) y no un material nuevo. Las clases .libreta-seam/-band/
+  -wear/-crease están calibradas en px fijos para la libreta chica del
+  escritorio (5rem×6.8rem) — a esta escala (objeto hero, ~27rem) esos
+  detalles se verían desproporcionados, así que acá solo se agrega un lomo
+  proporcional, con el mismo vocabulario visual (un filo de luz angosto),
+  en vez de inventar un material distinto.
+
+  Todo el timing entra en 1050ms — el mismo TRANSITION_MS que ya sincroniza
+  .scene-camera/.scene-desk-content — porque SceneStage desmonta este
+  módulo (o le saca data-transition) exactamente a esa marca. Por eso el
+  estado de reposo SIN atributo (fuera de [data-transition]) ya es igual al
+  estado "abierto": cuando la cámara termina de llegar y phase pasa a
+  'focused', data-transition desaparece y el elemento no salta, porque el
+  valor no animado ya coincide con el último frame de la animación — el
+  mismo truco que ya usa module-emerge (su "to" es opacity:1/scale(1), el
+  reposo por defecto de cualquier elemento sin transform).
+*/
+.journal-stage {
+  position: relative;
+  width: min(70vw, 27rem);
+  max-width: 94%;
+  aspect-ratio: 3 / 4;
+  margin: auto;
+  perspective: 1800px;
+}
+
+.journal-shadow {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: -6%;
+  height: 12%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(10, 7, 4, 0.5), transparent 70%);
+  filter: blur(6px);
+  opacity: 0.7;
+  transform: scale(1.06);
+}
+
+[data-transition='enter'] .journal-shadow {
+  animation: journal-shadow-deepen 340ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+[data-transition='exit'] .journal-shadow {
+  animation: journal-shadow-deepen 340ms cubic-bezier(0.7, 0, 0.84, 0) reverse both;
+}
+
+@keyframes journal-shadow-deepen {
+  from {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0.7;
+    transform: scale(1.06);
+  }
+}
+
+.journal-book {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transform: translateY(-3%) scale(1.03);
+}
+
+/*
+  "Subtly lifts from the table": el libro entero se levanta antes de que
+  la tapa empiece a girar. Sprint "Experience Pass 01": antes de subir se
+  hunde un instante contra la mesa — la anticipación de agarrar algo con
+  peso real antes de levantarlo, no un ascenso que arranca de cero.
+*/
+[data-transition='enter'] .journal-book {
+  animation: journal-lift 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+[data-transition='exit'] .journal-book {
+  animation: journal-lift 300ms cubic-bezier(0.7, 0, 0.84, 0) reverse both;
+}
+
+@keyframes journal-lift {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  18% {
+    transform: translateY(0.4%) scale(0.99);
+  }
+  100% {
+    transform: translateY(-3%) scale(1.03);
+  }
+}
+
+.journal-pages {
+  position: absolute;
+  inset: 0;
+  border-radius: 3px 8px 8px 3px;
+  overflow: hidden;
+}
+
+/*
+  Sprint "Diegetic Interaction Pass v1.0": antes las dos hojas eran dos
+  rectángulos enteros superpuestos (mismo inset, apenas rotados) — leía
+  como dos tarjetas flotando, no como un libro abierto. Ahora cada hoja
+  ocupa su mitad real (46% de ancho) y la ::before de .journal-pages pinta
+  el pliegue central + un viñeteado hacia los bordes, para que el papel
+  se apague contra la habitación oscura en vez de leer como un rectángulo
+  blanco pegado encima de la foto (el pedido explícito del sprint).
+*/
+.journal-pages::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 2;
+  background:
+    radial-gradient(120% 100% at 50% 50%, transparent 55%, rgba(18, 14, 9, 0.45) 100%),
+    linear-gradient(90deg, transparent 45%, rgba(28, 20, 13, 0.4) 50%, transparent 55%);
+}
+
+.journal-page {
+  position: absolute;
+  top: 3%;
+  bottom: 3%;
+  width: 46%;
+}
+
+.journal-page-left {
+  left: 3%;
+  border-radius: 3px 2px 2px 3px;
+  transform-origin: right center;
+  transform: rotate(-1deg);
+}
+
+.journal-page-right {
+  right: 3%;
+  border-radius: 2px 6px 6px 2px;
+  transform-origin: left center;
+  transform: rotate(1deg);
+}
+
+/*
+  Las hojas se separan recién cuando la tapa ya giró la mayor parte —
+  nunca antes. Sprint "Ambient Life Engine v1.0" (journal_page_settle,
+  ver ambientEvents.ts): apenas termina de abrirse, cada hoja se acomoda
+  un instante más — nunca vuelve a moverse después (both, sin loop),
+  como papel real asentándose, no una animación que se repite.
+
+  Sprint "Experience Pass 01": ese asentamiento nació pensado como algo
+  ambiente (1100ms, casi imperceptible) — pero acá es el gesto principal
+  que alguien está mirando de verdad, no un detalle de fondo. Se acorta y
+  el rebote se nota un poco más: confianza en vez de deriva.
+
+  Todo (delay + duración) tiene que terminar antes de que .journal-stage
+  pierda data-transition a los 1050ms (TRANSITION_MS, ver más arriba) —
+  si el asentamiento sigue corriendo pasado ese punto, la regla deja de
+  matchear a mitad de giro y la hoja salta en seco al valor de reposo en
+  vez de terminar de acomodarse. Por eso arranca antes que en la v1
+  ambiente y dura menos: 840+190=1030 / 860+170=1030, con margen real
+  antes del corte.
+*/
+[data-transition='enter'] .journal-page-left {
+  animation:
+    journal-page-open-left 380ms cubic-bezier(0.16, 1, 0.3, 1) 460ms both,
+    journal-page-settle-left 190ms ease-out 840ms both;
+}
+
+[data-transition='enter'] .journal-page-right {
+  animation:
+    journal-page-open-right 380ms cubic-bezier(0.16, 1, 0.3, 1) 480ms both,
+    journal-page-settle-right 170ms ease-out 860ms both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-transition='enter'] .journal-page-left {
+    animation: journal-page-open-left 380ms cubic-bezier(0.16, 1, 0.3, 1) 460ms both;
+  }
+  [data-transition='enter'] .journal-page-right {
+    animation: journal-page-open-right 380ms cubic-bezier(0.16, 1, 0.3, 1) 480ms both;
+  }
+}
+
+[data-transition='exit'] .journal-page-left {
+  animation: journal-page-open-left 380ms cubic-bezier(0.7, 0, 0.84, 0) reverse both;
+}
+
+[data-transition='exit'] .journal-page-right {
+  animation: journal-page-open-right 380ms cubic-bezier(0.7, 0, 0.84, 0) reverse both;
+}
+
+@keyframes journal-page-open-left {
+  from {
+    opacity: 0;
+    transform: translateX(35%) rotate(0deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) rotate(-1deg);
+  }
+}
+
+@keyframes journal-page-open-right {
+  from {
+    opacity: 0;
+    transform: translateX(-35%) rotate(0deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) rotate(1deg);
+  }
+}
+
+@keyframes journal-page-settle-left {
+  0% {
+    transform: translateX(0) rotate(-1deg);
+  }
+  35% {
+    transform: translateX(0) rotate(-1.4deg);
+  }
+  100% {
+    transform: translateX(0) rotate(-1deg);
+  }
+}
+
+@keyframes journal-page-settle-right {
+  0% {
+    transform: translateX(0) rotate(1deg);
+  }
+  35% {
+    transform: translateX(0) rotate(1.4deg);
+  }
+  100% {
+    transform: translateX(0) rotate(1deg);
+  }
+}
+
+/* El canto de las hojas apiladas, visible en el borde exterior de cada mitad — misma receta que .libreta-pages-edge, reescalada al tamaño hero. */
+.journal-page-edge {
+  position: absolute;
+  top: 4%;
+  bottom: 4%;
+  width: 4px;
+  border-radius: 1px;
+  opacity: 0.55;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(
+      180deg,
+      rgba(224, 214, 194, 0.5) 0,
+      rgba(224, 214, 194, 0.5) 1.5px,
+      rgba(150, 138, 118, 0.25) 1.5px,
+      rgba(150, 138, 118, 0.25) 3px
+    ),
+    linear-gradient(180deg, rgba(224, 214, 194, 0.4), rgba(224, 214, 194, 0.18) 50%, rgba(224, 214, 194, 0.4));
+}
+
+.journal-page-left .journal-page-edge {
+  left: -2px;
+}
+
+.journal-page-right .journal-page-edge {
+  right: -2px;
+}
+
+/* Renglones apenas visibles en la hoja izquierda — "la hoja se vuelve visible", no un rectángulo vacío. Usa --paper-border (heredada de .material-paper) en vez de un color nuevo. */
+.journal-page-lines {
+  position: absolute;
+  inset: 14% 10%;
+  background-image: repeating-linear-gradient(
+    180deg,
+    transparent 0,
+    transparent 1.7rem,
+    var(--paper-border, rgba(60, 51, 39, 0.14)) 1.7rem,
+    var(--paper-border, rgba(60, 51, 39, 0.14)) calc(1.7rem + 1px)
+  );
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+/*
+  Sprint "Objects Are The Interface v1.0": el diario ya abría bien, pero
+  la hoja derecha todavía se sentía "una app adentro de un libro" en vez
+  de papel de verdad. Numeración de página, encabezado con la fecha de
+  hoy y un doblez de esquina — el mismo vocabulario de imperfección que
+  ya usa .libreta-wear, apenas reescalado — hacen que sea la hoja la que
+  define el layout, no un contenedor HTML.
+*/
+.journal-page-number {
+  position: absolute;
+  bottom: 4%;
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  color: var(--paper-ink-faint);
+  opacity: 0.65;
+}
+
+.journal-page-number--left {
+  left: 7%;
+}
+
+.journal-page-number--right {
+  right: 7%;
+}
+
+.journal-page-fold {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 13%;
+  aspect-ratio: 1;
+  pointer-events: none;
+  background: linear-gradient(135deg, transparent 50%, rgba(0, 0, 0, 0.16) 50%, transparent 63%);
+  mix-blend-mode: multiply;
+}
+
+.journal-page-header {
+  margin: 0 0 0.6rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--paper-border);
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  text-transform: capitalize;
+  color: var(--paper-ink-faint);
+}
+
+.journal-interface {
+  position: absolute;
+  inset: 6% 8%;
+  overflow-y: auto;
+  animation: journal-interface-in 320ms ease both;
+}
+
+@keyframes journal-interface-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* La tapa gira sobre su propio lomo (hinge real, no un fade) — backface-visibility oculta el reverso al pasar los 90°. */
+.journal-cover {
+  position: absolute;
+  inset: 0;
+  border-radius: 3px 8px 8px 3px;
+  transform-origin: left center;
+  backface-visibility: hidden;
+  transform: rotateY(-162deg);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -16px 22px -16px rgba(0, 0, 0, 0.65),
+    0 18px 40px -20px rgba(0, 0, 0, 0.6);
+}
+
+/*
+  Sprint "Experience Pass 01": una tapa real no gira a velocidad pareja —
+  al principio vence la fricción de estar cerrada (arranca despacio),
+  después el propio peso la hace caer rápido pasando la vertical, y llega
+  al escritorio con un asentamiento final: pasa apenas de -162deg y
+  vuelve, como el cuero terminando de acomodarse contra la mesa, no un
+  giro que se corta en seco. El timing-function pasa a linear porque la
+  forma física ya vive en los keyframes — una curva global encima
+  distorsionaría estos tramos en vez de sumarlos.
+*/
+[data-transition='enter'] .journal-cover {
+  animation: journal-cover-open 620ms linear 40ms both;
+}
+
+[data-transition='exit'] .journal-cover {
+  animation: journal-cover-open 620ms cubic-bezier(0.7, 0, 0.84, 0) reverse both;
+}
+
+@keyframes journal-cover-open {
+  0% {
+    transform: rotateY(0deg);
+  }
+  12% {
+    transform: rotateY(-6deg);
+  }
+  60% {
+    transform: rotateY(-146deg);
+  }
+  88% {
+    transform: rotateY(-166deg);
+  }
+  100% {
+    transform: rotateY(-162deg);
+  }
+}
+
+.journal-cover-spine {
+  position: absolute;
+  left: 4%;
+  top: 5%;
+  bottom: 5%;
+  width: 3px;
+  border-radius: 1px;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.4), rgba(255, 240, 220, 0.16) 45%, rgba(0, 0, 0, 0.35));
+  opacity: 0.7;
+}
+
+/*
+  Sprint "Objects Are The Interface v1.0": el selector Misiones/Hábitos
+  deja de ser una fila de tabs — son dos etiquetas de papel clavadas al
+  corcho, cada una apenas rotada (nunca las dos parejas), la activa se
+  levanta un poco y recupera color; la inactiva queda un poco más
+  apagada, como cualquier papel al que no se le presta atención.
+*/
+.pizarra-selector {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: 1.5rem;
+  padding: 0 0.25rem;
+}
+
+.pizarra-tab {
+  position: relative;
+  padding: 0.4rem 0.9rem 0.5rem;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  transform: rotate(-1.5deg);
+  filter: saturate(0.7);
+  opacity: 0.72;
+  transition:
+    transform 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 180ms ease,
+    filter 180ms ease;
+}
+
+.pizarra-tab:nth-child(2) {
+  transform: rotate(1.5deg);
+}
+
+.pizarra-tab:hover {
+  opacity: 0.88;
+}
+
+.pizarra-tab--active {
+  opacity: 1;
+  filter: none;
+  transform: translateY(-2px) rotate(-1.5deg);
+}
+
+.pizarra-tab--active:nth-child(2) {
+  transform: translateY(-2px) rotate(1.5deg);
+}
+
+.pizarra-tab .chincheta {
+  top: -0.4rem;
+}
+
+/*
+  Sprint "Diegetic Interaction Pass v1.0": la Biblioteca era texto
+  centrado sobre nada (EmptyState genérico). Ahora el mueble es el
+  módulo — .material-wood, reservada para esto desde el Sprint 2.4
+  ("Escritorio, Mesa de Análisis y Biblioteca la usarán más adelante"),
+  hace de tabla de estante; cada lomo es un div sin contenido inventado
+  (sin biblioteca de datos real detrás todavía, solo el lenguaje visual)
+  que se levanta apenas al pasar el mouse — la misma física de
+  micro-interacción que ya usan los hotspots de la habitación.
+*/
+.biblioteca {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: min(80vw, 34rem);
+  max-width: 96%;
+  margin: auto;
+}
+
+.biblioteca-placa {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  text-align: center;
+}
+
+.biblioteca-placa-title {
+  color: var(--ink);
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+
+.biblioteca-placa-sub {
+  color: var(--ink-faint);
+  font-size: 11px;
+}
+
+.biblioteca-estante {
+  position: relative;
+  border-radius: 3px 6px 5px 6px;
+  padding: 0 0.85rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -10px 16px -12px rgba(0, 0, 0, 0.55),
+    0 14px 26px -20px rgba(0, 0, 0, 0.6);
+}
+
+/* La tabla misma hace de piso de los lomos, no una caja aparte por debajo. */
+.biblioteca-estante::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 40%;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.18), transparent);
+  pointer-events: none;
+}
+
+.biblioteca-libros {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  gap: 0.3rem;
+  height: 7.5rem;
+  padding: 0.7rem 0;
+}
+
+.biblioteca-libro {
+  flex: 0 0 auto;
+  width: var(--libro-w, 9%);
+  height: var(--libro-h, 90%);
+  transform-origin: 50% 100%;
+  border-radius: 2px 3px 1px 1px;
+  box-shadow:
+    inset 1px 0 0 rgba(255, 255, 255, 0.12),
+    inset -2px 0 4px rgba(0, 0, 0, 0.35),
+    0 3px 6px -3px rgba(0, 0, 0, 0.5);
+  transition:
+    transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 220ms ease;
+  /* Sprint "Ambient Life Engine v1.0" (library_idle, ver ambientEvents.ts): el estante nunca queda perfectamente quieto — mismo lenguaje que .planta-leaf (rango ~0.5deg, duraciones largas y no redondas, ver nth-child abajo). Se cede sin dudar en cuanto hay un gesto real. */
+  animation: library-idle-sway 75s ease-in-out infinite;
+}
+
+.biblioteca-libro:hover {
+  animation: none;
+  transform: translateY(-0.6rem) rotate(-1deg);
+  box-shadow:
+    inset 1px 0 0 rgba(255, 255, 255, 0.16),
+    inset -2px 0 4px rgba(0, 0, 0, 0.35),
+    0 12px 18px -8px rgba(0, 0, 0, 0.55);
+}
+
+.biblioteca-libro:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* "Selected books slide out a few millimeters" (Sprint "Objects Are The Interface v1.0") — se queda afuera, no vuelve a entrar hasta que se elige otro o el mismo de nuevo. */
+.biblioteca-libro--selected {
+  animation: none;
+  transform: translateY(-1rem) rotate(-1deg);
+  box-shadow:
+    inset 1px 0 0 rgba(255, 255, 255, 0.2),
+    inset -2px 0 4px rgba(0, 0, 0, 0.35),
+    0 16px 22px -10px rgba(0, 0, 0, 0.6);
+}
+
+/* Paleta de lomos — tonos que ya conviven con el cuero/madera del resto de la habitación, no colores inventados sueltos. */
+.biblioteca-libro:nth-child(6n + 1) {
+  background: linear-gradient(155deg, #6b3a34 0%, #4a2622 100%);
+}
+.biblioteca-libro:nth-child(6n + 2) {
+  background: linear-gradient(155deg, #3d4a3a 0%, #26302a 100%);
+}
+.biblioteca-libro:nth-child(6n + 3) {
+  background: linear-gradient(155deg, #6b5730 0%, #4a3a1f 100%);
+}
+.biblioteca-libro:nth-child(6n + 4) {
+  background: linear-gradient(155deg, #3a4655 0%, #232c38 100%);
+}
+.biblioteca-libro:nth-child(6n + 5) {
+  background: linear-gradient(155deg, #5c4634 0%, #3c2e1f 100%);
+}
+.biblioteca-libro:nth-child(6n) {
+  background: linear-gradient(155deg, #4a3550 0%, #2e2236 100%);
+}
+
+/* Ritmo independiente por lomo (Sprint "Ambient Life Engine v1.0") — otro módulo (5, no 6) para que la variación de movimiento nunca coincida con la de color. */
+.biblioteca-libro:nth-child(5n + 1) {
+  animation-duration: 75s;
+  animation-delay: -6s;
+}
+.biblioteca-libro:nth-child(5n + 2) {
+  animation-duration: 82s;
+  animation-delay: -34s;
+}
+.biblioteca-libro:nth-child(5n + 3) {
+  animation-duration: 68s;
+  animation-delay: -19s;
+}
+.biblioteca-libro:nth-child(5n + 4) {
+  animation-duration: 91s;
+  animation-delay: -47s;
+}
+.biblioteca-libro:nth-child(5n) {
+  animation-duration: 79s;
+  animation-delay: -12s;
+  animation-direction: reverse;
+}
+
+@keyframes library-idle-sway {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(0.5deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .biblioteca-libro {
+    transition: none;
+    animation: none;
+  }
+}
+
+/*
+  Plástico mate (Sprint "Objects Are The Interface v1.0"): el sexto
+  material de la biblioteca, para el bisel del monitor, el teclado y el
+  mouse. Mismo lenguaje que .material-metal (brillo direccional +
+  ruido) pero mucho más apagado y sin la veta fría del metal — un
+  plástico de office, no una pieza pulida.
+*/
+.material-plastic {
+  background:
+    linear-gradient(115deg, rgba(255, 255, 255, 0.07) 0%, transparent 30%),
+    linear-gradient(165deg, #2b2c30 0%, #202124 55%, #17181a 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.4);
+}
+
+.material-plastic::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)'/%3E%3C/svg%3E");
+}
+
+/*
+  Los monitores (Sprint "Objects Are The Interface v1.0", el cambio
+  central del sprint): "the monitors are still a background behind a UI
+  panel" — antes WorkspaceTabs dibujaba una tira de tabs + un panel de
+  contenido flotando sobre .workspace, sin relación con los monitores
+  que ya existen en la foto de la habitación. Ahora son dos objetos: el
+  bisel (.material-plastic) es el mueble, la pantalla (.monitor-screen)
+  es vidrio oscuro con un barrido diagonal de luz — nunca un rectángulo
+  de UI con bordes de tarjeta. El de la izquierda solo sabe navegar, el
+  de la derecha solo sabe mostrar trabajo: ninguno de los dos es un
+  contenedor genérico reutilizado para cualquier cosa.
+*/
+.escritorio-monitores {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .escritorio-monitores {
+    flex-direction: row;
+    gap: 2rem;
+  }
+}
+
+.monitor {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1 1 auto;
+}
+
+.monitor--content {
+  flex-grow: 1.6;
+}
+
+.monitor-bezel {
+  position: relative;
+  width: 100%;
+  border-radius: 10px;
+  padding: 0.6rem 0.6rem 1rem;
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.4),
+    0 22px 40px -26px rgba(0, 0, 0, 0.65);
+}
+
+/*
+  Fría por defecto (Sprint "Room Memory v1.0"): la primera vez que se
+  entra al escritorio en esta sesión, el led queda apagado y la pantalla
+  un poco más oscura — "recién prendido" no es un gesto que se vea
+  pasar, es simplemente cómo arranca la primera vez. escritorio-monitores
+  --warm (ver WorkspaceTabs.tsx, markWorkspaceActiveAndWasActive) es la
+  única diferencia entre esa primera vez y cualquier visita siguiente.
+*/
+.monitor-led {
+  position: absolute;
+  bottom: 0.4rem;
+  left: 50%;
+  translate: -50% 0;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #4a4d4f;
+}
+
+.escritorio-monitores--warm .monitor-led {
+  background: #6fbf8f;
+  box-shadow: 0 0 4px 1px rgba(111, 191, 143, 0.7);
+}
+
+.escritorio-monitores--warm .monitor-screen {
+  background: radial-gradient(120% 100% at 20% 0%, #191d23 0%, #0d1013 60%, #06080a 100%);
+}
+
+.monitor-screen {
+  --screen-ink: #d7dde3;
+  --screen-ink-faint: #7c848d;
+  position: relative;
+  overflow: hidden;
+  border-radius: 4px;
+  min-height: 15rem;
+  background: radial-gradient(120% 100% at 20% 0%, #14171c 0%, #0a0c0f 60%, #050607 100%);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.6);
+}
+
+@media (min-width: 768px) {
+  .monitor-screen {
+    min-height: 22rem;
+  }
+}
+
+.monitor-screen::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(115deg, rgba(255, 255, 255, 0.05) 0%, transparent 22%);
+}
+
+/*
+  Sprint "Ambient Life Engine v1.0" (monitor_glow, ver ambientEvents.ts):
+  un monitor real nunca sostiene el mismo brillo — el contenido en
+  pantalla lo hace variar apenas. Ninguna de las dos pantallas comparte
+  duración ni delay (ver .monitor--nav abajo), para que nunca respiren
+  al mismo tiempo.
+*/
+.monitor-screen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(70% 60% at 25% 15%, rgba(150, 195, 255, 0.4), transparent 70%);
+  opacity: 0;
+  animation: monitor-glow 37s ease-in-out infinite;
+}
+
+.monitor--nav .monitor-screen::after {
+  animation-duration: 43s;
+  animation-delay: -17s;
+}
+
+@keyframes monitor-glow {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.05;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .monitor-screen::after {
+    animation: none;
+  }
+}
+
+/*
+  Sprint "Desk Experience v1.0": "the monitors wake up. Not instantly.
+  Not dramatically" — hasta ahora la pantalla ya estaba prendida en el
+  primer frame, sin transición, como cualquier div de React apareciendo.
+  Un monitor real cuando arrancás la máquina muestra vidrio negro un
+  instante antes de que la señal llegue: por eso este scrim (un span
+  propio, no el fondo de .monitor-screen) es opaco al llegar y se
+  disuelve, dejando ver lo que ya estaba renderizado debajo — nunca un
+  fade del contenido en sí (que seguiría respondiendo a scroll/foco
+  mientras tanto). Gated en [data-transition='enter'] (mismo atributo
+  que .scene-desk-content, ver SceneStage.tsx).
+
+  Sprint "Desk Experience P0" (P0.2): "the monitors must stop behaving
+  identically" — antes los dos despertaban con el mismo scrim y el
+  mismo led, al mismo tiempo. Ahora el de la derecha (.monitor--content,
+  donde se trabaja) es el que arranca primero y llega antes a su brillo
+  final; el de la izquierda (.monitor--nav, donde se navega) arranca
+  después y se queda más apagado incluso ya despierto — la misma
+  asimetría que .monitor--nav .monitor-screen::after ya usa para el
+  respirar del brillo (arriba). Ninguno de los dos pares se acerca a los
+  1050ms de TRANSITION_MS (ver useCameraRig.ts): contenido termina a los
+  580ms, nav a los 920ms — 130ms de margen antes de que la transición le
+  corte la animación a mitad de camino.
+*/
+.monitor-wake-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+}
+
+[data-transition='enter'] .monitor--content .monitor-wake-scrim {
+  animation: monitor-wake 480ms ease-out 20ms both;
+}
+
+[data-transition='enter'] .monitor--nav .monitor-wake-scrim {
+  animation: monitor-wake 640ms ease-out 220ms both;
+}
+
+@keyframes monitor-wake {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/*
+  El led sigue a la pantalla, nunca la adelanta: se enciende recién
+  cuando el scrim ya casi terminó de disolverse, como si la máquina
+  confirmara señal después de calentar — nunca los dos a la vez, eso
+  leería como un simple fade-in de UI en vez de un arranque real. El de
+  contenido confirma señal primero (360ms); el de nav tarda más en
+  confirmar (700ms), reforzando que es el segundo en despertar.
+*/
+[data-transition='enter'] .monitor--content .monitor-led {
+  animation: monitor-led-wake 220ms ease-out 360ms both;
+}
+
+[data-transition='enter'] .monitor--nav .monitor-led {
+  animation: monitor-led-wake 220ms ease-out 700ms both;
+}
+
+@keyframes monitor-led-wake {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/*
+  Sprint "Desk Experience P0" (P0.2): "left monitor... stays quieter" —
+  no es solo el arranque, es un estado que se sostiene. El monitor de
+  nav queda apenas más apagado que el de contenido incluso en reposo,
+  para que el de contenido lea como el foco visual sin que ninguno de
+  los dos deje de estar "encendido". Nunca se toca .monitor-screen del
+  lado de contenido: la jerarquía se establece bajando uno, no subiendo
+  el otro.
+*/
+.monitor--nav .monitor-screen {
+  filter: brightness(0.93);
+}
+
+.monitor--nav .monitor-led {
+  filter: brightness(0.85);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .monitor-wake-scrim {
+    animation: none;
+    opacity: 0;
+  }
+
+  .monitor-led {
+    animation: none;
+  }
+}
+
+/*
+  Un monitor tiene luz propia: a diferencia de la madera o el papel, no
+  refleja la luz de la habitación, la emite. Por eso --ink/--ink-dim/
+  --ink-faint (que el motor de luz mueve todo el día para el resto del
+  cuarto, ver lightEngine.ts) quedan fijos acá adentro — el contenido
+  que ya usa esos tokens (HoyScreen, Trading, Misiones) sigue siendo
+  legible a cualquier hora sin que cada uno tenga que saber que vive
+  dentro de una pantalla.
+*/
+.monitor-screen--content {
+  --ink: var(--screen-ink);
+  --ink-dim: #9aa4ad;
+  --ink-faint: var(--screen-ink-faint);
+  overflow-y: auto;
+  padding: 1.1rem 1.25rem;
+  color: var(--screen-ink);
+}
+
+/*
+  Sprint "Desk Experience P0" (P0.3): "keep the same monitor... give each
+  destination its own visual temperament" — el monitor físico no cambia
+  (mismo bisel, mismo vidrio, mismo overflow), solo cambia cómo respira
+  su contenido. data-tab (ver WorkspaceTabs.tsx) es el único gancho
+  nuevo; todo lo demás son los tokens que .monitor-screen--content ya
+  exponía (--ink/--ink-dim/--ink-faint), reglas de spacing/density, y
+  nada que toque src/modules/* — esto es piel de la pantalla, no de la
+  aplicación que vive adentro.
+
+  Hoy: calma/personal/generosa — el estado de reposo, sin ajustes: el
+  padding base de arriba ya es esto.
+
+  Trading: foco/densidad/precisión — menos aire, números que se alinean
+  en columna (tabular-nums), tinta "faint" un poco más oscura para que
+  el detalle lea con más contraste sin recolorear --ink.
+*/
+.monitor-screen--content[data-tab='trading'] {
+  --ink-faint: #6b7680;
+  padding: 0.75rem 0.85rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.005em;
+}
+
+/*
+  Proyectos: estructura/ritmo claro/avance — un acento vertical fijo que
+  no respira ni brilla (a diferencia del glow ambiental de arriba),
+  como el margen de una hoja de tareas: marca que acá las cosas ocurren
+  en fila, una después de la otra.
+*/
+.monitor-screen--content[data-tab='proyectos'] {
+  padding-left: 1.5rem;
+  border-left: 2px solid rgba(215, 221, 227, 0.14);
+}
+
+/*
+  IA: viva/conversacional/presencia sutil — el único de los cinco con
+  movimiento propio, y a propósito el más lento y débil de toda la
+  pantalla (17s de ciclo, opacity tope 0.05: más callado todavía que
+  monitor-glow de arriba) para que se sienta "algo del otro lado" sin
+  que compita con el texto ni se note conscientemente.
+*/
+.monitor-screen--content[data-tab='ia'] {
+  position: relative;
+}
+
+.monitor-screen--content[data-tab='ia']::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(60% 50% at 85% 100%, rgba(188, 212, 230, 0.4), transparent 70%);
+  opacity: 0;
+  animation: ia-presence 17s ease-in-out infinite;
+}
+
+@keyframes ia-presence {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.05;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .monitor-screen--content[data-tab='ia']::after {
+    animation: none;
+  }
+}
+
+/*
+  Finanzas: calma/ledger/confianza — misma generosidad que Hoy pero con
+  los números alineados en columna y el color un poco menos saturado,
+  como una hoja de cálculo antes que un panel de control.
+*/
+.monitor-screen--content[data-tab='finanzas'] {
+  font-variant-numeric: tabular-nums;
+  filter: saturate(0.85);
+}
+
+.monitor-nav-list {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 1rem 0.5rem;
+}
+
+.monitor-nav-item {
+  position: relative;
+  padding: 0.55rem 0.9rem 0.55rem 1.1rem;
+  text-align: left;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  color: var(--screen-ink-faint);
+  transition: color 180ms ease;
+}
+
+.monitor-nav-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  translate: 0 -50%;
+  width: 2px;
+  height: 0%;
+  background: #bcd4e6;
+  box-shadow: 0 0 6px 1px rgba(188, 212, 230, 0.6);
+  transition: height 180ms ease;
+}
+
+.monitor-nav-item:hover {
+  color: var(--screen-ink);
+}
+
+.monitor-nav-item--active {
+  color: var(--screen-ink);
+  text-shadow: 0 0 12px rgba(188, 212, 230, 0.25);
+}
+
+.monitor-nav-item--active::before {
+  height: 60%;
+}
+
+.monitor-stand-neck {
+  width: 0.9rem;
+  height: 0.7rem;
+  margin-inline: auto;
+  background: linear-gradient(180deg, #2b2c30, #1a1b1d);
+}
+
+.monitor-stand-base {
+  width: 3.5rem;
+  height: 0.4rem;
+  margin-inline: auto;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #2b2c30, #1a1b1d);
+  box-shadow: 0 4px 8px -4px rgba(0, 0, 0, 0.5);
+}
+
+/*
+  Teclado y mouse: decorativos (aria-hidden, ver WorkspaceTabs.tsx) pero
+  no inventados sin criterio — misma superficie .material-plastic que
+  el bisel del monitor, así el escritorio se lee como un solo set de
+  objetos, no muebles de distintas familias.
+*/
+.escritorio-perifericos {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.25rem;
+}
+
+.teclado {
+  flex: 1 1 auto;
+  max-width: 16rem;
+  height: 2.75rem;
+  border-radius: 6px;
+  background-image:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0px, rgba(255, 255, 255, 0.05) 1px, transparent 1px, transparent 8px),
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.25) 0px, rgba(0, 0, 0, 0.25) 1px, transparent 1px, transparent 9px);
+}
+
+.mouse {
+  position: relative;
+  flex: 0 0 auto;
+  width: 1.5rem;
+  height: 2.25rem;
+  border-radius: 50% 50% 40% 40%;
+}
+
+.mouse-scroll {
+  position: absolute;
+  top: 0.35rem;
+  left: 50%;
+  translate: -50% 0;
+  width: 2px;
+  height: 0.6rem;
+  border-radius: 1px;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+/*
+  Sprint "Desk Experience v1.0": IdeaCapture ya decía en su propio
+  comentario "el Escritorio no es una pantalla, es un mueble" mientras
+  vivía adentro del monitor derecho (ver HoyScreen.tsx/WorkspaceTabs.tsx
+  para la reubicación). Acá afuera, entre el teclado y el borde de la
+  mesa, no lleva fondo ni borde propio — nunca otra tarjeta flotando
+  (ver MisionPrincipal para el mismo principio) — solo un ancho acotado
+  para que no se estire a todo el escritorio como si fuera un panel.
+*/
+.escritorio-notas {
+  position: relative;
+  z-index: 1;
+  max-width: 26rem;
+}

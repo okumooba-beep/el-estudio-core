@@ -1,0 +1,659 @@
+{
+  "communities": {
+    "0": [
+      "src_features_trading_checklisttemplate",
+      "src_features_trading_checklisttemplate_buildchecklistfromtemplate",
+      "src_features_trading_checklisttemplate_checklisttemplateitem",
+      "src_features_trading_checklisttemplate_getchecklisttemplate",
+      "src_features_trading_checklisttemplate_newtemplateitem",
+      "src_features_trading_checklisttemplate_savechecklisttemplate",
+      "src_features_trading_defaulttradingchecklist",
+      "src_features_trading_defaulttradingchecklist_default_trading_checklist",
+      "src_features_trading_operacionrepository",
+      "src_features_trading_operacionrepository_dexieoperacionrepository",
+      "src_features_trading_operacionrepository_dexieoperacionrepository_add",
+      "src_features_trading_operacionrepository_dexieoperacionrepository_list",
+      "src_features_trading_operacionrepository_dexieoperacionrepository_update",
+      "src_features_trading_operacionrepository_nuevaoperacion",
+      "src_features_trading_operacionrepository_operacionrepository",
+      "src_features_trading_operacionrepository_operacionrepository_add",
+      "src_features_trading_operacionrepository_operacionrepository_list",
+      "src_features_trading_operacionrepository_operacionrepository_update",
+      "src_features_trading_tradingscreen",
+      "src_features_trading_tradingscreen_checklisteditor",
+      "src_features_trading_tradingscreen_expedientecaptura",
+      "src_features_trading_tradingscreen_expedientecard",
+      "src_features_trading_tradingscreen_fecha_corta",
+      "src_features_trading_tradingscreen_formatfechacorta",
+      "src_features_trading_tradingscreen_formatsignedpts",
+      "src_features_trading_tradingscreen_formatsignedusd",
+      "src_features_trading_tradingscreen_instrumentos",
+      "src_features_trading_tradingscreen_lado_label",
+      "src_features_trading_tradingscreen_nuevaoperacionform",
+      "src_features_trading_tradingscreen_tradingscreen",
+      "src_features_trading_useoperaciones",
+      "src_features_trading_useoperaciones_useoperaciones"
+    ],
+    "1": [
+      "ref_dom",
+      "ref_src",
+      "ref_vite_client",
+      "tsconfig_app",
+      "tsconfig_app_compileroptions",
+      "tsconfig_app_compileroptions_allowarbitraryextensions",
+      "tsconfig_app_compileroptions_allowimportingtsextensions",
+      "tsconfig_app_compileroptions_erasablesyntaxonly",
+      "tsconfig_app_compileroptions_exactoptionalpropertytypes",
+      "tsconfig_app_compileroptions_jsx",
+      "tsconfig_app_compileroptions_lib",
+      "tsconfig_app_compileroptions_module",
+      "tsconfig_app_compileroptions_moduledetection",
+      "tsconfig_app_compileroptions_moduleresolution",
+      "tsconfig_app_compileroptions_noemit",
+      "tsconfig_app_compileroptions_nofallthroughcasesinswitch",
+      "tsconfig_app_compileroptions_noimplicitreturns",
+      "tsconfig_app_compileroptions_nouncheckedindexedaccess",
+      "tsconfig_app_compileroptions_nounusedlocals",
+      "tsconfig_app_compileroptions_nounusedparameters",
+      "tsconfig_app_compileroptions_paths",
+      "tsconfig_app_compileroptions_skiplibcheck",
+      "tsconfig_app_compileroptions_strict",
+      "tsconfig_app_compileroptions_target",
+      "tsconfig_app_compileroptions_tsbuildinfofile",
+      "tsconfig_app_compileroptions_types",
+      "tsconfig_app_compileroptions_verbatimmodulesyntax",
+      "tsconfig_app_include",
+      "tsconfig_app_json_ref_es2023",
+      "tsconfig_app_paths"
+    ],
+    "2": [
+      "src_features_idea_deskpaperstack",
+      "src_features_idea_deskpaperstack_deskpaperstack",
+      "src_features_idea_deskpaperstack_deskpaperstackprops",
+      "src_features_idea_destinofurniture",
+      "src_features_idea_destinofurniture_destino_to_furniture",
+      "src_features_idea_destinofurniture_furniture_to_destino",
+      "src_features_idea_draftidea",
+      "src_features_idea_draftidea_draftidea",
+      "src_features_idea_ideacapture",
+      "src_features_idea_ideacapture_correccion_destinos",
+      "src_features_idea_ideacapture_destino_label",
+      "src_features_idea_ideacapture_ideacapture",
+      "src_features_idea_ideacapture_proposal",
+      "src_features_idea_idearepository",
+      "src_features_idea_idearepository_addoptions",
+      "src_features_idea_idearepository_dexieidearepository",
+      "src_features_idea_idearepository_dexieidearepository_add",
+      "src_features_idea_idearepository_dexieidearepository_list",
+      "src_features_idea_idearepository_dexieidearepository_update",
+      "src_features_idea_idearepository_idearepository",
+      "src_features_idea_idearepository_idearepository_add",
+      "src_features_idea_idearepository_idearepository_list",
+      "src_features_idea_idearepository_idearepository_update",
+      "src_features_idea_ideasheet",
+      "src_features_idea_ideasheet_ideasheet",
+      "src_features_idea_ideasheet_ideasheetprops",
+      "src_features_idea_movesheet",
+      "src_features_idea_movesheet_movesheet",
+      "src_features_idea_useideas",
+      "src_features_idea_useideas_useideas"
+    ],
+    "3": [
+      "ref_react",
+      "src_app",
+      "src_app_app",
+      "src_components_room_objects_libreta",
+      "src_components_room_objects_libreta_libreta",
+      "src_components_room_objects_libreta_libretaprops",
+      "src_components_room_roomobjects",
+      "src_components_room_roomobjects_object_renderers",
+      "src_components_room_roomobjects_objectrendererprops",
+      "src_components_room_roomobjects_roomobjects",
+      "src_components_room_roomobjectsregistry",
+      "src_components_room_roomobjectsregistry_room_objects",
+      "src_features_hoy_components_hoyheader",
+      "src_features_hoy_components_hoyheader_hoyheader",
+      "src_features_hoy_components_misionprincipal",
+      "src_features_hoy_components_misionprincipal_misionprincipal",
+      "src_features_hoy_components_phraseslot",
+      "src_features_hoy_components_phraseslot_phraseslot",
+      "src_features_hoy_hoyscreen",
+      "src_features_hoy_hoyscreen_hoyscreen",
+      "src_features_misiones_misionesscreen",
+      "src_features_misiones_misionesscreen_estado_label",
+      "src_features_misiones_misionesscreen_misionesscreen",
+      "src_features_workspace_workspace",
+      "src_features_workspace_workspace_workspace",
+      "src_main"
+    ],
+    "4": [
+      "dexie",
+      "package",
+      "package_dependencies",
+      "package_dependencies_dexie",
+      "package_dependencies_react",
+      "package_dependencies_react_dom",
+      "package_dependencies_react_router_dom",
+      "package_dependencies_supabase_supabase_js",
+      "package_name",
+      "package_private",
+      "package_scripts",
+      "package_scripts_build",
+      "package_scripts_dev",
+      "package_scripts_lint",
+      "package_scripts_preview",
+      "package_type",
+      "package_version",
+      "react",
+      "react_dom",
+      "react_router_dom",
+      "supabase_supabase_js"
+    ],
+    "5": [
+      "oxlint",
+      "package_devdependencies",
+      "package_devdependencies_oxlint",
+      "package_devdependencies_tailwindcss",
+      "package_devdependencies_tailwindcss_vite",
+      "package_devdependencies_types_node",
+      "package_devdependencies_types_react",
+      "package_devdependencies_types_react_dom",
+      "package_devdependencies_typescript",
+      "package_devdependencies_vite",
+      "package_devdependencies_vite_plugin_pwa",
+      "package_devdependencies_vitejs_plugin_react",
+      "tailwindcss",
+      "tailwindcss_vite",
+      "types_node",
+      "types_react",
+      "types_react_dom",
+      "typescript",
+      "vite",
+      "vite_plugin_pwa",
+      "vitejs_plugin_react"
+    ],
+    "6": [
+      "ref_node",
+      "ref_vite_config_ts",
+      "tsconfig_node",
+      "tsconfig_node_compileroptions",
+      "tsconfig_node_compileroptions_allowimportingtsextensions",
+      "tsconfig_node_compileroptions_erasablesyntaxonly",
+      "tsconfig_node_compileroptions_lib",
+      "tsconfig_node_compileroptions_module",
+      "tsconfig_node_compileroptions_moduledetection",
+      "tsconfig_node_compileroptions_noemit",
+      "tsconfig_node_compileroptions_nofallthroughcasesinswitch",
+      "tsconfig_node_compileroptions_nounusedlocals",
+      "tsconfig_node_compileroptions_nounusedparameters",
+      "tsconfig_node_compileroptions_skiplibcheck",
+      "tsconfig_node_compileroptions_target",
+      "tsconfig_node_compileroptions_tsbuildinfofile",
+      "tsconfig_node_compileroptions_types",
+      "tsconfig_node_compileroptions_verbatimmodulesyntax",
+      "tsconfig_node_include",
+      "tsconfig_node_json_ref_es2023"
+    ],
+    "7": [
+      "src_lib_comprehension_classifier",
+      "src_lib_comprehension_classifier_comprehensionengine",
+      "src_lib_comprehension_classifier_normalizetexto",
+      "src_lib_comprehension_classifier_rulebasedclassifier",
+      "src_lib_comprehension_classifier_rulebasedclassifier_classify",
+      "src_lib_comprehension_log",
+      "src_lib_comprehension_log_classificationlogentry",
+      "src_lib_comprehension_log_recordclassification",
+      "src_lib_comprehension_memory",
+      "src_lib_comprehension_memory_getlearneddestino",
+      "src_lib_comprehension_memory_learncorrection",
+      "src_lib_comprehension_memory_memoria",
+      "src_lib_comprehension_rules",
+      "src_lib_comprehension_rules_rules",
+      "src_lib_comprehension_types",
+      "src_lib_comprehension_types_classificationengine",
+      "src_lib_comprehension_types_classificationengine_classify",
+      "src_lib_comprehension_types_classificationreason",
+      "src_lib_comprehension_types_classificationresult",
+      "src_lib_comprehension_types_classificationrule"
+    ],
+    "8": [
+      "src_features_habitos_habitcheckrepository",
+      "src_features_habitos_habitcheckrepository_dexiehabitcheckrepository",
+      "src_features_habitos_habitcheckrepository_dexiehabitcheckrepository_list",
+      "src_features_habitos_habitcheckrepository_dexiehabitcheckrepository_setchecked",
+      "src_features_habitos_habitcheckrepository_habitcheckrepository",
+      "src_features_habitos_habitcheckrepository_habitcheckrepository_list",
+      "src_features_habitos_habitcheckrepository_habitcheckrepository_setchecked",
+      "src_features_habitos_habitosscreen",
+      "src_features_habitos_habitosscreen_dias_semana",
+      "src_features_habitos_habitosscreen_fechassemanaactual",
+      "src_features_habitos_habitosscreen_habitosscreen",
+      "src_features_habitos_usehabitchecks",
+      "src_features_habitos_usehabitchecks_usehabitchecks"
+    ],
+    "9": [
+      "src_lib_light_applylight",
+      "src_lib_light_applylight_applylight",
+      "src_lib_light_lightengine",
+      "src_lib_light_lightengine_computelight",
+      "src_lib_light_lightengine_daylightat",
+      "src_lib_light_lightengine_lerp",
+      "src_lib_light_lightengine_lerprgb",
+      "src_lib_light_lightengine_lerprgba",
+      "src_lib_light_lightengine_lightstate",
+      "src_lib_light_lightengine_rgb",
+      "src_lib_light_useambientlight",
+      "src_lib_light_useambientlight_useambientlight",
+      "src_light_bootstrap"
+    ],
+    "10": [
+      "src_lib_studio_furniture",
+      "src_lib_studio_furniture_furniture",
+      "src_lib_studio_furniture_furnitureid",
+      "src_lib_studio_furniture_historyentry",
+      "src_lib_studio_furniture_historyevento",
+      "src_lib_studio_materials",
+      "src_lib_studio_materials_implemented_materials",
+      "src_lib_studio_materials_materialid",
+      "src_lib_studio_materials_materialprofile",
+      "src_lib_studio_materials_materials"
+    ],
+    "11": [
+      "oxlintrc",
+      "oxlintrc_plugins",
+      "oxlintrc_rules",
+      "oxlintrc_rules_react_only_export_components",
+      "oxlintrc_rules_react_rules_of_hooks",
+      "oxlintrc_schema",
+      "ref_oxc",
+      "ref_typescript",
+      "ref_warn"
+    ],
+    "12": [
+      "src_lib_phrases_phraseengine",
+      "src_lib_phrases_phraseengine_datekey",
+      "src_lib_phrases_phraseengine_daysbetween",
+      "src_lib_phrases_phraseengine_default_state",
+      "src_lib_phrases_phraseengine_gettodaysphrase",
+      "src_lib_phrases_phraseengine_phrasestate",
+      "src_lib_phrases_phraseengine_pickindex",
+      "src_lib_phrases_phrases",
+      "src_lib_phrases_phrases_phrases"
+    ],
+    "13": [
+      "src_types_historymark",
+      "src_types_historymark_historymark",
+      "src_types_roomobject",
+      "src_types_roomobject_roomobjectanimation",
+      "src_types_roomobject_roomobjectcondition",
+      "src_types_roomobject_roomobjectdefinition",
+      "src_types_roomobject_roomobjectkind",
+      "src_types_roomobject_roomobjectposition",
+      "src_types_roomobject_roomobjectstate"
+    ],
+    "14": [
+      "src_lib_voice_voiceengine",
+      "src_lib_voice_voiceengine_getestudiosignal",
+      "src_lib_voice_voiceengine_getfraseentry",
+      "src_lib_voice_voiceengine_getmemoriaviva",
+      "src_lib_voice_voiceengine_getsabiduria",
+      "src_lib_voice_voiceengine_resolvevoice",
+      "src_lib_voice_voiceengine_voiceentry",
+      "src_lib_voice_voiceengine_voicesource"
+    ],
+    "15": [
+      "src_lib_studio_sheetphysics",
+      "src_lib_studio_sheetphysics_getsheetplacement",
+      "src_lib_studio_sheetphysics_offsets_x",
+      "src_lib_studio_sheetphysics_offsets_y",
+      "src_lib_studio_sheetphysics_rotations",
+      "src_lib_studio_sheetphysics_sheetestado",
+      "src_lib_studio_sheetphysics_sheetphysics"
+    ],
+    "16": [
+      "src_lib_db_db",
+      "src_lib_db_db_db",
+      "src_lib_db_db_legacynota",
+      "src_lib_db_db_lifeosdb",
+      "src_lib_db_db_lifeosdb_constructor"
+    ],
+    "17": [
+      "src_lib_light_seasons",
+      "src_lib_light_seasons_getseason",
+      "src_lib_light_seasons_getseasonalmodifier",
+      "src_lib_light_seasons_season",
+      "src_lib_light_seasons_seasonallightmodifier"
+    ],
+    "18": [
+      "src_lib_room_historymarks",
+      "src_lib_room_historymarks_gethistorymarks",
+      "src_lib_room_historymarks_libreta_thresholds",
+      "src_lib_room_objectage",
+      "src_lib_room_objectage_dayssincepresent"
+    ],
+    "19": [
+      "src_types_operacion",
+      "src_types_operacion_checklistitem",
+      "src_types_operacion_operacion",
+      "src_types_operacion_operacionchecklist",
+      "src_types_operacion_operacionlado"
+    ],
+    "20": [
+      "venv_graphify_scripts_activate",
+      "venv_graphify_scripts_activate_get_pyvenvconfig",
+      "venv_graphify_scripts_activate_global_deactivate",
+      "venv_graphify_scripts_activate_global_old_virtual_prompt",
+      "venv_graphify_scripts_activate_global_prompt"
+    ],
+    "21": [
+      "src_components_room_ambientparticles",
+      "src_components_room_ambientparticles_ambientparticles",
+      "src_components_room_roombackground",
+      "src_components_room_roombackground_roombackground"
+    ],
+    "22": [
+      "src_lib_room_objectusage",
+      "src_lib_room_objectusage_getusagecount",
+      "src_lib_room_objectusage_recorduse",
+      "src_lib_room_objectusage_usagelog"
+    ],
+    "23": [
+      "src_app_modules",
+      "src_app_modules_moduledef",
+      "src_app_modules_modules"
+    ],
+    "24": [
+      "src_components_layout_appshell",
+      "src_components_layout_appshell_appshell",
+      "src_components_layout_appshell_linkclass"
+    ],
+    "25": [
+      "src_components_ui_emptystate",
+      "src_components_ui_emptystate_emptystate",
+      "src_components_ui_emptystate_emptystateprops"
+    ],
+    "26": [
+      "src_lib_storage_localstorage",
+      "src_lib_storage_localstorage_readjson",
+      "src_lib_storage_localstorage_writejson"
+    ],
+    "27": [
+      "src_lib_world_worldrules",
+      "src_lib_world_worldrules_world_rules",
+      "src_lib_world_worldrules_worldrule"
+    ],
+    "28": [
+      "src_types_ambientparticle",
+      "src_types_ambientparticle_ambientparticledefinition",
+      "src_types_ambientparticle_ambientparticleposition"
+    ],
+    "29": [
+      "src_types_idea",
+      "src_types_idea_idea",
+      "src_types_idea_ideadestino"
+    ],
+    "30": [
+      "tsconfig",
+      "tsconfig_files",
+      "tsconfig_references"
+    ],
+    "31": [
+      "src_features_dev_materialinspector",
+      "src_features_dev_materialinspector_materialinspector"
+    ],
+    "32": [
+      "src_features_diario_diarioscreen",
+      "src_features_diario_diarioscreen_diarioscreen"
+    ],
+    "33": [
+      "src_features_idea_silentsave",
+      "src_features_idea_silentsave_schedulesilentsave"
+    ],
+    "34": [
+      "src_features_memoria_memorylayer",
+      "src_features_memoria_memorylayer_memorylayer"
+    ],
+    "35": [
+      "src_features_placeholder_moduleplaceholder",
+      "src_features_placeholder_moduleplaceholder_moduleplaceholder"
+    ],
+    "36": [
+      "src_lib_date_describeday",
+      "src_lib_date_describeday_describeday"
+    ],
+    "37": [
+      "src_lib_id",
+      "src_lib_id_generateid"
+    ],
+    "38": [
+      "src_lib_room_deskmemory",
+      "src_lib_room_deskmemory_getdeskmemorymarks"
+    ],
+    "39": [
+      "src_lib_room_objectevolution",
+      "src_lib_room_objectevolution_evolveobjectstate"
+    ],
+    "40": [
+      "src_lib_studio_muebles",
+      "src_lib_studio_muebles_muebles"
+    ],
+    "41": [
+      "src_lib_supabase_client",
+      "src_lib_supabase_client_issupabaseconfigured"
+    ],
+    "42": [
+      "src_lib_trading_patterns",
+      "src_lib_trading_patterns_patterns"
+    ],
+    "43": [
+      "src_lib_trading_reviewscore",
+      "src_lib_trading_reviewscore_reviewscore"
+    ],
+    "44": [
+      "src_types_deskmemory",
+      "src_types_deskmemory_deskmemorymark"
+    ],
+    "45": [
+      "src_types_habitcheck",
+      "src_types_habitcheck_habitcheck"
+    ],
+    "46": [
+      "vite_config"
+    ]
+  },
+  "cohesion": {
+    "0": 0.10483870967741936,
+    "1": 0.06896551724137931,
+    "2": 0.10574712643678161,
+    "3": 0.10153846153846154,
+    "4": 0.09523809523809523,
+    "5": 0.09523809523809523,
+    "6": 0.1,
+    "7": 0.1631578947368421,
+    "8": 0.21794871794871795,
+    "9": 0.28205128205128205,
+    "10": 0.24444444444444444,
+    "11": 0.2222222222222222,
+    "12": 0.3333333333333333,
+    "13": 0.2777777777777778,
+    "14": 0.39285714285714285,
+    "15": 0.2857142857142857,
+    "16": 0.4,
+    "17": 0.4,
+    "18": 0.6,
+    "19": 0.4,
+    "20": 0.4,
+    "21": 0.6666666666666666,
+    "22": 0.5,
+    "23": 0.6666666666666666,
+    "24": 1.0,
+    "25": 0.6666666666666666,
+    "26": 0.6666666666666666,
+    "27": 0.6666666666666666,
+    "28": 0.6666666666666666,
+    "29": 0.6666666666666666,
+    "30": 0.6666666666666666,
+    "31": 1.0,
+    "32": 1.0,
+    "33": 1.0,
+    "34": 1.0,
+    "35": 1.0,
+    "36": 1.0,
+    "37": 1.0,
+    "38": 1.0,
+    "39": 1.0,
+    "40": 1.0,
+    "41": 1.0,
+    "42": 1.0,
+    "43": 1.0,
+    "44": 1.0,
+    "45": 1.0,
+    "46": 1.0
+  },
+  "gods": [
+    {
+      "id": "tsconfig_app_compileroptions",
+      "label": "compilerOptions",
+      "degree": 23
+    },
+    {
+      "id": "ref_react",
+      "label": "react",
+      "degree": 17
+    },
+    {
+      "id": "tsconfig_node_compileroptions",
+      "label": "compilerOptions",
+      "degree": 15
+    },
+    {
+      "id": "src_features_idea_idearepository_idearepository",
+      "label": "IdeaRepository",
+      "degree": 7
+    },
+    {
+      "id": "src_features_trading_operacionrepository_operacionrepository",
+      "label": "OperacionRepository",
+      "degree": 6
+    },
+    {
+      "id": "src_lib_light_lightengine_computelight",
+      "label": "computeLight()",
+      "degree": 6
+    },
+    {
+      "id": "package_scripts",
+      "label": "scripts",
+      "degree": 5
+    },
+    {
+      "id": "src_features_habitos_habitcheckrepository_habitcheckrepository",
+      "label": "HabitCheckRepository",
+      "degree": 5
+    },
+    {
+      "id": "src_features_idea_idearepository_dexieidearepository",
+      "label": "DexieIdeaRepository",
+      "degree": 5
+    },
+    {
+      "id": "src_features_trading_operacionrepository_dexieoperacionrepository",
+      "label": "DexieOperacionRepository",
+      "degree": 5
+    }
+  ],
+  "surprises": [
+    {
+      "source": "useAmbientLight()",
+      "target": "applyLight()",
+      "source_files": [
+        "src/lib/light/useAmbientLight.ts",
+        "src/lib/light/applyLight.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "peripheral node `useAmbientLight()` unexpectedly reaches hub `applyLight()`"
+    },
+    {
+      "source": "HabitosScreen()",
+      "target": "useHabitChecks()",
+      "source_files": [
+        "src/features/habitos/HabitosScreen.tsx",
+        "src/features/habitos/useHabitChecks.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "cross-file semantic connection"
+    },
+    {
+      "source": "IdeaCapture()",
+      "target": "useIdeas()",
+      "source_files": [
+        "src/features/idea/IdeaCapture.tsx",
+        "src/features/idea/useIdeas.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "cross-file semantic connection"
+    },
+    {
+      "source": "TradingScreen()",
+      "target": "getChecklistTemplate()",
+      "source_files": [
+        "src/features/trading/TradingScreen.tsx",
+        "src/features/trading/checklistTemplate.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "cross-file semantic connection"
+    },
+    {
+      "source": "TradingScreen()",
+      "target": "useOperaciones()",
+      "source_files": [
+        "src/features/trading/TradingScreen.tsx",
+        "src/features/trading/useOperaciones.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "cross-file semantic connection"
+    }
+  ],
+  "questions": [
+    {
+      "type": "bridge_node",
+      "question": "Why does `react` connect `Community 3` to `Community 0`, `Community 2`, `Community 8`, `Community 9`, `Community 11`?",
+      "why": "High betweenness centrality (0.093) - this node is a cross-community bridge."
+    },
+    {
+      "type": "bridge_node",
+      "question": "Why does `plugins` connect `Community 11` to `Community 3`?",
+      "why": "High betweenness centrality (0.014) - this node is a cross-community bridge."
+    },
+    {
+      "type": "bridge_node",
+      "question": "Why does `devDependencies` connect `Community 5` to `Community 4`?",
+      "why": "High betweenness centrality (0.009) - this node is a cross-community bridge."
+    },
+    {
+      "type": "isolated_nodes",
+      "question": "What connects `$schema`, `typescript`, `oxc` to the rest of the system?",
+      "why": "126 weakly-connected nodes found - possible documentation gaps or missing edges."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `Community 0` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.10483870967741936 - nodes in this community are weakly interconnected."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `Community 1` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.06896551724137931 - nodes in this community are weakly interconnected."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `Community 2` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.10574712643678161 - nodes in this community are weakly interconnected."
+    }
+  ]
+}
