@@ -125,11 +125,11 @@ export function DiarioScreen() {
 
   return (
     <div className="mx-auto flex max-w-xl flex-col pb-16 pt-8">
-      <header className="mb-6 px-1">
+      <header className="mb-6">
         <h1 className="diario-fecha-pagina">{fechaDePagina(fechaActual, hoy)}</h1>
       </header>
 
-      <div className="diario-pagina">
+      <div>
         {entradas.map((idea) => (
           <p key={idea.id} className="diario-parrafo">
             {idea.texto}
@@ -144,6 +144,7 @@ export function DiarioScreen() {
             onBlur={handleBlur}
             placeholder={entradas.length === 0 ? 'Empezá cuando quieras.' : 'Seguí escribiendo…'}
             rows={1}
+            autoFocus
             className="diario-escritura"
             aria-label="Escribir"
           />

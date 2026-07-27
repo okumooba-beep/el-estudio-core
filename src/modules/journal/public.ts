@@ -7,4 +7,4 @@
  * poder linkearlo igual que a los demás módulos.
  */
 export { DiarioScreen } from './DiarioScreen'
-export const MODULE = { path: '/diario', label: 'Diario' }
+export const MODULE = { path: '/diario', label: 'Cuaderno' }

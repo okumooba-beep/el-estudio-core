@@ -32,7 +32,7 @@ const CORRECCION_DESTINOS: readonly { id: FurnitureId; label: string }[] = [
   { id: 'tablero', label: 'Misiones' },
   { id: 'habitos', label: 'Hábitos' },
   { id: 'mesa-analisis', label: 'Trading' },
-  { id: 'escritorio', label: 'Diario' },
+  { id: 'escritorio', label: 'Cuaderno' },
 ]
 
 /**

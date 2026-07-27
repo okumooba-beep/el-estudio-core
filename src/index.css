@@ -2746,41 +2746,31 @@ html.light-boot *::after {
 }
 
 /*
-  "THE NOTEBOOK" — el Diario deja de mostrar lo escrito y pasa a ser
-  donde se escribe. Sigue sin cajas, rotación ni sombra por entrada (el
-  pensamiento vive en el texto, nunca en el envoltorio — heredado de
-  Threshold V1), pero el título ya no repite la fecha en cada párrafo:
-  una sola vez por página, como el encabezado real de una hoja de
-  cuaderno. El filo angosto a la izquierda es el mismo vocabulario de
-  "margen" que ya usa el resto del Estudio (ver .idea-destinos), acá
-  aplicado como el margen de una libreta real.
+  "Writing Comfort" — el Cuaderno (antes "THE NOTEBOOK") pierde el filo
+  de margen a la izquierda que antes citaba "el margen de una libreta
+  real": el brief de este sprint pide explícitamente no simular papel
+  ni cuaderno ("the room is already the environment"), así que la única
+  referencia a un objeto físico desaparece. Todo el bloque pasa además
+  de --ink-faint a --ink-dim (encabezado, confirmación, navegación,
+  placeholder): --ink-faint mide ~3.78:1 contra --canvas, por debajo del
+  mínimo AA (4.5:1) — el mismo defecto que Threshold V1 ya había
+  encontrado y corregido en los links del nav de AppShell cuando el
+  resplandor de la ventana lo lavaba a mediodía. Acá el placeholder
+  hace ahora de estado vacío (ver Sprint "THE NOTEBOOK"), así que es
+  el primer texto que lee cualquiera al abrir una página en blanco —
+  no puede quedar en el escalón más débil de contraste que existe.
 */
 .diario-fecha-pagina {
   font-size: 13px;
   letter-spacing: 0.02em;
   text-transform: capitalize;
-  color: var(--ink-faint);
-}
-
-.diario-pagina {
-  position: relative;
-  padding-left: 1.5rem;
-}
-
-.diario-pagina::before {
-  content: '';
-  position: absolute;
-  top: 0.2rem;
-  bottom: 0.2rem;
-  left: 0.35rem;
-  width: 1px;
-  background: var(--accent-soft);
+  color: var(--ink-dim);
 }
 
 .diario-parrafo {
-  margin-bottom: 1.1rem;
+  margin-bottom: 1.6rem;
   font-size: 16px;
-  line-height: 1.7;
+  line-height: 1.8;
   color: var(--ink-dim);
   white-space: pre-wrap;
 }
@@ -2788,7 +2778,7 @@ html.light-boot *::after {
 /*
   La superficie de escritura en sí: sin borde, sin fondo propio, mismo
   tamaño/interlineado que .diario-parrafo para que un párrafo recién
-  escrito y uno ya guardado se lean como el mismo papel — la única
+  escrito y uno ya guardado se lean como el mismo texto — la única
   diferencia es el color (--ink, tinta fresca, contra --ink-dim, tinta
   ya asentada, en vez de un timestamp o un ícono señalando "esto es
   nuevo"). resize:none + el alto lo pone JS (scrollHeight) para que
@@ -2804,20 +2794,19 @@ html.light-boot *::after {
   outline: none;
   background: transparent;
   font-size: 16px;
-  line-height: 1.7;
+  line-height: 1.8;
   color: var(--ink);
   caret-color: var(--accent);
 }
 
 .diario-escritura::placeholder {
-  color: var(--ink-faint);
+  color: var(--ink-dim);
 }
 
 .diario-guardado {
   margin-top: 0.75rem;
-  padding-left: 1.5rem;
   font-size: 12.5px;
-  color: var(--ink-faint);
+  color: var(--ink-dim);
 }
 
 /*
@@ -2831,13 +2820,12 @@ html.light-boot *::after {
   display: flex;
   justify-content: space-between;
   margin-top: 2rem;
-  padding-left: 1.5rem;
 }
 
 .diario-nav button {
   padding: 0.5rem 0;
   font-size: 13px;
-  color: var(--ink-faint);
+  color: var(--ink-dim);
   transition: color 150ms ease;
 }
 
