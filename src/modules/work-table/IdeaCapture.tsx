@@ -101,6 +101,7 @@ export function IdeaCapture() {
   const [openedId, setOpenedId] = useState<string | null>(null)
   const proposalTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const hoyIdeas = ideas.filter((idea) => idea.destino === 'hoy')
   const propuesta = proposal ? ideas.find((idea) => idea.id === proposal.ideaId) : undefined
@@ -137,6 +138,10 @@ export function IdeaCapture() {
     const created = await add(texto)
     setValue('')
     writeJSON(DRAFT_KEY, '')
+    // Core V3 — "si algo interrumpe la escritura, sacarlo": guardar con
+    // el botón (a diferencia de Enter) le saca el foco al input; sin
+    // esto, escribir la siguiente idea pedía un segundo toque.
+    inputRef.current?.focus()
 
     const { destino, reason } = comprehensionEngine.classify(texto)
     if (destino === 'hoy') return
@@ -222,6 +227,7 @@ export function IdeaCapture() {
         className="flex items-center gap-3 border-b border-border/60 pb-4 transition-[border-color,box-shadow] duration-300 ease-out focus-within:border-accent/70 focus-within:shadow-[0_1px_0_0_rgba(206,150,92,0.3)] motion-reduce:transition-none"
       >
         <input
+          ref={inputRef}
           type="text"
           value={value}
           onChange={(e) => handleChange(e.target.value)}
@@ -234,7 +240,7 @@ export function IdeaCapture() {
         {value.trim() ? (
           <button
             type="submit"
-            className="shrink-0 px-2 py-3 text-[13.5px] text-accent transition-colors duration-150 hover:text-ink active:text-ink"
+            className="shrink-0 px-2 py-3.5 text-[13.5px] text-accent transition-colors duration-150 hover:text-ink active:text-ink"
           >
             Guardar
           </button>

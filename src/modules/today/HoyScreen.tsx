@@ -1,7 +1,8 @@
+import { useIdeas } from '@modules/work-table/public'
 import { HoyHeader } from './components/HoyHeader'
 import { PhraseSlot } from './components/PhraseSlot'
 import { IdeaCapture } from '@modules/work-table/IdeaCapture'
-import { ContinueWorking } from './components/ContinueWorking'
+import { ContinueWorking, selectContinueWorking } from './components/ContinueWorking'
 import { MisionPrincipal } from './components/MisionPrincipal'
 import { HabitsGlance } from './components/HabitsGlance'
 import { RecentActivity } from './components/RecentActivity'
@@ -47,8 +48,21 @@ import { Spaces } from './components/Spaces'
  * día. Ningún componente cambió su propio spacing interno (cada uno
  * sigue con su `pb-6`) — el cambio es solo cuánto aire separa a los
  * grupos entre sí.
+ *
+ * Core V3 — "quitar duplicación": `HoyScreen` es ahora quien decide qué
+ * Idea es "Seguir con esto" (`selectContinueWorking`, antes calculado
+ * adentro de `ContinueWorking`), porque ese mismo id también hace falta
+ * en `MisionPrincipal` para que no repita la misma Idea si resulta ser,
+ * a la vez, la única misión pendiente. Un solo cálculo, dos lugares que
+ * lo leen — nunca el mismo criterio de selección escrito dos veces.
+ * `useIdeas()` ya no cuesta una lectura extra de IndexedDB por llamada
+ * (ver useIdeas.ts, Core V3): todas las instancias comparten una sola
+ * carga y un solo estado reactivo, así que agregar esta acá es gratis.
  */
 export function HoyScreen() {
+  const { ideas } = useIdeas()
+  const activa = selectContinueWorking(ideas)
+
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-10 pb-10">
       <div className="flex flex-col gap-6">
@@ -57,10 +71,10 @@ export function HoyScreen() {
           <PhraseSlot />
         </div>
         <IdeaCapture />
-        <ContinueWorking />
+        <ContinueWorking activa={activa} />
       </div>
       <div className="flex flex-col">
-        <MisionPrincipal />
+        <MisionPrincipal excludeId={activa?.id ?? null} />
         <HabitsGlance />
         <RecentActivity />
       </div>

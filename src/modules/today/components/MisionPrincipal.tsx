@@ -22,16 +22,36 @@ import { describeDay } from '@shared-kernel/date/describeDay'
  * Tablero (mismo gesto que Libreta.tsx usa para el Diario): marcar
  * terminada o editar ya vive ahí, Hoy solo señala, nunca duplica esa
  * lógica.
+ *
+ * Core V3 — "quitar duplicación": si la única misión pendiente es la
+ * misma Idea que ya se muestra en "Seguir con esto" (`excludeId`, que
+ * viene de `selectContinueWorking` en HoyScreen), acá no se repite el
+ * mismo texto en dos bloques seguidos. Distingue dos casos de "sin
+ * principal": cero misiones pendientes en absoluto (muestra el mismo
+ * estado vacío de siempre, con su guía) versus la única pendiente ya
+ * visible arriba (no muestra nada — nunca un "no hay nada" cuando sí
+ * hay algo, solo que ya se contó).
  */
-export function MisionPrincipal() {
+interface MisionPrincipalProps {
+  excludeId?: string | null
+}
+
+export function MisionPrincipal({ excludeId }: MisionPrincipalProps) {
   const { ideas, ready } = useIdeas()
   const navigate = useNavigate()
 
+  const pendientes = useMemo(
+    () => ideas.filter((idea) => idea.destino === 'misiones' && idea.estado !== 'terminada'),
+    [ideas],
+  )
   const principal = useMemo(() => {
-    const pendientes = ideas.filter((idea) => idea.destino === 'misiones' && idea.estado !== 'terminada')
-    if (pendientes.length === 0) return null
-    return [...pendientes].sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0]
-  }, [ideas])
+    const disponibles = pendientes.filter((idea) => idea.id !== excludeId)
+    if (disponibles.length === 0) return null
+    return [...disponibles].sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0] ?? null
+  }, [pendientes, excludeId])
+
+  const yaVisibleArriba = !principal && pendientes.length > 0
+  if (yaVisibleArriba) return null
 
   return (
     <section className="pb-6">

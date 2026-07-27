@@ -1679,11 +1679,15 @@ html.light-boot *::after {
  * Core V2 — HabitsGlance: mismo par color/transform que .habito-dia,
  * en un botón redondo en vez de una columna con letra de día (acá no
  * hay semana, solo el punto de hoy).
+ *
+ * Core V3 — mobile: 1.75rem (28px) queda debajo del mínimo táctil
+ * recomendado (~44px). El punto visual sigue del mismo tamaño relativo
+ * (font-size sin cambios), solo crece el área tocable alrededor.
  */
 .habito-punto {
   display: flex;
-  width: 1.75rem;
-  height: 1.75rem;
+  width: 2.75rem;
+  height: 2.75rem;
   align-items: center;
   justify-content: center;
   font-size: 15px;
