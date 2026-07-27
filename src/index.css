@@ -1809,18 +1809,6 @@ html.light-boot *::after {
     animation: none;
   }
 
-  .journal-shadow,
-  .journal-book,
-  .journal-page-left,
-  .journal-page-right,
-  .journal-cover {
-    animation: none;
-  }
-
-  .journal-interface {
-    animation: none;
-    opacity: 1;
-  }
 }
 
 .scene-layer {
@@ -2043,414 +2031,6 @@ html.light-boot *::after {
 .scene-return:hover,
 .scene-return:focus-visible {
   color: var(--ink);
-}
-
-/*
-  Sprint "Journal Experience v1.0": el Diario es el primer objeto que se
-  abre de verdad, no un módulo que aparece encima de la habitación. Reutiliza
-  .material-leather/.material-paper (el mismo cuero/papel de toda la
-  biblioteca, punto 04/05) para la tapa y las hojas — lo único nuevo acá es
-  la coreografía física (elevarse, la tapa gira sobre su propio lomo, las
-  hojas se separan) y no un material nuevo. Las clases .libreta-seam/-band/
-  -wear/-crease están calibradas en px fijos para la libreta chica del
-  escritorio (5rem×6.8rem) — a esta escala (objeto hero, ~27rem) esos
-  detalles se verían desproporcionados, así que acá solo se agrega un lomo
-  proporcional, con el mismo vocabulario visual (un filo de luz angosto),
-  en vez de inventar un material distinto.
-
-  Todo el timing entra en 1050ms — el mismo TRANSITION_MS que ya sincroniza
-  .scene-camera/.scene-desk-content — porque SceneStage desmonta este
-  módulo (o le saca data-transition) exactamente a esa marca. Por eso el
-  estado de reposo SIN atributo (fuera de [data-transition]) ya es igual al
-  estado "abierto": cuando la cámara termina de llegar y phase pasa a
-  'focused', data-transition desaparece y el elemento no salta, porque el
-  valor no animado ya coincide con el último frame de la animación — el
-  mismo truco que ya usa module-emerge (su "to" es opacity:1/scale(1), el
-  reposo por defecto de cualquier elemento sin transform).
-*/
-.journal-stage {
-  position: relative;
-  width: min(70vw, 27rem);
-  max-width: 94%;
-  aspect-ratio: 3 / 4;
-  margin: auto;
-  perspective: 1800px;
-}
-
-.journal-shadow {
-  position: absolute;
-  left: 8%;
-  right: 8%;
-  bottom: -6%;
-  height: 12%;
-  border-radius: 50%;
-  background: radial-gradient(ellipse, rgba(10, 7, 4, 0.5), transparent 70%);
-  filter: blur(6px);
-  opacity: 0.7;
-  transform: scale(1.06);
-}
-
-[data-transition='enter'] .journal-shadow {
-  animation: journal-shadow-deepen 340ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-[data-transition='exit'] .journal-shadow {
-  animation: journal-shadow-deepen 340ms cubic-bezier(0.7, 0, 0.84, 0) reverse both;
-}
-
-@keyframes journal-shadow-deepen {
-  from {
-    opacity: 0.4;
-    transform: scale(1);
-  }
-  to {
-    opacity: 0.7;
-    transform: scale(1.06);
-  }
-}
-
-.journal-book {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  transform-style: preserve-3d;
-  transform: translateY(-3%) scale(1.03);
-}
-
-/*
-  "Subtly lifts from the table": el libro entero se levanta antes de que
-  la tapa empiece a girar. Sprint "Experience Pass 01": antes de subir se
-  hunde un instante contra la mesa — la anticipación de agarrar algo con
-  peso real antes de levantarlo, no un ascenso que arranca de cero.
-*/
-[data-transition='enter'] .journal-book {
-  animation: journal-lift 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-[data-transition='exit'] .journal-book {
-  animation: journal-lift 300ms cubic-bezier(0.7, 0, 0.84, 0) reverse both;
-}
-
-@keyframes journal-lift {
-  0% {
-    transform: translateY(0) scale(1);
-  }
-  18% {
-    transform: translateY(0.4%) scale(0.99);
-  }
-  100% {
-    transform: translateY(-3%) scale(1.03);
-  }
-}
-
-.journal-pages {
-  position: absolute;
-  inset: 0;
-  border-radius: 3px 8px 8px 3px;
-  overflow: hidden;
-}
-
-/*
-  Sprint "Diegetic Interaction Pass v1.0": antes las dos hojas eran dos
-  rectángulos enteros superpuestos (mismo inset, apenas rotados) — leía
-  como dos tarjetas flotando, no como un libro abierto. Ahora cada hoja
-  ocupa su mitad real (46% de ancho) y la ::before de .journal-pages pinta
-  el pliegue central + un viñeteado hacia los bordes, para que el papel
-  se apague contra la habitación oscura en vez de leer como un rectángulo
-  blanco pegado encima de la foto (el pedido explícito del sprint).
-*/
-.journal-pages::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  z-index: 2;
-  background:
-    radial-gradient(120% 100% at 50% 50%, transparent 55%, rgba(18, 14, 9, 0.45) 100%),
-    linear-gradient(90deg, transparent 45%, rgba(28, 20, 13, 0.4) 50%, transparent 55%);
-}
-
-.journal-page {
-  position: absolute;
-  top: 3%;
-  bottom: 3%;
-  width: 46%;
-}
-
-.journal-page-left {
-  left: 3%;
-  border-radius: 3px 2px 2px 3px;
-  transform-origin: right center;
-  transform: rotate(-1deg);
-}
-
-.journal-page-right {
-  right: 3%;
-  border-radius: 2px 6px 6px 2px;
-  transform-origin: left center;
-  transform: rotate(1deg);
-}
-
-/*
-  Las hojas se separan recién cuando la tapa ya giró la mayor parte —
-  nunca antes. Sprint "Ambient Life Engine v1.0" (journal_page_settle,
-  ver ambientEvents.ts): apenas termina de abrirse, cada hoja se acomoda
-  un instante más — nunca vuelve a moverse después (both, sin loop),
-  como papel real asentándose, no una animación que se repite.
-
-  Sprint "Experience Pass 01": ese asentamiento nació pensado como algo
-  ambiente (1100ms, casi imperceptible) — pero acá es el gesto principal
-  que alguien está mirando de verdad, no un detalle de fondo. Se acorta y
-  el rebote se nota un poco más: confianza en vez de deriva.
-
-  Todo (delay + duración) tiene que terminar antes de que .journal-stage
-  pierda data-transition a los 1050ms (TRANSITION_MS, ver más arriba) —
-  si el asentamiento sigue corriendo pasado ese punto, la regla deja de
-  matchear a mitad de giro y la hoja salta en seco al valor de reposo en
-  vez de terminar de acomodarse. Por eso arranca antes que en la v1
-  ambiente y dura menos: 840+190=1030 / 860+170=1030, con margen real
-  antes del corte.
-*/
-[data-transition='enter'] .journal-page-left {
-  animation:
-    journal-page-open-left 380ms cubic-bezier(0.16, 1, 0.3, 1) 460ms both,
-    journal-page-settle-left 190ms ease-out 840ms both;
-}
-
-[data-transition='enter'] .journal-page-right {
-  animation:
-    journal-page-open-right 380ms cubic-bezier(0.16, 1, 0.3, 1) 480ms both,
-    journal-page-settle-right 170ms ease-out 860ms both;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  [data-transition='enter'] .journal-page-left {
-    animation: journal-page-open-left 380ms cubic-bezier(0.16, 1, 0.3, 1) 460ms both;
-  }
-  [data-transition='enter'] .journal-page-right {
-    animation: journal-page-open-right 380ms cubic-bezier(0.16, 1, 0.3, 1) 480ms both;
-  }
-}
-
-[data-transition='exit'] .journal-page-left {
-  animation: journal-page-open-left 380ms cubic-bezier(0.7, 0, 0.84, 0) reverse both;
-}
-
-[data-transition='exit'] .journal-page-right {
-  animation: journal-page-open-right 380ms cubic-bezier(0.7, 0, 0.84, 0) reverse both;
-}
-
-@keyframes journal-page-open-left {
-  from {
-    opacity: 0;
-    transform: translateX(35%) rotate(0deg);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0) rotate(-1deg);
-  }
-}
-
-@keyframes journal-page-open-right {
-  from {
-    opacity: 0;
-    transform: translateX(-35%) rotate(0deg);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0) rotate(1deg);
-  }
-}
-
-@keyframes journal-page-settle-left {
-  0% {
-    transform: translateX(0) rotate(-1deg);
-  }
-  35% {
-    transform: translateX(0) rotate(-1.4deg);
-  }
-  100% {
-    transform: translateX(0) rotate(-1deg);
-  }
-}
-
-@keyframes journal-page-settle-right {
-  0% {
-    transform: translateX(0) rotate(1deg);
-  }
-  35% {
-    transform: translateX(0) rotate(1.4deg);
-  }
-  100% {
-    transform: translateX(0) rotate(1deg);
-  }
-}
-
-/* El canto de las hojas apiladas, visible en el borde exterior de cada mitad — misma receta que .libreta-pages-edge, reescalada al tamaño hero. */
-.journal-page-edge {
-  position: absolute;
-  top: 4%;
-  bottom: 4%;
-  width: 4px;
-  border-radius: 1px;
-  opacity: 0.55;
-  pointer-events: none;
-  background:
-    repeating-linear-gradient(
-      180deg,
-      rgba(224, 214, 194, 0.5) 0,
-      rgba(224, 214, 194, 0.5) 1.5px,
-      rgba(150, 138, 118, 0.25) 1.5px,
-      rgba(150, 138, 118, 0.25) 3px
-    ),
-    linear-gradient(180deg, rgba(224, 214, 194, 0.4), rgba(224, 214, 194, 0.18) 50%, rgba(224, 214, 194, 0.4));
-}
-
-.journal-page-left .journal-page-edge {
-  left: -2px;
-}
-
-.journal-page-right .journal-page-edge {
-  right: -2px;
-}
-
-/* Renglones apenas visibles en la hoja izquierda — "la hoja se vuelve visible", no un rectángulo vacío. Usa --paper-border (heredada de .material-paper) en vez de un color nuevo. */
-.journal-page-lines {
-  position: absolute;
-  inset: 14% 10%;
-  background-image: repeating-linear-gradient(
-    180deg,
-    transparent 0,
-    transparent 1.7rem,
-    var(--paper-border, rgba(60, 51, 39, 0.14)) 1.7rem,
-    var(--paper-border, rgba(60, 51, 39, 0.14)) calc(1.7rem + 1px)
-  );
-  opacity: 0.55;
-  pointer-events: none;
-}
-
-/*
-  Sprint "Objects Are The Interface v1.0": el diario ya abría bien, pero
-  la hoja derecha todavía se sentía "una app adentro de un libro" en vez
-  de papel de verdad. Numeración de página, encabezado con la fecha de
-  hoy y un doblez de esquina — el mismo vocabulario de imperfección que
-  ya usa .libreta-wear, apenas reescalado — hacen que sea la hoja la que
-  define el layout, no un contenedor HTML.
-*/
-.journal-page-number {
-  position: absolute;
-  bottom: 4%;
-  font-size: 10px;
-  letter-spacing: 0.02em;
-  color: var(--paper-ink-faint);
-  opacity: 0.65;
-}
-
-.journal-page-number--left {
-  left: 7%;
-}
-
-.journal-page-number--right {
-  right: 7%;
-}
-
-.journal-page-fold {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 13%;
-  aspect-ratio: 1;
-  pointer-events: none;
-  background: linear-gradient(135deg, transparent 50%, rgba(0, 0, 0, 0.16) 50%, transparent 63%);
-  mix-blend-mode: multiply;
-}
-
-.journal-page-header {
-  margin: 0 0 0.6rem;
-  padding-bottom: 0.4rem;
-  border-bottom: 1px solid var(--paper-border);
-  font-size: 11px;
-  letter-spacing: 0.03em;
-  text-transform: capitalize;
-  color: var(--paper-ink-faint);
-}
-
-.journal-interface {
-  position: absolute;
-  inset: 6% 8%;
-  overflow-y: auto;
-  animation: journal-interface-in 320ms ease both;
-}
-
-@keyframes journal-interface-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* La tapa gira sobre su propio lomo (hinge real, no un fade) — backface-visibility oculta el reverso al pasar los 90°. */
-.journal-cover {
-  position: absolute;
-  inset: 0;
-  border-radius: 3px 8px 8px 3px;
-  transform-origin: left center;
-  backface-visibility: hidden;
-  transform: rotateY(-162deg);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    inset 0 -16px 22px -16px rgba(0, 0, 0, 0.65),
-    0 18px 40px -20px rgba(0, 0, 0, 0.6);
-}
-
-/*
-  Sprint "Experience Pass 01": una tapa real no gira a velocidad pareja —
-  al principio vence la fricción de estar cerrada (arranca despacio),
-  después el propio peso la hace caer rápido pasando la vertical, y llega
-  al escritorio con un asentamiento final: pasa apenas de -162deg y
-  vuelve, como el cuero terminando de acomodarse contra la mesa, no un
-  giro que se corta en seco. El timing-function pasa a linear porque la
-  forma física ya vive en los keyframes — una curva global encima
-  distorsionaría estos tramos en vez de sumarlos.
-*/
-[data-transition='enter'] .journal-cover {
-  animation: journal-cover-open 620ms linear 40ms both;
-}
-
-[data-transition='exit'] .journal-cover {
-  animation: journal-cover-open 620ms cubic-bezier(0.7, 0, 0.84, 0) reverse both;
-}
-
-@keyframes journal-cover-open {
-  0% {
-    transform: rotateY(0deg);
-  }
-  12% {
-    transform: rotateY(-6deg);
-  }
-  60% {
-    transform: rotateY(-146deg);
-  }
-  88% {
-    transform: rotateY(-166deg);
-  }
-  100% {
-    transform: rotateY(-162deg);
-  }
-}
-
-.journal-cover-spine {
-  position: absolute;
-  left: 4%;
-  top: 5%;
-  bottom: 5%;
-  width: 3px;
-  border-radius: 1px;
-  background: linear-gradient(90deg, rgba(0, 0, 0, 0.4), rgba(255, 240, 220, 0.16) 45%, rgba(0, 0, 0, 0.35));
-  opacity: 0.7;
 }
 
 /*
@@ -3166,18 +2746,22 @@ html.light-boot *::after {
 }
 
 /*
-  Threshold Experience V1 — "el Diario deja de ser una pila de post-its":
-  hasta acá DiarioScreen reusaba <IdeaSheet>/.idea-hoja (la misma hoja
-  rotada con sombra de contacto que usan el Escritorio y el Tablero de
-  Misiones) para cada fila — leía como una lista de tarjetas, no como un
-  cuaderno. Estas clases son nuevas y propias del Diario (nunca tocan
-  .idea-hoja/.material-paper, que siguen siendo el papel correcto para
-  Escritorio/Misiones/Hábitos): una sola página continua, sin cajas ni
-  rotación ni sombra por entrada — el pensamiento vive en el texto, no en
-  el envoltorio. El filo angosto a la izquierda es el mismo vocabulario
-  de "margen" que ya usa el resto del Estudio para señalar estructura
-  (ver .idea-destinos), acá aplicado como el margen de una libreta real.
+  "THE NOTEBOOK" — el Diario deja de mostrar lo escrito y pasa a ser
+  donde se escribe. Sigue sin cajas, rotación ni sombra por entrada (el
+  pensamiento vive en el texto, nunca en el envoltorio — heredado de
+  Threshold V1), pero el título ya no repite la fecha en cada párrafo:
+  una sola vez por página, como el encabezado real de una hoja de
+  cuaderno. El filo angosto a la izquierda es el mismo vocabulario de
+  "margen" que ya usa el resto del Estudio (ver .idea-destinos), acá
+  aplicado como el margen de una libreta real.
 */
+.diario-fecha-pagina {
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  text-transform: capitalize;
+  color: var(--ink-faint);
+}
+
 .diario-pagina {
   position: relative;
   padding-left: 1.5rem;
@@ -3193,27 +2777,71 @@ html.light-boot *::after {
   background: var(--accent-soft);
 }
 
-.diario-entrada {
-  position: relative;
-  padding: 1.1rem 0;
+.diario-parrafo {
+  margin-bottom: 1.1rem;
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--ink-dim);
+  white-space: pre-wrap;
 }
 
-.diario-entrada + .diario-entrada {
-  border-top: 1px solid var(--border);
-}
-
-.diario-fecha {
+/*
+  La superficie de escritura en sí: sin borde, sin fondo propio, mismo
+  tamaño/interlineado que .diario-parrafo para que un párrafo recién
+  escrito y uno ya guardado se lean como el mismo papel — la única
+  diferencia es el color (--ink, tinta fresca, contra --ink-dim, tinta
+  ya asentada, en vez de un timestamp o un ícono señalando "esto es
+  nuevo"). resize:none + el alto lo pone JS (scrollHeight) para que
+  crezca con el texto sin su propia barra de scroll — la página entera
+  se desplaza, nunca un cuadro adentro de la página.
+*/
+.diario-escritura {
   display: block;
-  margin-bottom: 0.35rem;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.05em;
+  width: 100%;
+  resize: none;
+  overflow: hidden;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--ink);
+  caret-color: var(--accent);
+}
+
+.diario-escritura::placeholder {
   color: var(--ink-faint);
 }
 
-.diario-texto {
-  font-size: 16px;
-  line-height: 1.65;
-  color: var(--ink-dim);
-  white-space: pre-wrap;
+.diario-guardado {
+  margin-top: 0.75rem;
+  padding-left: 1.5rem;
+  font-size: 12.5px;
+  color: var(--ink-faint);
+}
+
+/*
+  Hojear páginas anteriores: dos rótulos de texto, mismo vocabulario
+  ya usado en Trading para acciones secundarias silenciosas
+  (.expediente-faint) — nunca una paginación numerada ni flechas con
+  fondo propio, que se sentirían como control de UI, no como pasar
+  hojas.
+*/
+.diario-nav {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2rem;
+  padding-left: 1.5rem;
+}
+
+.diario-nav button {
+  padding: 0.5rem 0;
+  font-size: 13px;
+  color: var(--ink-faint);
+  transition: color 150ms ease;
+}
+
+.diario-nav button:hover,
+.diario-nav button:active {
+  color: var(--ink);
 }

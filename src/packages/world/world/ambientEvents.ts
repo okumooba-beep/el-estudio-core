@@ -15,7 +15,6 @@ export type AmbientEventId =
   | 'window_light_shift'
   | 'lamp_breath'
   | 'monitor_glow'
-  | 'journal_page_settle'
   | 'library_idle'
   | 'coffee_steam'
 
@@ -23,8 +22,6 @@ const ANIMATION_TO_EVENT: Record<string, AmbientEventId> = {
   'light-breathe-window': 'window_light_shift',
   'light-breathe-lamp': 'lamp_breath',
   'monitor-glow': 'monitor_glow',
-  'journal-page-settle-left': 'journal_page_settle',
-  'journal-page-settle-right': 'journal_page_settle',
   'library-idle-sway': 'library_idle',
   'taza-vapor-rise': 'coffee_steam',
 }
