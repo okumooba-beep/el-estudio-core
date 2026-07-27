@@ -275,11 +275,11 @@ export function IdeaCapture() {
         ) : null}
       </form>
       {justSaved ? (
-        <p className="px-1 text-[12.5px] text-ink-faint/80" aria-live="polite">
+        <p className="px-1 text-[12.5px] text-ink-faint" aria-live="polite">
           Guardado.
         </p>
       ) : preclasificacion ? (
-        <p className="px-1 text-[12.5px] text-ink-faint/80" aria-live="polite">
+        <p className="px-1 text-[12.5px] text-ink-faint" aria-live="polite">
           {DESTINO_PREVIEW_MESSAGE[preclasificacion]}
         </p>
       ) : null}

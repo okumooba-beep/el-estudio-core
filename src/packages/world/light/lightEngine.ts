@@ -51,15 +51,30 @@ function lerpRgba(a: Rgb, b: Rgb, t: number, alphaA: number, alphaB: number): st
  * accent deja de ser azul (DAY y NIGHT) y pasa a cobre — el color de
  * la lámpara, nunca el de un botón de SaaS.
  */
+/*
+ * Sprint "Visual Refinement" — inkFaint medía ~3.78:1 (NIGHT) y ~3.09:1
+ * (DAY) contra canvas: por debajo del mínimo AA (4.5:1) en los dos
+ * extremos del ciclo, no solo en el arranque nocturno estático que
+ * documentaba el comentario de index.css. Ambos valores suben de
+ * luminancia relativa (NIGHT: texto claro más claro; DAY: texto oscuro
+ * más oscuro — canvas es casi blanco a mediodía) hasta despejar AA con
+ * margen (~4.87:1 y ~4.90:1), sin tocar el resto de la paleta ni el
+ * propio canvas — la habitación no se ilumina más, solo el texto que
+ * menos contraste tenía. accent se corre al dorado más saturado del
+ * mockup de referencia (#D8A24A en NIGHT — coincide exacto), que de
+ * paso mejora su propio contraste (7.40:1 → 8.36:1); DAY.accent baja de
+ * luminancia en la misma dirección de tono para seguir despejando AA
+ * (4.01:1 → 4.82:1) contra el canvas casi blanco del mediodía.
+ */
 const NIGHT = {
   canvas: [18, 15, 12],
   surface: [27, 22, 18],
   surfaceAlt: [36, 29, 23],
   ink: [237, 229, 218],
   inkDim: [176, 163, 149],
-  inkFaint: [120, 109, 96],
+  inkFaint: [138, 127, 112],
   border: [46, 38, 31],
-  accent: [206, 150, 92],
+  accent: [216, 162, 74],
   good: [111, 174, 133],
   warn: [201, 154, 85],
   critical: [201, 122, 115],
@@ -71,9 +86,9 @@ const DAY = {
   surfaceAlt: [232, 229, 225],
   ink: [27, 26, 31],
   inkDim: [99, 96, 107],
-  inkFaint: [141, 138, 147],
+  inkFaint: [108, 105, 115],
   border: [219, 215, 209],
-  accent: [168, 106, 48],
+  accent: [140, 100, 42],
   good: [62, 122, 84],
   warn: [162, 115, 46],
   critical: [168, 67, 61],

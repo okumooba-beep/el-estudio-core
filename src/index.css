@@ -24,9 +24,9 @@
   --border: #2E261F;
   --ink: #EDE5DA;
   --ink-dim: #B0A395;
-  --ink-faint: #786D60;
-  --accent: #CE965C;
-  --accent-soft: rgba(206, 150, 92, 0.12);
+  --ink-faint: #8A7F70;
+  --accent: #D8A24A;
+  --accent-soft: rgba(216, 162, 74, 0.12);
   --good: #6FAE85;
   --warn: #C99A55;
   --critical: #C97A73;
@@ -179,6 +179,25 @@ html.light-boot *::after {
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/*
+  Sprint "Visual Refinement", Prioridad 4 — `bg-surface/95` + `border-t
+  border-border/40` se sentía "plano y transparente" (queja explícita
+  del brief). Esta barra pasa a leerse como una placa tallada aparte de
+  la habitación, no una capa flotando encima: color-mix con negro (no
+  un tono nuevo) la separa un poco de --surface, un filo superior de
+  luz (inset) le da borde, y una sombra que sube hacia el contenido
+  —no hacia abajo, ya toca el borde del viewport— es lo que la separa
+  de la habitación en vez de un simple hairline.
+*/
+.nav-inferior {
+  background: color-mix(in srgb, var(--surface) 94%, black 6%);
+  border-top: 1px solid var(--border);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 -20px 28px -22px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(14px);
 }
 
 /*
@@ -2760,6 +2779,27 @@ html.light-boot *::after {
   el primer texto que lee cualquiera al abrir una página en blanco —
   no puede quedar en el escalón más débil de contraste que existe.
 */
+/*
+  Sprint "Visual Refinement" — "aumentar el brillo de fondo un 5–8% solo
+  adentro del Cuaderno" sin volver a lo que "Writing Comfort" ya había
+  descartado (ninguna tarjeta, ninguna textura de papel): en vez de un
+  fondo propio en el contenedor angosto de la página (eso sí leería como
+  una tarjeta flotando), esta capa cubre todo el viewport a todo lo
+  ancho, exactamente como .room-layer-* (mismo -z-10, mismo <body> sin
+  fondo propio — ver comentario más arriba), así que se siente como que
+  cambia la luz de la habitación, no como una caja detrás del texto.
+  color-mix mezcla blanco sobre el --canvas que ya esté activo en ese
+  instante (el motor de luz sigue interpolando normalmente) en vez de un
+  valor fijo, así que el brillo extra se mantiene proporcional a
+  cualquier hora del día sin tocar lightEngine.ts.
+*/
+.cuaderno-luz {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: color-mix(in srgb, var(--canvas) 92%, white 8%);
+}
+
 .diario-fecha-pagina {
   font-size: 13px;
   letter-spacing: 0.02em;

@@ -125,6 +125,7 @@ export function DiarioScreen() {
 
   return (
     <div className="mx-auto flex max-w-xl flex-col pb-16 pt-8">
+      <div className="cuaderno-luz" aria-hidden="true" />
       <header className="mb-6">
         <h1 className="diario-fecha-pagina">{fechaDePagina(fechaActual, hoy)}</h1>
       </header>
