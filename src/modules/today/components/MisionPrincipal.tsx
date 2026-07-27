@@ -31,13 +31,20 @@ import { describeDay } from '@shared-kernel/date/describeDay'
  * estado vacío de siempre, con su guía) versus la única pendiente ya
  * visible arriba (no muestra nada — nunca un "no hay nada" cuando sí
  * hay algo, solo que ya se contó).
+ *
+ * Threshold Experience V1 — "completar sin salir del Core": el punto
+ * discreto es el mismo `.habito-punto` que ya usa HabitsGlance para
+ * marcar un hábito de hoy sin ir al Tablero — acá alterna el mismo
+ * campo `estado` que MisionesScreen ya usa (`handleTerminada`), mismo
+ * `update` optimista de useIdeas (ver useIdeas.ts): el cambio se ve al
+ * instante, sin esperar confirmación de IndexedDB.
  */
 interface MisionPrincipalProps {
   excludeId?: string | null
 }
 
 export function MisionPrincipal({ excludeId }: MisionPrincipalProps) {
-  const { ideas, ready } = useIdeas()
+  const { ideas, ready, update } = useIdeas()
   const navigate = useNavigate()
 
   const pendientes = useMemo(
@@ -59,18 +66,28 @@ export function MisionPrincipal({ excludeId }: MisionPrincipalProps) {
         Lo que más importa hoy
       </h2>
       {principal ? (
-        <button
-          type="button"
-          onClick={() => navigate('/misiones')}
-          className="group block w-full appearance-none border-0 bg-transparent p-0 text-left"
-        >
-          <p className="line-clamp-2 text-[15px] text-ink-dim transition-colors duration-150 group-hover:text-ink group-active:text-ink">
-            {principal.texto}
-          </p>
-          <p className="mt-1 text-[13.5px] text-ink-faint">
-            Es lo que espera hace más tiempo — desde {describeDay(principal.fecha)}
-          </p>
-        </button>
+        <div className="flex items-start gap-2.5">
+          <button
+            type="button"
+            onClick={() => update(principal.id, { estado: 'terminada' })}
+            aria-label="Marcar terminada"
+            className="habito-punto mt-0.5"
+          >
+            <span aria-hidden="true">○</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/misiones')}
+            className="group block min-w-0 flex-1 appearance-none border-0 bg-transparent p-0 text-left"
+          >
+            <p className="line-clamp-2 text-[15px] text-ink-dim transition-colors duration-150 group-hover:text-ink group-active:text-ink">
+              {principal.texto}
+            </p>
+            <p className="mt-1 text-[13.5px] text-ink-faint">
+              Es lo que espera hace más tiempo — desde {describeDay(principal.fecha)}
+            </p>
+          </button>
+        </div>
       ) : ready ? (
         <>
           <p className="text-[15px] text-ink-dim">Ninguna misión está esperando.</p>

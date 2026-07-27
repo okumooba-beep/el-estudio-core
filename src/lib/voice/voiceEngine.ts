@@ -1,4 +1,5 @@
 import { getTodaysPhrase } from '@world/phrases/phraseEngine'
+import { getCurrentQuote } from '@world/quotes/quoteEngine'
 import type { Idea } from '@/types/idea'
 
 export type VoiceSource = 'memoria' | 'sabiduria' | 'estudio' | 'frase'
@@ -22,7 +23,7 @@ export interface VoiceEntry {
  * "aconseja", está rompiendo la arquitectura, no extendiéndola.
  */
 export function resolveVoice(ideas: readonly Idea[], now: Date = new Date()): VoiceEntry | null {
-  return getMemoriaViva() ?? getSabiduria() ?? getEstudioSignal(ideas, now) ?? getFraseEntry(now)
+  return getMemoriaViva() ?? getSabiduria(now) ?? getEstudioSignal(ideas, now) ?? getFraseEntry(now)
 }
 
 /**
@@ -34,9 +35,22 @@ function getMemoriaViva(): VoiceEntry | null {
   return null
 }
 
-/** Biblioteca de Sabiduría todavía no existe. Mismo contrato que Memoria Viva. */
-function getSabiduria(): VoiceEntry | null {
-  return null
+/**
+ * Threshold Experience V1 — Biblioteca de Sabiduría deja de ser un
+ * stub: ahora es la colección curada de frases propias del usuario
+ * (ver src/packages/world/quotes/), rotando según el tramo del día
+ * (quoteEngine.ts) en vez del gate de silencio de 4 días que gobierna
+ * la Frase del Manifiesto (ver getFraseEntry) — son fuentes distintas a
+ * propósito: una es sabiduría propia ya vivida, la otra es la voz
+ * genérica del Estudio. Mismo contrato que Memoria Viva (`null` cuando
+ * no hay nada real que mostrar — acá, mientras `QUOTES` siga vacío).
+ * "La IA nunca enseña. La IA recuerda": esto nunca redacta nada, solo
+ * repite texto que el usuario ya escribió/eligió de antemano.
+ */
+function getSabiduria(now: Date): VoiceEntry | null {
+  const quote = getCurrentQuote(now)
+  if (!quote) return null
+  return { source: 'sabiduria', text: quote.author ? `${quote.text} — ${quote.author}` : quote.text }
 }
 
 const DIAS_SIN_ESCRIBIR = 3

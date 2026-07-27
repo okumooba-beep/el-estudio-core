@@ -2,6 +2,7 @@ import Dexie, { type EntityTable } from 'dexie'
 import type { Idea } from '@/types/idea'
 import type { Operacion } from '@/types/operacion'
 import type { HabitCheck } from '@/types/habitCheck'
+import type { FinanceAccount, FinanceMovimiento, FinanceGoal } from '@/types/finance'
 
 interface LegacyNota {
   id: string
@@ -31,6 +32,9 @@ class LifeosDB extends Dexie {
   ideas!: EntityTable<Idea, 'id'>
   operaciones!: EntityTable<Operacion, 'id'>
   habitChecks!: EntityTable<HabitCheck, 'id'>
+  financeAccounts!: EntityTable<FinanceAccount, 'id'>
+  financeMovimientos!: EntityTable<FinanceMovimiento, 'id'>
+  financeGoals!: EntityTable<FinanceGoal, 'id'>
 
   constructor() {
     super('lifeos')
@@ -192,6 +196,19 @@ class LifeosDB extends Dexie {
             .modify({ pendingSync: true }),
         ])
       })
+    // Threshold Experience V1 — Finanzas gana persistencia real. Tres
+    // tablas nuevas, mismo índice mínimo ('id, createdAt') que ya usa
+    // `operaciones`: nada las consulta todavía por otro campo, así que
+    // agregar más índices ahora sería especulativo (Regla 4/8).
+    this.version(8).stores({
+      notas: 'id, createdAt',
+      ideas: 'id, createdAt, destino',
+      operaciones: 'id, createdAt',
+      habitChecks: 'id, habitId, fecha, [habitId+fecha]',
+      financeAccounts: 'id, createdAt',
+      financeMovimientos: 'id, createdAt',
+      financeGoals: 'id, createdAt',
+    })
   }
 }
 

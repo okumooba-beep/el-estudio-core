@@ -6,6 +6,7 @@ import { MisionesScreen } from '@modules/missions/MisionesScreen'
 import { HabitosScreen } from '@modules/habits/HabitosScreen'
 import { TradingScreen } from '@modules/trading/TradingScreen'
 import { DiarioScreen } from '@modules/journal/DiarioScreen'
+import { FinanceScreen } from '@modules/finance/FinanceScreen'
 import { ModulePlaceholder } from '@modules/library/ModulePlaceholder'
 import { MaterialInspector } from '@/dev-tools/material-inspector/MaterialInspector'
 import { DesignSystemGallery } from '@/features/dev/DesignSystemGallery'
@@ -25,7 +26,7 @@ function App() {
           <Route path="trading" element={<TradingScreen />} />
           <Route path="diario" element={<DiarioScreen />} />
           <Route path="frases" element={<ModulePlaceholder title="Biblioteca de frases" />} />
-          <Route path="finanzas" element={<ModulePlaceholder title="Finanzas" />} />
+          <Route path="finanzas" element={<FinanceScreen />} />
         </Route>
         {/* Material Inspector (Sprint 2.4, punto 07): fuera de AppShell a propósito — no es un lugar del Estudio, es una herramienta de desarrollo. Nunca existe en producción. */}
         {import.meta.env.DEV ? <Route path="dev/materiales" element={<MaterialInspector />} /> : null}

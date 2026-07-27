@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { readJSON, writeJSON } from '@shared-kernel/storage/localStorage'
 import { useIdeas } from './useIdeas'
 import { DeskPaperStack } from './DeskPaperStack'
@@ -43,6 +43,26 @@ const DESTINO_LABEL: Record<IdeaDestino, string> = {
   finanzas: 'Finanzas',
   biblioteca: 'Biblioteca',
   archivo: 'Archivo',
+}
+
+/**
+ * Threshold V1 — vista previa en vivo, antes de guardar: distinta de la
+ * propuesta de arriba (que aparece DESPUÉS de guardar y solo si
+ * destino !== 'hoy', porque ahí el Estudio "nunca adivina"). Acá no es
+ * una adivinanza: es un reporte honesto de lo que el mismo motor de
+ * reglas (comprehensionEngine, sin IA) ya decidiría ahora mismo, así
+ * que también existe un mensaje para 'hoy' — no es fabricar
+ * inteligencia, es mostrar la verdad completa del clasificador mientras
+ * se escribe.
+ */
+const PRECLASIFICACION_MESSAGE: Record<IdeaDestino, string> = {
+  hoy: 'Se queda como Idea.',
+  misiones: 'Esto parece una Misión.',
+  habitos: 'Esto parece un Hábito.',
+  trading: 'Esto parece una nota de Trading.',
+  finanzas: 'Esto pertenece a Finanzas.',
+  biblioteca: 'Esto parece una frase para la Biblioteca.',
+  archivo: 'Esto parece algo para archivar.',
 }
 
 interface Proposal {
@@ -99,9 +119,17 @@ export function IdeaCapture() {
   const [value, setValue] = useState(() => readJSON(DRAFT_KEY, ''))
   const [proposal, setProposal] = useState<Proposal | null>(null)
   const [openedId, setOpenedId] = useState<string | null>(null)
+  const [justSaved, setJustSaved] = useState(false)
   const proposalTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  const preclasificacion = useMemo(() => {
+    const texto = value.trim()
+    if (!texto) return null
+    return comprehensionEngine.classify(texto).destino
+  }, [value])
 
   const hoyIdeas = ideas.filter((idea) => idea.destino === 'hoy')
   const propuesta = proposal ? ideas.find((idea) => idea.id === proposal.ideaId) : undefined
@@ -112,6 +140,7 @@ export function IdeaCapture() {
     return () => {
       if (proposalTimer.current) clearTimeout(proposalTimer.current)
       if (dismissTimer.current) clearTimeout(dismissTimer.current)
+      if (savedTimer.current) clearTimeout(savedTimer.current)
     }
   }, [])
 
@@ -142,6 +171,14 @@ export function IdeaCapture() {
     // el botón (a diferencia de Enter) le saca el foco al input; sin
     // esto, escribir la siguiente idea pedía un segundo toque.
     inputRef.current?.focus()
+
+    // Threshold V1 — "guardar debe sentirse satisfactorio": el mismo
+    // borde/sombra cálidos que ya existen para focus-within (abajo) se
+    // reusan acá, disparados un instante después de guardar en vez de
+    // solo al enfocar. Ningún componente ni color nuevo.
+    setJustSaved(true)
+    if (savedTimer.current) clearTimeout(savedTimer.current)
+    savedTimer.current = setTimeout(() => setJustSaved(false), 900)
 
     const { destino, reason } = comprehensionEngine.classify(texto)
     if (destino === 'hoy') return
@@ -224,7 +261,10 @@ export function IdeaCapture() {
       ) : null}
       <form
         onSubmit={handleSubmit}
-        className="flex items-center gap-3 border-b border-border/60 pb-4 transition-[border-color,box-shadow] duration-300 ease-out focus-within:border-accent/70 focus-within:shadow-[0_1px_0_0_rgba(206,150,92,0.3)] motion-reduce:transition-none"
+        className={[
+          'flex items-center gap-3 border-b pb-4 transition-[border-color,box-shadow] duration-300 ease-out focus-within:border-accent/70 focus-within:shadow-[0_1px_0_0_rgba(206,150,92,0.3)] motion-reduce:transition-none',
+          justSaved ? 'border-accent/70 shadow-[0_1px_0_0_rgba(206,150,92,0.3)]' : 'border-border/60',
+        ].join(' ')}
       >
         <input
           ref={inputRef}
@@ -235,7 +275,7 @@ export function IdeaCapture() {
           onBlur={() => setGaze(null)}
           aria-label="Idea"
           placeholder="¿Qué tenés en mente?"
-          className="min-w-0 flex-1 bg-transparent px-1 py-3.5 text-[19px] leading-snug tracking-tight text-ink caret-accent outline-none placeholder:text-ink-faint"
+          className="min-w-0 flex-1 bg-transparent px-1 py-4 text-[21px] leading-relaxed text-ink caret-accent outline-none placeholder:text-ink-faint"
         />
         {value.trim() ? (
           <button
@@ -246,6 +286,11 @@ export function IdeaCapture() {
           </button>
         ) : null}
       </form>
+      {preclasificacion ? (
+        <p className="px-1 text-[12.5px] text-ink-faint/80" aria-live="polite">
+          {PRECLASIFICACION_MESSAGE[preclasificacion]}
+        </p>
+      ) : null}
     </div>
   )
 }

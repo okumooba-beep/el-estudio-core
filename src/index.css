@@ -230,8 +230,14 @@ html.light-boot *::after {
     apagar la puerta por la que se entra a él. El resplandor sigue
     reaccionando 1:1 a la hora real, solo que ahora nunca compite con la
     legibilidad del resto de la casa.
+
+    Threshold Experience V1 — "aumentar contraste, sin competir con la
+    interfaz": el mismo multiplicador baja un poco más (0.55 → 0.45).
+    Nunca se toca --window-opacity ni light/lightEngine.ts (la curva de
+    luz real del día): esto solo ajusta cuánto de esa luz llega a
+    pintarse encima del contenido, el mismo lever ya usado arriba.
   */
-  opacity: calc(var(--window-opacity, 0.3) * 0.55);
+  opacity: calc(var(--window-opacity, 0.3) * 0.45);
   animation: light-breathe-window 71s ease-in-out infinite;
 }
 
@@ -305,6 +311,12 @@ html.light-boot *::after {
   la ventana es más fuerte. 8% es apenas perceptible (nunca un
   "cabezal oscuro" nuevo), solo asienta el título antes de que la luz
   real del día lo lave.
+
+  Threshold Experience V1 — "oscurecer el overlay, mejorar el
+  contraste": los mismos dos bordes (arriba/abajo) profundizan un poco
+  más (0.16→0.20, 0.32→0.38). La banda vertical central — donde vive el
+  Umbral/Core — sigue en transparent 18%→62% sin tocar: la viñeta
+  refuerza el marco de la escena, nunca oscurece el contenido real.
 */
 #root::before {
   content: '';
@@ -312,7 +324,7 @@ html.light-boot *::after {
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.16) 0%, transparent 18%, transparent 62%, rgba(0, 0, 0, 0.32) 100%);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.2) 0%, transparent 18%, transparent 62%, rgba(0, 0, 0, 0.38) 100%);
 }
 
 /*
@@ -3151,4 +3163,57 @@ html.light-boot *::after {
   position: relative;
   z-index: 1;
   max-width: 26rem;
+}
+
+/*
+  Threshold Experience V1 — "el Diario deja de ser una pila de post-its":
+  hasta acá DiarioScreen reusaba <IdeaSheet>/.idea-hoja (la misma hoja
+  rotada con sombra de contacto que usan el Escritorio y el Tablero de
+  Misiones) para cada fila — leía como una lista de tarjetas, no como un
+  cuaderno. Estas clases son nuevas y propias del Diario (nunca tocan
+  .idea-hoja/.material-paper, que siguen siendo el papel correcto para
+  Escritorio/Misiones/Hábitos): una sola página continua, sin cajas ni
+  rotación ni sombra por entrada — el pensamiento vive en el texto, no en
+  el envoltorio. El filo angosto a la izquierda es el mismo vocabulario
+  de "margen" que ya usa el resto del Estudio para señalar estructura
+  (ver .idea-destinos), acá aplicado como el margen de una libreta real.
+*/
+.diario-pagina {
+  position: relative;
+  padding-left: 1.5rem;
+}
+
+.diario-pagina::before {
+  content: '';
+  position: absolute;
+  top: 0.2rem;
+  bottom: 0.2rem;
+  left: 0.35rem;
+  width: 1px;
+  background: var(--accent-soft);
+}
+
+.diario-entrada {
+  position: relative;
+  padding: 1.1rem 0;
+}
+
+.diario-entrada + .diario-entrada {
+  border-top: 1px solid var(--border);
+}
+
+.diario-fecha {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  color: var(--ink-faint);
+}
+
+.diario-texto {
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--ink-dim);
+  white-space: pre-wrap;
 }
