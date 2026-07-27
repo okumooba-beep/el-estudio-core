@@ -1,5 +1,4 @@
 import { useNavigate } from 'react-router-dom'
-import { describeDay } from '@shared-kernel/date/describeDay'
 import { DESTINO_TO_SPACE } from './spaceRegistry'
 import type { Idea } from '@/types/idea'
 
@@ -24,6 +23,11 @@ import type { Idea } from '@/types/idea'
  * elige, y puede excluirlo de Misión Principal (ver MisionPrincipal.tsx)
  * sin duplicar el criterio de selección en dos archivos — un solo lugar
  * decide "qué es lo que se está continuando".
+ *
+ * Voice — reportar la fecha ("Estabas en esto...") convertía este
+ * espacio en un registro; la Voz del Estudio pide invitación, no
+ * reporte, así que la etiqueta pasa a ser una frase fija que no
+ * depende de `updatedAt` (el dato sigue existiendo, solo ya no se dice).
  */
 export function selectContinueWorking(ideas: readonly Idea[]): Idea | null {
   const candidatas = ideas.filter(
@@ -31,12 +35,6 @@ export function selectContinueWorking(ideas: readonly Idea[]): Idea | null {
   )
   if (candidatas.length === 0) return null
   return [...candidatas].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0] ?? null
-}
-
-function fraseContinuar(dia: string): string {
-  if (dia === 'hoy') return 'Hoy volviste a esto'
-  if (dia === 'ayer') return 'Ayer estabas pensando en esto'
-  return `Estabas en esto ${dia}`
 }
 
 interface ContinueWorkingProps {
@@ -56,9 +54,7 @@ export function ContinueWorking({ activa }: ContinueWorkingProps) {
         onClick={() => navigate(espacio.path)}
         className="group block w-full appearance-none border-0 bg-transparent p-0 text-left"
       >
-        <p className="font-mono text-[11px] uppercase tracking-wide text-ink-faint">
-          {fraseContinuar(describeDay(activa.updatedAt.slice(0, 10)))}
-        </p>
+        <p className="font-mono text-[11px] uppercase tracking-wide text-ink-faint">¿Continuamos?</p>
         <p className="mt-1.5 line-clamp-2 text-[17px] text-ink-dim transition-colors duration-150 group-hover:text-ink group-active:text-ink">
           {activa.texto}
         </p>

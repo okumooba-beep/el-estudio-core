@@ -47,9 +47,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg'],
       manifest: {
-        name: 'LifeOS',
-        short_name: 'LifeOS',
-        description: 'Un sistema operativo personal. Hoy es el único lugar donde puedes actuar.',
+        name: 'El Estudio',
+        short_name: 'El Estudio',
+        description: 'Un lugar personal para pensar. Hoy es el único lugar donde puedes actuar.',
         theme_color: '#120F0C',
         background_color: '#120F0C',
         display: 'standalone',

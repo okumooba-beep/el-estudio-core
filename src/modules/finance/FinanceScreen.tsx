@@ -176,7 +176,7 @@ export function FinanceScreen() {
 
       {sinNada ? (
         <EmptyState
-          title="Todavía no hay nada acá."
+          title="Ninguna cuenta vive acá todavía."
           description="Agregá una cuenta para que Patrimonio Neto empiece a significar algo."
         />
       ) : null}

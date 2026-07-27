@@ -29,10 +29,7 @@ export function DiarioScreen() {
   return (
     <div className="mx-auto flex max-w-xl flex-col pt-2">
       {!ready ? null : pensamientos.length === 0 ? (
-        <EmptyState
-          title="Todavía no escribiste nada."
-          description="Lo que escribas en el Umbral y se quede como Idea va a quedar acá."
-        />
+        <EmptyState title="Todavía no escribiste nada." description="Lo que escribas hoy va a quedar acá, como una página más." />
       ) : (
         <div className="diario-pagina">
           {pensamientos.map((idea) => (

@@ -35,34 +35,22 @@ const CORRECCION_DESTINOS: readonly { id: FurnitureId; label: string }[] = [
   { id: 'escritorio', label: 'Diario' },
 ]
 
-const DESTINO_LABEL: Record<IdeaDestino, string> = {
-  hoy: 'Hoy',
-  misiones: 'Misiones',
-  habitos: 'Hábitos',
-  trading: 'Trading',
-  finanzas: 'Finanzas',
-  biblioteca: 'Biblioteca',
-  archivo: 'Archivo',
-}
-
 /**
- * Threshold V1 — vista previa en vivo, antes de guardar: distinta de la
- * propuesta de arriba (que aparece DESPUÉS de guardar y solo si
- * destino !== 'hoy', porque ahí el Estudio "nunca adivina"). Acá no es
- * una adivinanza: es un reporte honesto de lo que el mismo motor de
- * reglas (comprehensionEngine, sin IA) ya decidiría ahora mismo, así
- * que también existe un mensaje para 'hoy' — no es fabricar
- * inteligencia, es mostrar la verdad completa del clasificador mientras
- * se escribe.
+ * Voice of El Estudio — un solo texto para "qué cree el clasificador",
+ * usado tanto antes de guardar (vista previa en vivo) como después
+ * (la propuesta). Corto, sin "Esto"/"Creo que": el Estudio observa y
+ * dice lo que ve, nunca se explica de más. "Cambiar destino" (más abajo)
+ * es la invitación explícita a corregir — nunca un texto que hay que
+ * adivinar que se puede tocar.
  */
-const PRECLASIFICACION_MESSAGE: Record<IdeaDestino, string> = {
-  hoy: 'Se queda como Idea.',
-  misiones: 'Esto parece una Misión.',
-  habitos: 'Esto parece un Hábito.',
-  trading: 'Esto parece una nota de Trading.',
-  finanzas: 'Esto pertenece a Finanzas.',
-  biblioteca: 'Esto parece una frase para la Biblioteca.',
-  archivo: 'Esto parece algo para archivar.',
+const DESTINO_PREVIEW_MESSAGE: Record<IdeaDestino, string> = {
+  hoy: 'Se queda como idea.',
+  misiones: 'Parece una misión.',
+  habitos: 'Parece un hábito.',
+  trading: 'Parece una nota de trading.',
+  finanzas: 'Parece algo de finanzas.',
+  biblioteca: 'Parece una frase para la biblioteca.',
+  archivo: 'Parece algo para archivar.',
 }
 
 interface Proposal {
@@ -237,9 +225,9 @@ export function IdeaCapture() {
           <IdeaSheet idea={activa} open={Boolean(propuesta)} />
           {propuesta && proposal ? (
             <p className="idea-proposal">
-              Creo que esto pertenece a{' '}
+              {DESTINO_PREVIEW_MESSAGE[proposal.destinoPropuesto]}{' '}
               <button type="button" className="idea-proposal-target" onClick={handleToggleExpand}>
-                {DESTINO_LABEL[proposal.destinoPropuesto]}
+                Cambiar destino
               </button>
             </p>
           ) : null}
@@ -286,9 +274,13 @@ export function IdeaCapture() {
           </button>
         ) : null}
       </form>
-      {preclasificacion ? (
+      {justSaved ? (
         <p className="px-1 text-[12.5px] text-ink-faint/80" aria-live="polite">
-          {PRECLASIFICACION_MESSAGE[preclasificacion]}
+          Guardado.
+        </p>
+      ) : preclasificacion ? (
+        <p className="px-1 text-[12.5px] text-ink-faint/80" aria-live="polite">
+          {DESTINO_PREVIEW_MESSAGE[preclasificacion]}
         </p>
       ) : null}
     </div>

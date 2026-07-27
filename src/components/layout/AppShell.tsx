@@ -13,7 +13,7 @@ export function AppShell() {
     <div className="mx-auto flex min-h-dvh max-w-6xl md:gap-6">
       <aside className="hidden shrink-0 flex-col justify-between border-r border-border/40 px-4 py-6 md:flex md:w-52">
         <div>
-          <p className="mb-8 px-3 font-mono text-[11px] tracking-[0.15em] text-ink-faint/80">LIFEOS</p>
+          <p className="mb-8 px-3 font-mono text-[11px] tracking-[0.15em] text-ink-faint/80">EL ESTUDIO</p>
           <nav className="flex flex-col gap-1">
             {MODULES.map((mod) => (
               <NavLink key={mod.path} to={mod.path} end={mod.path === '/'} className={({ isActive }) => linkClass(isActive)}>
