@@ -3,9 +3,6 @@ import { HoyHeader } from './components/HoyHeader'
 import { PhraseSlot } from './components/PhraseSlot'
 import { IdeaCapture } from '@modules/work-table/IdeaCapture'
 import { ContinueWorking, selectContinueWorking } from './components/ContinueWorking'
-import { MisionPrincipal } from './components/MisionPrincipal'
-import { HabitsGlance } from './components/HabitsGlance'
-import { RecentActivity } from './components/RecentActivity'
 import { Spaces } from './components/Spaces'
 
 /**
@@ -20,14 +17,24 @@ import { Spaces } from './components/Spaces'
  * Orden (un flujo, no una grilla de tarjetas — Bible cap. 11):
  * Saludo + fecha + voz ambiental → Umbral (única puerta de entrada,
  * ahora con más aire y una línea real donde escribir) → Seguir con
- * esto (lo último que se tocó, cualquier destino) → Misión principal
- * (lo que más tiempo espera) → Hábitos de hoy (vistazo, nunca la
- * grilla completa) → Actividad reciente (Idea.history leído desde
- * afuera por primera vez) → Espacios (los 6 lugares reales — Diario,
- * Misiones, Hábitos, Trading, Finanzas, Biblioteca; el brief sugería
- * también "Planning" y "AI", ninguno de los dos existe como destino,
- * mueble o pantalla en el Estudio, así que no se fabrican — ver
- * spaceRegistry.ts y el reporte de este sprint).
+ * esto (lo último que se tocó, cualquier destino) → Espacios (los 6
+ * lugares reales — Diario, Misiones, Hábitos, Trading, Finanzas,
+ * Biblioteca; el brief sugería también "Planning" y "AI", ninguno de
+ * los dos existe como destino, mueble o pantalla en el Estudio, así
+ * que no se fabrican — ver spaceRegistry.ts y el reporte de este
+ * sprint).
+ *
+ * Sprint "Product Refocus" — Misión principal, Hábitos de hoy y
+ * Actividad reciente se quitan de Hoy: el brief pide que Home sea "a
+ * place to begin, never a summary screen", y las tres eran vistazos de
+ * estado de otros muebles (Misiones, Hábitos, historial), exactamente
+ * lo que el propio test anti-dashboard de la Biblia (cap. 4: "si dos
+ * señales compiten por atención al mismo tiempo, Today está mal
+ * diseñado") ya prohibía en espíritu. No se borran los componentes
+ * (`MisionPrincipal.tsx`, `HabitsGlance.tsx`, `RecentActivity.tsx`
+ * siguen en el árbol, sin importar de acá) — Home deja de mostrarlos,
+ * no deja de existir la función; un sprint futuro puede reusarlos en
+ * otro lugar si corresponde (Regla 4).
  *
  * El sistema de cámara/habitación que ocupaba este lugar en "Build V1"
  * (features/room, features/workspace, features/memoria,
@@ -38,26 +45,15 @@ import { Spaces } from './components/Spaces'
  * because it already exists") y `npx tsc -b` confirmó cero imports
  * rotos tras borrarlo.
  *
- * Core V2 — jerarquía visual: antes las 6 secciones cargaban el mismo
- * `gap-8` entre todas, así que nada se leía como más importante que lo
- * demás. Ahora hay tres grupos con distinto aire entre ellos: el grupo
- * "hoy" (saludo, voz, Umbral, Seguir con esto) respira junto porque es
- * un solo momento; el grupo "de fondo" (Misión, Hábitos, Memoria) queda
- * más apretado entre sí porque son apoyo, no protagonistas; Espacios
+ * Core V2 — jerarquía visual: el grupo "hoy" (saludo, voz, Umbral,
+ * Seguir con esto) respira junto porque es un solo momento; Espacios
  * cierra con más distancia porque es la salida, no parte del flujo del
- * día. Ningún componente cambió su propio spacing interno (cada uno
- * sigue con su `pb-6`) — el cambio es solo cuánto aire separa a los
- * grupos entre sí.
+ * día.
  *
- * Core V3 — "quitar duplicación": `HoyScreen` es ahora quien decide qué
- * Idea es "Seguir con esto" (`selectContinueWorking`, antes calculado
- * adentro de `ContinueWorking`), porque ese mismo id también hace falta
- * en `MisionPrincipal` para que no repita la misma Idea si resulta ser,
- * a la vez, la única misión pendiente. Un solo cálculo, dos lugares que
- * lo leen — nunca el mismo criterio de selección escrito dos veces.
- * `useIdeas()` ya no cuesta una lectura extra de IndexedDB por llamada
- * (ver useIdeas.ts, Core V3): todas las instancias comparten una sola
- * carga y un solo estado reactivo, así que agregar esta acá es gratis.
+ * Core V3 — `HoyScreen` decide qué Idea es "Seguir con esto"
+ * (`selectContinueWorking`) porque `useIdeas()` ya comparte una sola
+ * carga y un solo estado reactivo entre instancias (ver useIdeas.ts,
+ * Core V3), así que calcularla acá y pasarla por prop es gratis.
  */
 export function HoyScreen() {
   const { ideas } = useIdeas()
@@ -72,11 +68,6 @@ export function HoyScreen() {
         </div>
         <IdeaCapture />
         <ContinueWorking activa={activa} />
-      </div>
-      <div className="flex flex-col">
-        <MisionPrincipal excludeId={activa?.id ?? null} />
-        <HabitsGlance />
-        <RecentActivity />
       </div>
       <Spaces />
     </div>
