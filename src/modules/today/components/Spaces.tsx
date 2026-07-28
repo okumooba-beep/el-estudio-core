@@ -15,7 +15,7 @@ import { SPACES } from './spaceRegistry'
 export function Spaces() {
   return (
     <section>
-      <h2 className="mb-2 font-mono text-[11px] uppercase tracking-wide text-ink-faint">Espacios</h2>
+      <h2 className="mb-2 font-mono text-[11px] uppercase tracking-wide text-accent">Espacios</h2>
       <nav aria-label="Espacios del Estudio" className="flex flex-col divide-y divide-border/40 border-t border-border/40">
         {SPACES.map((espacio) => {
           const Icon = MODULE_ICONS[espacio.path]

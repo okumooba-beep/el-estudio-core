@@ -54,7 +54,7 @@ export function ContinueWorking({ activa }: ContinueWorkingProps) {
         onClick={() => navigate(espacio.path)}
         className="group block w-full appearance-none border-0 bg-transparent p-0 text-left"
       >
-        <p className="font-mono text-[11px] uppercase tracking-wide text-ink-faint">¿Continuamos?</p>
+        <p className="font-mono text-[11px] uppercase tracking-wide text-accent">¿Continuamos?</p>
         <p className="mt-1.5 line-clamp-2 text-[17px] text-ink-dim transition-colors duration-150 group-hover:text-ink group-active:text-ink">
           {activa.texto}
         </p>

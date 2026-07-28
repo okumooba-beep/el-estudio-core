@@ -27,7 +27,7 @@ export function HabitsGlance() {
 
   return (
     <section className="pb-6">
-      <h2 className="mb-2 font-mono text-[11px] uppercase tracking-wide text-ink-faint">Hábitos de hoy</h2>
+      <h2 className="mb-2 font-mono text-[11px] uppercase tracking-wide text-accent">Hábitos de hoy</h2>
       <div className="flex flex-col gap-2.5">
         {habitos.map((habito) => {
           const marcado = marcadoHoy(habito.id)

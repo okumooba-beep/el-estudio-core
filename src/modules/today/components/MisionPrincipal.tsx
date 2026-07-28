@@ -62,7 +62,7 @@ export function MisionPrincipal({ excludeId }: MisionPrincipalProps) {
 
   return (
     <section className="pb-6">
-      <h2 className="mb-2 font-mono text-[11px] uppercase tracking-wide text-ink-faint">
+      <h2 className="mb-2 font-mono text-[11px] uppercase tracking-wide text-accent">
         Lo que más importa hoy
       </h2>
       {principal ? (

@@ -30,7 +30,7 @@ export function HoyHeader() {
   return (
     <header>
       <h1 className="text-[28px] font-medium tracking-tight text-ink text-balance">{saludo(now.getHours())}</h1>
-      <p className="mt-1.5 font-mono text-[11px] uppercase tracking-wide text-ink-faint">{date}</p>
+      <p className="mt-1.5 font-mono text-[11px] uppercase tracking-wide text-accent">{date}</p>
     </header>
   )
 }

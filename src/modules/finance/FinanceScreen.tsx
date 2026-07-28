@@ -54,7 +54,7 @@ export function FinanceScreen() {
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-8 pt-2">
       <section>
-        <h2 className="mb-1 font-mono text-[11px] uppercase tracking-wide text-ink-faint">Patrimonio neto</h2>
+        <h2 className="mb-1 font-mono text-[11px] uppercase tracking-wide text-accent">Patrimonio neto</h2>
         <p className="text-[28px] text-ink">{formatMoney(patrimonioNeto)}</p>
         <p className="mt-1 text-[13.5px] text-ink-faint">
           Liquidez {formatMoney(liquidez)} · Inversiones {formatMoney(inversion)} · Deudas {formatMoney(deuda)}
@@ -62,7 +62,7 @@ export function FinanceScreen() {
       </section>
 
       <section>
-        <h2 className="mb-1 font-mono text-[11px] uppercase tracking-wide text-ink-faint">Flujo de caja de este mes</h2>
+        <h2 className="mb-1 font-mono text-[11px] uppercase tracking-wide text-accent">Flujo de caja de este mes</h2>
         <p className="text-[19px] text-ink-dim">{formatMoney(cashFlow.neto)}</p>
         <p className="mt-1 text-[13.5px] text-ink-faint">
           Ingresos {formatMoney(cashFlow.ingresos)} · Egresos {formatMoney(cashFlow.egresos)}
@@ -87,7 +87,7 @@ export function FinanceScreen() {
       </section>
 
       <section>
-        <h2 className="mb-2 font-mono text-[11px] uppercase tracking-wide text-ink-faint">Cuentas</h2>
+        <h2 className="mb-2 font-mono text-[11px] uppercase tracking-wide text-accent">Cuentas</h2>
         {accounts.length > 0 ? (
           <ul className="flex flex-col gap-2.5">
             {accounts.map((account) => (
@@ -131,7 +131,7 @@ export function FinanceScreen() {
       </section>
 
       <section>
-        <h2 className="mb-2 font-mono text-[11px] uppercase tracking-wide text-ink-faint">Metas</h2>
+        <h2 className="mb-2 font-mono text-[11px] uppercase tracking-wide text-accent">Metas</h2>
         {goals.length > 0 ? (
           <ul className="flex flex-col gap-2.5">
             {goals.map((goal) => (

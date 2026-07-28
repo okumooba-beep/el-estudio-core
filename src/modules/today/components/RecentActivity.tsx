@@ -31,7 +31,7 @@ export function RecentActivity() {
 
   return (
     <section className="pb-6">
-      <h2 className="mb-2 font-mono text-[11px] uppercase tracking-wide text-ink-faint">Memoria</h2>
+      <h2 className="mb-2 font-mono text-[11px] uppercase tracking-wide text-accent">Memoria</h2>
       <ul className="flex flex-col divide-y divide-border/40 border-t border-border/40">
         {recientes.map((idea) => {
           const espacio = DESTINO_TO_SPACE[idea.destino]
