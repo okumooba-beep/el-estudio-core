@@ -72,6 +72,7 @@
 html {
   color-scheme: light dark;
   background: var(--canvas);
+  overscroll-behavior-y: contain;
 }
 
 /*
@@ -1576,9 +1577,31 @@ html.light-boot *::after {
   cursor: pointer;
 }
 
-.checklist-fila span:first-child {
+/*
+  Sprint "Art Direction": ☑/☐ (dingbats) se pintan como emoji a color en
+  Windows/Segoe, ignorando el color heredado — "el cuadrado" de arriba
+  nunca se veía como tal fuera de macOS. Un cuadrado dibujado con CSS
+  cumple la misma intención en cualquier plataforma.
+*/
+.checklist-marca {
+  display: inline-flex;
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--paper-border, rgba(60, 51, 39, 0.35));
+  border-radius: 3px;
   font-family: var(--font-mono);
-  color: var(--paper-ink-faint);
+  font-size: 10px;
+  line-height: 1;
+  color: var(--accent);
+  transition: background-color 150ms, border-color 150ms;
+}
+
+.checklist-marca-marcada {
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
 }
 
 .checklist-editor {

@@ -250,7 +250,7 @@ export function IdeaCapture() {
       <form
         onSubmit={handleSubmit}
         className={[
-          'flex items-center gap-3 border-b pb-4 transition-[border-color,box-shadow] duration-300 ease-out focus-within:border-accent/70 focus-within:shadow-[0_1px_0_0_rgba(216,162,74,0.3)] motion-reduce:transition-none',
+          'flex items-center gap-3 border-b pb-4 transition-[border-color,box-shadow] duration-150 ease-out focus-within:border-accent/70 focus-within:shadow-[0_1px_0_0_rgba(216,162,74,0.3)] motion-reduce:transition-none',
           justSaved ? 'border-accent/70 shadow-[0_1px_0_0_rgba(216,162,74,0.3)]' : 'border-border/60',
         ].join(' ')}
       >

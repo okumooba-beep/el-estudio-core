@@ -25,10 +25,10 @@ export function Spaces() {
               to={espacio.path}
               className="group flex min-h-16 items-center gap-3 py-2 text-ink-dim transition-colors active:text-ink motion-reduce:transition-none"
             >
-              {Icon ? <Icon width={19} height={19} className="shrink-0 text-ink-faint" /> : null}
+              {Icon ? <Icon width={20} height={20} className="shrink-0 text-ink-faint" /> : null}
               <span className="flex min-w-0 flex-1 flex-col">
                 <span className="text-[15px]">{espacio.label}</span>
-                {espacio.proposito ? <span className="mt-0.5 text-[13px] text-ink-faint">{espacio.proposito}</span> : null}
+                {espacio.proposito ? <span className="mt-0.5 text-[12px] text-ink-faint">{espacio.proposito}</span> : null}
               </span>
               <span
                 aria-hidden="true"

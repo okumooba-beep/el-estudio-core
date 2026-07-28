@@ -323,7 +323,12 @@ function ExpedienteCard({
                         })
                       }
                     >
-                      <span aria-hidden="true">{item.checked ? '☑' : '☐'}</span>
+                      <span
+                        aria-hidden="true"
+                        className={`checklist-marca${item.checked ? ' checklist-marca-marcada' : ''}`}
+                      >
+                        {item.checked ? '✓' : ''}
+                      </span>
                       <span>{item.texto}</span>
                     </button>
                   ))}
