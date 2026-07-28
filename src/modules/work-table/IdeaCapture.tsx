@@ -250,8 +250,8 @@ export function IdeaCapture() {
       <form
         onSubmit={handleSubmit}
         className={[
-          'flex items-center gap-3 border-b pb-4 transition-[border-color,box-shadow] duration-300 ease-out focus-within:border-accent/70 focus-within:shadow-[0_1px_0_0_rgba(206,150,92,0.3)] motion-reduce:transition-none',
-          justSaved ? 'border-accent/70 shadow-[0_1px_0_0_rgba(206,150,92,0.3)]' : 'border-border/60',
+          'flex items-center gap-3 border-b pb-4 transition-[border-color,box-shadow] duration-300 ease-out focus-within:border-accent/70 focus-within:shadow-[0_1px_0_0_rgba(216,162,74,0.3)] motion-reduce:transition-none',
+          justSaved ? 'border-accent/70 shadow-[0_1px_0_0_rgba(216,162,74,0.3)]' : 'border-border/60',
         ].join(' ')}
       >
         <input
@@ -263,13 +263,10 @@ export function IdeaCapture() {
           onBlur={() => setGaze(null)}
           aria-label="Idea"
           placeholder="¿Qué tenés en mente?"
-          className="min-w-0 flex-1 bg-transparent px-1 py-4 text-[21px] leading-relaxed text-ink caret-accent outline-none placeholder:text-ink-faint"
+          className="min-w-0 flex-1 bg-transparent px-1 py-4 text-[21px] leading-relaxed text-ink caret-accent outline-none placeholder:text-ink-dim"
         />
         {value.trim() ? (
-          <button
-            type="submit"
-            className="shrink-0 px-2 py-3.5 text-[13.5px] text-accent transition-colors duration-150 hover:text-ink active:text-ink"
-          >
+          <button type="submit" className="accion-primaria shrink-0 px-3.5 py-2 text-[13.5px]">
             Guardar
           </button>
         ) : null}

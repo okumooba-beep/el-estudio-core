@@ -191,13 +191,33 @@ html.light-boot *::after {
   —no hacia abajo, ya toca el borde del viewport— es lo que la separa
   de la habitación en vez de un simple hairline.
 */
+/*
+  Sprint "Visual Weight", Prioridad 3 — "objeto tallado, no tira
+  flotante": profundiza lo que ya hizo Threshold V1 (mezcla con negro +
+  sombra + blur) en vez de repensarlo. Más negro en la mezcla y una
+  sombra más oscura/próxima le dan al panel más masa aparente contra el
+  contenido detrás; el filo superior (inset blanco) sube de peso en la
+  misma proporción para que el borde no quede desatendido mientras el
+  cuerpo del panel gana profundidad.
+*/
 .nav-inferior {
-  background: color-mix(in srgb, var(--surface) 94%, black 6%);
+  background: color-mix(in srgb, var(--surface) 90%, black 10%);
   border-top: 1px solid var(--border);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.05),
-    0 -20px 28px -22px rgba(0, 0, 0, 0.5);
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 -20px 32px -20px rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(14px);
+}
+
+/*
+  El ítem activo ya cambiaba de color (AppShell.tsx); acá gana además
+  un cuerpo propio (--accent-soft, la misma pareja de .accion-primaria)
+  para que "estoy acá" se sienta como una pieza tallada en el panel, no
+  solo un cambio de tinta sobre la misma superficie plana.
+*/
+.nav-inferior-item-activo {
+  background: var(--accent-soft);
+  border-radius: var(--radius-sm);
 }
 
 /*
@@ -1090,6 +1110,48 @@ html.light-boot *::after {
   }
 }
 
+/*
+  Sprint "Visual Weight", Prioridad 4 — la única acción primaria que
+  existía en cuatro formularios (Guardar, en Umbral/Finanzas/Trading)
+  era texto de color puro, sin fondo ni borde: la misma "sensación
+  flat" que el brief pide reducir. .accion-primaria es la única clase
+  nueva de este sprint para eso, reusada en los cinco lugares en vez de
+  repetir la regla — fondo con --accent-soft (ya pareja con --accent
+  como texto en .habito-dia-hoy) para no depender de un contraste fijo
+  que el motor de luz podría romper en un extremo del ciclo. Los
+  secundarios (Cancelar, .idea-destino, .idea-proposal-target) siguen
+  sin fondo a propósito (ver comentario más abajo): la jerarquía pide
+  que solo la acción principal gane peso.
+*/
+.accion-primaria {
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 500;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.16);
+  transition: background-color 150ms ease-out, box-shadow 150ms ease-out, transform 100ms ease-out;
+}
+
+.accion-primaria:hover {
+  background: color-mix(in srgb, var(--accent) 18%, var(--accent-soft));
+}
+
+.accion-primaria:active {
+  transform: scale(0.96);
+  box-shadow: 0 0 1px rgba(0, 0, 0, 0.1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .accion-primaria {
+    transition: background-color 150ms ease-out;
+  }
+
+  .accion-primaria:active {
+    transform: none;
+  }
+}
+
 .idea-destino {
   padding: 0.15rem 0;
   border: none;
@@ -1685,7 +1747,7 @@ html.light-boot *::after {
 }
 
 .habito-dia-hoy {
-  background: var(--accent-soft, rgba(206, 150, 92, 0.12));
+  background: var(--accent-soft, rgba(216, 162, 74, 0.12));
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1715,16 +1777,25 @@ html.light-boot *::after {
  * recomendado (~44px). El punto visual sigue del mismo tamaño relativo
  * (font-size sin cambios), solo crece el área tocable alrededor.
  */
+/*
+  Sprint "Visual Weight" — el punto era un glyph (●/○) flotando solo,
+  sin forma propia, adentro de un área táctil invisible de 44px. Un
+  círculo de fondo (neutro sin marcar, --accent-soft marcado) le da al
+  botón un cuerpo real sin tocar el glyph, el tamaño del área táctil ni
+  la lógica de toggle.
+*/
 .habito-punto {
   display: flex;
   width: 2.75rem;
   height: 2.75rem;
   align-items: center;
   justify-content: center;
+  border-radius: 50%;
   font-size: 15px;
   line-height: 1;
   color: var(--ink-faint);
-  transition: color 150ms, transform 100ms;
+  background: color-mix(in srgb, var(--ink-faint) 10%, transparent);
+  transition: color 150ms, background-color 150ms, transform 100ms;
 }
 
 .habito-punto:active {
@@ -1733,6 +1804,7 @@ html.light-boot *::after {
 
 .habito-punto-marcado {
   color: var(--accent);
+  background: var(--accent-soft);
   transform: scale(1.08);
 }
 

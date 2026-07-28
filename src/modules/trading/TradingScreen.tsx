@@ -215,7 +215,7 @@ function NuevaOperacionForm({
           />
         </div>
         <div className="flex gap-4">
-          <button type="submit" className="self-start text-[13.5px]">
+          <button type="submit" className="accion-primaria self-start px-3.5 py-2 text-[13.5px]">
             Guardar
           </button>
           <button type="button" onClick={onCancel} className="expediente-faint self-start text-[13.5px]">
@@ -413,7 +413,7 @@ export function TradingScreen() {
         <button
           type="button"
           onClick={() => setEditingTemplate((current) => !current)}
-          className="self-start text-[12px] text-ink-faint/70 transition-colors duration-150 hover:text-ink active:text-ink"
+          className="self-start text-[12px] text-ink-faint transition-colors duration-150 hover:text-ink active:text-ink"
         >
           Editar plantilla
         </button>

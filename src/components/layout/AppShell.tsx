@@ -43,8 +43,8 @@ export function AppShell() {
               end={mod.path === '/'}
               className={({ isActive }) =>
                 [
-                  'flex min-h-14 min-w-[3.5rem] flex-1 flex-col items-center justify-center gap-1 px-2 pb-1 pt-2.5 text-[11px] transition-colors active:scale-90 motion-reduce:transition-none motion-reduce:active:scale-100',
-                  isActive ? 'font-medium text-accent' : 'text-ink-faint',
+                  'mx-1 my-1.5 flex min-h-14 min-w-[3.5rem] flex-1 flex-col items-center justify-center gap-1 px-2 pb-1 pt-1.5 text-[11px] transition-colors active:scale-90 motion-reduce:transition-none motion-reduce:active:scale-100',
+                  isActive ? 'nav-inferior-item-activo font-medium text-accent' : 'text-ink-faint',
                 ].join(' ')
               }
             >

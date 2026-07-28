@@ -207,7 +207,7 @@ function NuevaCuentaForm({
         value={nombre}
         onChange={(event) => setNombre(event.target.value)}
         placeholder="Nombre de la cuenta"
-        className="border-b border-border/60 bg-transparent pb-1 text-[14px] text-ink outline-none placeholder:text-ink-faint focus:border-accent/70"
+        className="border-b border-border/60 bg-transparent pb-1 text-[14px] text-ink outline-none placeholder:text-ink-dim focus:border-accent/70"
       />
       <div className="flex gap-4" role="radiogroup" aria-label="Tipo de cuenta">
         {(Object.keys(TIPO_LABEL) as FinanceAccountTipo[]).map((valor) => (
@@ -229,10 +229,10 @@ function NuevaCuentaForm({
         value={saldo}
         onChange={(event) => setSaldo(event.target.value)}
         placeholder="Saldo actual"
-        className="border-b border-border/60 bg-transparent pb-1 text-[14px] text-ink outline-none placeholder:text-ink-faint focus:border-accent/70"
+        className="border-b border-border/60 bg-transparent pb-1 text-[14px] text-ink outline-none placeholder:text-ink-dim focus:border-accent/70"
       />
       <div className="flex gap-4">
-        <button type="submit" className="self-start text-[13.5px] text-accent">
+        <button type="submit" className="accion-primaria self-start px-3.5 py-2 text-[13.5px]">
           Guardar
         </button>
         <button type="button" onClick={onCancel} className="self-start text-[13.5px] text-ink-faint">
@@ -288,16 +288,16 @@ function NuevoMovimientoForm({
         value={monto}
         onChange={(event) => setMonto(event.target.value)}
         placeholder="Monto"
-        className="border-b border-border/60 bg-transparent pb-1 text-[14px] text-ink outline-none placeholder:text-ink-faint focus:border-accent/70"
+        className="border-b border-border/60 bg-transparent pb-1 text-[14px] text-ink outline-none placeholder:text-ink-dim focus:border-accent/70"
       />
       <input
         value={concepto}
         onChange={(event) => setConcepto(event.target.value)}
         placeholder="Concepto (opcional)"
-        className="border-b border-border/60 bg-transparent pb-1 text-[14px] text-ink outline-none placeholder:text-ink-faint focus:border-accent/70"
+        className="border-b border-border/60 bg-transparent pb-1 text-[14px] text-ink outline-none placeholder:text-ink-dim focus:border-accent/70"
       />
       <div className="flex gap-4">
-        <button type="submit" className="self-start text-[13.5px] text-accent">
+        <button type="submit" className="accion-primaria self-start px-3.5 py-2 text-[13.5px]">
           Guardar
         </button>
         <button type="button" onClick={onCancel} className="self-start text-[13.5px] text-ink-faint">
@@ -330,7 +330,7 @@ function NuevaMetaForm({
         value={texto}
         onChange={(event) => setTexto(event.target.value)}
         placeholder="¿Qué querés lograr?"
-        className="border-b border-border/60 bg-transparent pb-1 text-[14px] text-ink outline-none placeholder:text-ink-faint focus:border-accent/70"
+        className="border-b border-border/60 bg-transparent pb-1 text-[14px] text-ink outline-none placeholder:text-ink-dim focus:border-accent/70"
       />
       <input
         type="number"
@@ -338,10 +338,10 @@ function NuevaMetaForm({
         value={objetivo}
         onChange={(event) => setObjetivo(event.target.value)}
         placeholder="Objetivo"
-        className="border-b border-border/60 bg-transparent pb-1 text-[14px] text-ink outline-none placeholder:text-ink-faint focus:border-accent/70"
+        className="border-b border-border/60 bg-transparent pb-1 text-[14px] text-ink outline-none placeholder:text-ink-dim focus:border-accent/70"
       />
       <div className="flex gap-4">
-        <button type="submit" className="self-start text-[13.5px] text-accent">
+        <button type="submit" className="accion-primaria self-start px-3.5 py-2 text-[13.5px]">
           Guardar
         </button>
         <button type="button" onClick={onCancel} className="self-start text-[13.5px] text-ink-faint">
