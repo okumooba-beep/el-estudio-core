@@ -11,37 +11,36 @@ import { MUEBLES } from '@world/studio/muebles'
 import { setGaze } from '@world/world/gaze'
 import { WORLD_PLACES } from '@world/world/worldMap'
 import { DESTINO_TO_FURNITURE, FURNITURE_TO_DESTINO } from './destinoFurniture'
-import type { ClassificationReason } from '@cognitive-engine/ports/ClassificationEngine'
+import type { ClassificationReason, NivelConfianza } from '@cognitive-engine/ports/ClassificationEngine'
 import type { IdeaDestino } from '@/types/idea'
 import type { FurnitureId } from '@world/studio/furniture'
 
 const DRAFT_KEY = 'idea-draft'
 
-/** Cuánto descansa una idea recién guardada antes de que aparezca la propuesta, en silencio. */
+/** Cuánto descansa una captura recién guardada antes de que aparezca la propuesta, en silencio. */
 const PROPOSAL_DELAY_MS = 2200
-/** Si nadie la toca, la propuesta se retira sola — el destino ya elegido queda como está. */
-const PROPOSAL_TIMEOUT_MS = 9000
 
 /**
- * Sprint 3.6 (revisión), parte 6: solo los muebles que ya existen de
- * verdad — nunca Biblioteca ni Finanzas, todavía reservados. "Diario"
- * reemplaza a "Hoy": elegirlo no muda a ningún mueble especial, porque
- * la hoja ya vive para siempre en el Diario (ver moveSheet/history).
+ * Umbral V1 (Contrato del Umbral §7): los siete destinos, siempre. Antes
+ * solo había cuatro, así que una hoja mandada por error a Finanzas o
+ * Biblioteca no se podía corregir desde la propuesta — la
+ * reversibilidad del §1 se rompía justo donde más importaba. "Cuaderno"
+ * apunta al escritorio: la hoja se queda donde está.
  */
 const CORRECCION_DESTINOS: readonly { id: FurnitureId; label: string }[] = [
   { id: 'tablero', label: 'Misiones' },
   { id: 'habitos', label: 'Hábitos' },
   { id: 'mesa-analisis', label: 'Trading' },
+  { id: 'finanzas', label: 'Finanzas' },
+  { id: 'biblioteca', label: 'Biblioteca' },
+  { id: 'archivador', label: 'Archivo' },
   { id: 'escritorio', label: 'Cuaderno' },
 ]
 
 /**
- * Voice of El Estudio — un solo texto para "qué cree el clasificador",
- * usado tanto antes de guardar (vista previa en vivo) como después
- * (la propuesta). Corto, sin "Esto"/"Creo que": el Estudio observa y
- * dice lo que ve, nunca se explica de más. "Cambiar destino" (más abajo)
- * es la invitación explícita a corregir — nunca un texto que hay que
- * adivinar que se puede tocar.
+ * Voice of El Estudio — qué cree el clasificador, en vista previa y en
+ * la propuesta de confianza media. Corto, sin "Esto"/"Creo que": el
+ * Estudio observa y dice lo que ve, nunca se explica de más.
  */
 const DESTINO_PREVIEW_MESSAGE: Record<IdeaDestino, string> = {
   hoy: 'Se queda como idea.',
@@ -53,10 +52,38 @@ const DESTINO_PREVIEW_MESSAGE: Record<IdeaDestino, string> = {
   archivo: 'Parece algo para archivar.',
 }
 
+/**
+ * Confianza alta: la hoja ya se mudó, así que el texto lo cuenta en
+ * pasado en vez de preguntar. No es una pregunta pendiente — es un
+ * hecho reversible.
+ */
+const DESTINO_ASIGNADO_MESSAGE: Record<IdeaDestino, string> = {
+  hoy: 'Se queda como idea.',
+  misiones: 'Vive en Misiones.',
+  habitos: 'Vive en Hábitos.',
+  trading: 'Vive en Trading.',
+  finanzas: 'Vive en Finanzas.',
+  biblioteca: 'Vive en la Biblioteca.',
+  archivo: 'Vive en el Archivo.',
+}
+
+const DESTINO_LABEL: Record<IdeaDestino, string> = {
+  hoy: 'Cuaderno',
+  misiones: 'Misiones',
+  habitos: 'Hábitos',
+  trading: 'Trading',
+  finanzas: 'Finanzas',
+  biblioteca: 'Biblioteca',
+  archivo: 'Archivo',
+}
+
 interface Proposal {
   ideaId: string
   texto: string
   destinoPropuesto: IdeaDestino
+  /** Contrato §7: 'alta' ya movió la hoja y esto lo informa; 'media' todavía no movió nada. */
+  nivel: NivelConfianza
+  alternativa: IdeaDestino | null
   reason: ClassificationReason
   expanded: boolean
 }
@@ -65,42 +92,42 @@ interface Proposal {
  * Esta es la única puerta (Sprint 2.2, regla "Todo pensamiento entra
  * por una sola puerta"): nunca va a existir un formulario propio para
  * Misiones, Hábitos, Trading, Finanzas o Biblioteca. Todo empieza acá
- * como una Idea sin hogar, y el Escritorio (antes "Hoy" — ver
+ * como una captura sin hogar, y el Escritorio (antes "Hoy" — ver
  * src/packages/world/studio/muebles.ts) es el mueble donde vive mientras tanto.
  *
- * Desde Sprint 2.1 el Estudio ya no pregunta primero — observa el texto
- * con el Motor de Comprensión (ver src/packages/cognitive-engine/) y, solo si
- * reconoce algo, propone en silencio dónde cree que vive. Si no
- * reconoce nada, no dice nada — la idea se queda en el Escritorio sin
- * comentario (el Estudio nunca adivina), y ahí se queda para siempre si
- * nadie la mueve: el Motor clasifica una sola vez, al nacer la Idea, y
- * nunca vuelve más tarde a insistir con una que ya lleva días sin hogar
- * (Sprint 2.2, punto 07 — el Estudio nunca presiona).
+ * Umbral V1 — los tres comportamientos del Contrato del Umbral §7. Hasta
+ * este sprint el Umbral hacía exactamente lo que el Contrato prohíbe:
+ * llamaba a moveSheet() apenas una regla coincidía y recién después
+ * mostraba la "propuesta", así que lo que parecía una pregunta era en
+ * realidad un deshacer sobre una hoja ya mudada. Y a los 9 segundos, si
+ * nadie reaccionaba, escribía en el log `destinoElegido: destino` — el
+ * silencio quedaba registrado como una decisión del usuario.
  *
- * Tocar la propuesta despliega la corrección — solo Hoy, Misiones,
- * Hábitos y Trading (los únicos destinos con evidencia real todavía).
+ * Ahora:
+ *   alta  → la hoja se mueve sola y el Estudio lo informa en pasado;
+ *   media → NO se mueve nada; la propuesta espera indefinidamente;
+ *   baja  → silencio, la captura se queda en el Escritorio.
+ *
+ * La propuesta ya no expira. Si la ignorás, no pasa nada — ni ahora ni
+ * en tres meses (Contrato §11: el Umbral limita la visibilidad, nunca
+ * la existencia). Y nada se escribe en el log de clasificación salvo
+ * que el usuario haya hecho algo: confirmar, corregir, o que el propio
+ * Estudio haya asignado por confianza alta (registrado con
+ * `destinoElegido: null`, porque el usuario todavía no se pronunció).
+ *
  * Corregir enseña esa preferencia en este dispositivo, nunca más allá
  * (ver src/packages/cognitive-engine/providers/rule-based/memory.ts), para la próxima vez que
  * aparezca el mismo texto exacto.
  *
- * El Escritorio no es una lista (Sprint 2.2, punto 02 — cierre de la
- * auditoría del Sprint 2.1): puede haber varias Ideas sin hogar a la
- * vez, y todas siguen vivas en IndexedDB, pero acá solo se ve una pila
- * física de hasta 4 (ver DeskPaperStack). Cuando una Idea encuentra
- * hogar no hace fade ni se borra — su `destino` cambia y simplemente
- * deja de pertenecer a esta pila, porque ya vive en otro mueble.
+ * El Escritorio no es una lista (Sprint 2.2, punto 02): puede haber
+ * varias capturas sin hogar a la vez, y todas siguen vivas en
+ * IndexedDB, pero acá solo se ve una pila física de hasta 4 (ver
+ * DeskPaperStack).
  *
  * Sprint "The Gaze": onFocus en el input, no onChange — la mirada se
- * decide al entrar por la única puerta, antes de escribir la primera
- * letra (ver src/packages/world/world/gaze.ts). Todavía no mueve ni anima nada;
- * solo dice que la atención ya pertenece al Escritorio.
- *
- * Sprint "Crossing the Threshold": onBlur es el regreso — dejar esta
- * puerta limpia la mirada, nunca un botón "salir" ni una ruta nueva.
- * El destino usa WORLD_PLACES.escritorio.id (ver
- * src/packages/world/world/worldMap.ts), nunca el literal 'escritorio' suelto:
- * el mapa del mundo es la fuente de verdad de qué lugares existen,
- * este archivo solo la consulta.
+ * decide al entrar por la única puerta. Sprint "Crossing the Threshold":
+ * onBlur es el regreso; el destino usa WORLD_PLACES.escritorio.id, nunca
+ * el literal 'escritorio' suelto.
  */
 export function IdeaCapture() {
   const { ideas, add, moveSheet } = useIdeas()
@@ -109,14 +136,16 @@ export function IdeaCapture() {
   const [openedId, setOpenedId] = useState<string | null>(null)
   const [justSaved, setJustSaved] = useState(false)
   const proposalTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const preclasificacion = useMemo(() => {
     const texto = value.trim()
     if (!texto) return null
-    return comprehensionEngine.classify(texto).destino
+    const { destino, nivel } = comprehensionEngine.classify(texto)
+    // Contrato §7: con confianza baja el Estudio no dice nada. Tampoco
+    // mientras escribís.
+    return nivel === 'baja' ? null : destino
   }, [value])
 
   const hoyIdeas = ideas.filter((idea) => idea.destino === 'hoy')
@@ -127,7 +156,6 @@ export function IdeaCapture() {
   useEffect(() => {
     return () => {
       if (proposalTimer.current) clearTimeout(proposalTimer.current)
-      if (dismissTimer.current) clearTimeout(dismissTimer.current)
       if (savedTimer.current) clearTimeout(savedTimer.current)
     }
   }, [])
@@ -135,7 +163,6 @@ export function IdeaCapture() {
   function clearProposalState() {
     setProposal(null)
     if (proposalTimer.current) clearTimeout(proposalTimer.current)
-    if (dismissTimer.current) clearTimeout(dismissTimer.current)
   }
 
   function handleChange(text: string) {
@@ -156,52 +183,78 @@ export function IdeaCapture() {
     setValue('')
     writeJSON(DRAFT_KEY, '')
     // Core V3 — "si algo interrumpe la escritura, sacarlo": guardar con
-    // el botón (a diferencia de Enter) le saca el foco al input; sin
-    // esto, escribir la siguiente idea pedía un segundo toque.
+    // el botón (a diferencia de Enter) le saca el foco al input.
     inputRef.current?.focus()
 
-    // Threshold V1 — "guardar debe sentirse satisfactorio": el mismo
-    // borde/sombra cálidos que ya existen para focus-within (abajo) se
-    // reusan acá, disparados un instante después de guardar en vez de
-    // solo al enfocar. Ningún componente ni color nuevo.
+    // Threshold V1 — "guardar debe sentirse satisfactorio".
     setJustSaved(true)
     if (savedTimer.current) clearTimeout(savedTimer.current)
     savedTimer.current = setTimeout(() => setJustSaved(false), 900)
 
-    const { destino, reason } = comprehensionEngine.classify(texto)
-    if (destino === 'hoy') return
+    const { destino, reason, nivel, alternativa } = comprehensionEngine.classify(texto)
+
+    // Contrato §7, confianza baja: silencio. Ni propuesta, ni etiqueta,
+    // ni movimiento. Un Umbral con capturas sin clasificar es un Umbral
+    // honesto.
+    if (nivel === 'baja') return
 
     proposalTimer.current = setTimeout(() => {
-      // La propuesta siempre debe aparecer, incluso si mover la hoja
-      // falla o tarda (Sprint 3.2, prioridad 2) — por eso ya no se
-      // espera assignDestino antes de mostrarla.
-      setProposal({ ideaId: created.id, texto, destinoPropuesto: destino, reason, expanded: false })
+      setProposal({
+        ideaId: created.id,
+        texto,
+        destinoPropuesto: destino,
+        nivel,
+        alternativa,
+        reason,
+        expanded: false,
+      })
+
+      // Contrato §7: SOLO la confianza alta mueve la hoja. Con media, la
+      // propuesta se muestra y la captura sigue en el Escritorio hasta
+      // que el usuario confirme.
+      if (nivel !== 'alta') return
+
       moveSheet(created, DESTINO_TO_FURNITURE[destino]).catch((error) => {
         console.error('No se pudo mover la hoja al mueble propuesto', error)
       })
-      dismissTimer.current = setTimeout(() => {
-        recordClassification({
-          texto,
-          destinoPropuesto: destino,
-          destinoElegido: destino,
-          reason,
-          fecha: new Date().toISOString(),
-        })
-        setProposal(null)
-      }, PROPOSAL_TIMEOUT_MS)
+      recordClassification({
+        texto,
+        destinoPropuesto: destino,
+        destinoElegido: null,
+        reason,
+        fecha: new Date().toISOString(),
+      })
     }, PROPOSAL_DELAY_MS)
   }
 
   function handleToggleExpand() {
-    if (dismissTimer.current) clearTimeout(dismissTimer.current)
     setProposal((current) => (current ? { ...current, expanded: !current.expanded } : current))
+  }
+
+  /** Contrato §7, confianza media: recién acá se mueve la hoja. */
+  async function handleConfirmar(destino: IdeaDestino) {
+    if (!proposal) return
+    const idea = ideas.find((i) => i.id === proposal.ideaId)
+    if (!idea) return
+
+    await moveSheet(idea, DESTINO_TO_FURNITURE[destino])
+    if (destino !== proposal.destinoPropuesto) {
+      learnCorrection(normalizeTexto(proposal.texto), destino)
+    }
+    recordClassification({
+      texto: proposal.texto,
+      destinoPropuesto: proposal.destinoPropuesto,
+      destinoElegido: destino,
+      reason: proposal.reason,
+      fecha: new Date().toISOString(),
+    })
+    setProposal(null)
   }
 
   async function handleCorreccion(furniture: FurnitureId) {
     if (!proposal) return
     const idea = ideas.find((i) => i.id === proposal.ideaId)
     if (!idea) return
-    if (dismissTimer.current) clearTimeout(dismissTimer.current)
 
     const destino = FURNITURE_TO_DESTINO[furniture] ?? idea.destino
     await moveSheet(idea, furniture)
@@ -225,7 +278,33 @@ export function IdeaCapture() {
           <IdeaSheet idea={activa} open={Boolean(propuesta)} />
           {propuesta && proposal ? (
             <p className="idea-proposal">
-              {DESTINO_PREVIEW_MESSAGE[proposal.destinoPropuesto]}{' '}
+              {proposal.nivel === 'alta'
+                ? DESTINO_ASIGNADO_MESSAGE[proposal.destinoPropuesto]
+                : DESTINO_PREVIEW_MESSAGE[proposal.destinoPropuesto]}{' '}
+              {proposal.nivel === 'media' ? (
+                <>
+                  <button
+                    type="button"
+                    className="idea-proposal-target"
+                    onClick={() => handleConfirmar(proposal.destinoPropuesto)}
+                  >
+                    Confirmar
+                  </button>
+                  {proposal.alternativa ? (
+                    <>
+                      {' · '}
+                      <button
+                        type="button"
+                        className="idea-proposal-target"
+                        onClick={() => handleConfirmar(proposal.alternativa as IdeaDestino)}
+                      >
+                        {DESTINO_LABEL[proposal.alternativa]}
+                      </button>
+                    </>
+                  ) : null}
+                  {' · '}
+                </>
+              ) : null}
               <button type="button" className="idea-proposal-target" onClick={handleToggleExpand}>
                 Cambiar destino
               </button>

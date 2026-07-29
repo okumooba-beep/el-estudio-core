@@ -1,4 +1,4 @@
-import type { ClassificationRule } from '../../ports/ClassificationEngine'
+import type { ClassificationRule, StructuralRule } from '../../ports/ClassificationEngine'
 
 /**
  * Espejo exacto de `IdeaDestino` (ver src/types/idea.ts) — duplicado a
@@ -11,10 +11,13 @@ export type Destino = 'hoy' | 'misiones' | 'habitos' | 'trading' | 'finanzas' | 
 
 /**
  * Reglas simples y transparentes (Sprint 2.1, punto 01): palabra clave
- * → destino, en ese orden, el primer match gana. Nunca IA, nunca
- * embeddings, nunca puntuación de confianza — cada regla se puede leer
- * en una línea. Agregar un destino nuevo es agregar una línea acá,
- * nunca tocar RuleBasedClassifier.ts.
+ * → destino. Cada regla se puede leer en una línea. Agregar un destino
+ * nuevo es agregar una línea acá, nunca tocar RuleBasedClassifier.ts.
+ *
+ * Umbral V1: la lista queda igual — este sprint no amplía el léxico
+ * (Contrato §9 tiene el léxico completo pendiente). Lo que cambia es
+ * que una coincidencia léxica ya no alcanza para mover una hoja: vale
+ * PESO_LEXICO, que es confianza media, o sea propuesta sin movimiento.
  */
 export const RULES: readonly ClassificationRule<Destino>[] = [
   { id: 'habito-meditar', keyword: 'meditar', destino: 'habitos' },
@@ -32,3 +35,52 @@ export const RULES: readonly ClassificationRule<Destino>[] = [
   { id: 'biblioteca-frase', keyword: 'frase', destino: 'biblioteca' },
   { id: 'archivo-archivar', keyword: 'archivar', destino: 'archivo' },
 ]
+
+/**
+ * Señales estructurales (Contrato del Umbral §6) — la familia que
+ * faltaba. Un monto es la señal más fuerte que existe en el sistema y
+ * hasta este sprint el clasificador la ignoraba por completo.
+ *
+ * Un monto por sí solo NO es Finanzas: "Comprar un escritorio de
+ * $200.000" es una intención de gasto, no un movimiento (Contrato §4:
+ * Finanzas no recibe intenciones futuras). Por eso el monto vale
+ * PESO_MONTO — media — y solo llega a confianza alta acompañado de un
+ * verbo de gasto en pasado.
+ */
+export const ESTRUCTURA: readonly StructuralRule<Destino>[] = [
+  {
+    id: 'finanzas-monto',
+    patron: /\$\s?\d|(?:\d[\d.,]*)\s?(?:pesos|d[oó]lares|usd|mil|luca|lucas|palo|palos)\b/i,
+    destino: 'finanzas',
+  },
+]
+
+/**
+ * Pretérito de gasto en primera persona (Contrato §6, familia
+ * sintáctica). Solo formas cerradas y sin ambigüedad: "gasté" nunca es
+ * otra cosa. Se listan con y sin tilde porque el texto llega
+ * normalizado pero no siempre acentuado.
+ */
+export const VERBOS_GASTO_PASADO: readonly string[] = [
+  'gasté', 'gaste', 'pagué', 'pague', 'compré', 'compre', 'cobré', 'cobre',
+  'transferí', 'transferi', 'deposité', 'deposite', 'me salió', 'me salio',
+  'me costó', 'me costo',
+]
+
+/**
+ * Negadores (Contrato §6). Sin esto "No tengo que comprar nada" movía
+ * la hoja a Misiones por contener "comprar" — el error silencioso más
+ * visible de la auditoría. Una palabra clave precedida por un negador
+ * en la misma oración no dispara.
+ */
+export const NEGADORES: readonly string[] = ['no ', 'nunca ', 'ni ', 'tampoco ', 'sin ', 'jamás ', 'jamas ']
+
+/** Contrato §6: el peso de cada familia de señal. */
+export const PESO_LEXICO = 0.6
+export const PESO_MONTO = 0.6
+export const PESO_GASTO_PASADO = 0.86
+export const PESO_MONTO_Y_GASTO = 0.95
+/** Contrato §6, regla 2: cada señal adicional que apunta al mismo destino. */
+export const BONO_CONVERGENCIA = 0.15
+/** Contrato §6, regla 3: dos destinos por encima de este valor son un conflicto. */
+export const UMBRAL_CONFLICTO = 0.5

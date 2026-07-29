@@ -8,7 +8,16 @@ const MAX_ENTRIES = 200
 export interface ClassificationLogEntry {
   readonly texto: string
   readonly destinoPropuesto: Destino
-  readonly destinoElegido: Destino
+  /**
+   * Umbral V1: `null` cuando el usuario todavía no se pronunció — el
+   * Estudio asignó por confianza alta y nadie confirmó ni corrigió.
+   * Antes se escribía el destino propuesto cuando la propuesta expiraba
+   * por timeout, o sea que el log guardaba como decisión del usuario
+   * algo que el usuario nunca decidió. Ese historial es el que más
+   * adelante va a usar la IA: contaminarlo con consentimientos falsos
+   * era el peor de los errores silenciosos.
+   */
+  readonly destinoElegido: Destino | null
   readonly reason: ClassificationReason
   readonly fecha: string
 }
