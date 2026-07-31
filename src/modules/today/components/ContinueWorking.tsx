@@ -28,10 +28,30 @@ import type { Idea } from '@/types/idea'
  * espacio en un registro; la Voz del Estudio pide invitación, no
  * reporte, así que la etiqueta pasa a ser una frase fija que no
  * depende de `updatedAt` (el dato sigue existiendo, solo ya no se dice).
+ *
+ * Umbral V1.1 — ordenar por `updatedAt` sin más hacía que la hoja
+ * recién capturada fuera SIEMPRE la elegida: apenas el Umbral la
+ * archivaba, el Escritorio te ofrecía "continuar" con lo que acababas
+ * de escribir, y la captura no terminaba de irse nunca. Que el Umbral
+ * la haya archivado no es haber empezado nada.
+ *
+ * El criterio pasa a ser el historial, no el reloj: una hoja entra acá
+ * solo si se movió más de una vez. La primera mudanza es el Umbral
+ * dándole un lugar; cualquiera posterior ya es una decisión tuya. Es
+ * deliberadamente estricto — la pantalla principal no debe resumir tu
+ * vida, debe invitarte a comenzar (EL_ESTUDIO_CORE.md), así que esta
+ * sección aparece poco y solo cuando de verdad dejaste algo a medias.
+ * Se elige el historial y no un margen de minutos a propósito: el
+ * Estudio no cambia de opinión por el paso del tiempo.
  */
 export function selectContinueWorking(ideas: readonly Idea[]): Idea | null {
   const candidatas = ideas.filter(
-    (idea) => idea.destino !== 'hoy' && idea.destino !== 'archivo' && idea.estado !== 'terminada',
+    (idea) =>
+      idea.destino !== 'hoy' &&
+      idea.destino !== 'archivo' &&
+      idea.estado !== 'terminada' &&
+      // 'creada' + una sola 'movida' = recién archivada por el Umbral.
+      idea.history.length > 2,
   )
   if (candidatas.length === 0) return null
   return [...candidatas].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0] ?? null

@@ -1,6 +1,7 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { useFinance } from './useFinance'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { useIdeas } from '@modules/work-table/public'
 import type { FinanceAccountTipo, FinanceMovimientoTipo } from '@/types/finance'
 
 const TIPO_LABEL: Record<FinanceAccountTipo, string> = {
@@ -30,6 +31,7 @@ function sumaPorTipo(cuentas: readonly { tipo: FinanceAccountTipo; saldo: number
  */
 export function FinanceScreen() {
   const { accounts, movimientos, goals, ready, addAccount, updateAccount, addMovimiento, addGoal, updateGoal } = useFinance()
+  const { ideas } = useIdeas()
   const [creatingAccount, setCreatingAccount] = useState(false)
   const [creatingMovimiento, setCreatingMovimiento] = useState(false)
   const [creatingGoal, setCreatingGoal] = useState(false)
@@ -49,10 +51,44 @@ export function FinanceScreen() {
 
   if (!ready) return null
 
-  const sinNada = accounts.length === 0 && movimientos.length === 0 && goals.length === 0
+  /**
+   * Umbral V1.1 — las hojas que el Umbral enruta acá (Contrato del
+   * Umbral §10: una captura puede llegar a su destino sin estar
+   * completa). Hasta este sprint Finanzas no sabía siquiera que las
+   * Ideas existían: leía solo sus propias tablas Dexie, así que
+   * escribir "Gasté 80k en gasolina" mandaba la hoja a un destino que
+   * nunca la mostraba — llegaba a Finanzas y Finanzas no se enteraba.
+   *
+   * Todavía NO se convierten en FinanceMovimiento: extraer el monto,
+   * inferir la categoría y agrupar por mes es el motor de movimientos,
+   * y ese es su propio sprint. Acá solo se cumple la mitad que le toca
+   * al destino — mostrar lo que le llegó. El Umbral resuelve dónde; el
+   * módulo resuelve qué falta.
+   *
+   * Importa `work-table/public.ts`, la única superficie que un módulo
+   * de contenido puede tomar de otro (.dependency-cruiser.cjs,
+   * module-no-cross-module-import), igual que ya hace Misiones.
+   */
+  const capturas = ideas.filter((idea) => idea.destino === 'finanzas')
+
+  const sinNada = accounts.length === 0 && movimientos.length === 0 && goals.length === 0 && capturas.length === 0
 
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-8 pt-2">
+      {capturas.length > 0 ? (
+        <section>
+          <h2 className="mb-2 font-mono text-[11px] uppercase tracking-wide text-accent">Llegaron acá</h2>
+          <ul className="flex flex-col">
+            {capturas.map((captura) => (
+              <li key={captura.id} className="border-b border-border/40 py-2.5 last:border-b-0">
+                <p className="text-[17px] text-ink">{captura.texto}</p>
+                <p className="mt-0.5 font-mono text-[12.5px] text-ink-faint">{captura.hora}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       <section>
         <h2 className="mb-1 font-mono text-[11px] uppercase tracking-wide text-accent">Patrimonio neto</h2>
         <p className="text-[28px] text-ink">{formatMoney(patrimonioNeto)}</p>
