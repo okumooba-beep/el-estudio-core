@@ -36,7 +36,7 @@ import type { Idea } from '@/types/idea'
  * la haya archivado no es haber empezado nada.
  *
  * El criterio pasa a ser el historial, no el reloj: una hoja entra acá
- * solo si se movió más de una vez. La primera mudanza es el Umbral
+ * solo si se MUDÓ más de una vez. La primera mudanza es el Umbral
  * dándole un lugar; cualquiera posterior ya es una decisión tuya. Es
  * deliberadamente estricto — la pantalla principal no debe resumir tu
  * vida, debe invitarte a comenzar (EL_ESTUDIO_CORE.md), así que esta
@@ -50,8 +50,14 @@ export function selectContinueWorking(ideas: readonly Idea[]): Idea | null {
       idea.destino !== 'hoy' &&
       idea.destino !== 'archivo' &&
       idea.estado !== 'terminada' &&
-      // 'creada' + una sola 'movida' = recién archivada por el Umbral.
-      idea.history.length > 2,
+      // Se cuentan las mudanzas, nunca el largo del historial: toda hoja
+      // nace ya con DOS entradas 'creada' — el diario registra cada hoja
+      // al nacer además del mueble donde aterriza (ideaRepository.create).
+      // Contar entradas daba 3 apenas el Umbral archivaba, y la captura
+      // recién escrita volvía al Escritorio como "¿Continuamos?": el bug
+      // que este filtro existe para evitar. Contar 'movida' es inmune a
+      // cuántas 'creada' agregue el mundo en el futuro.
+      idea.history.filter((entrada) => entrada.evento === 'movida').length > 1,
   )
   if (candidatas.length === 0) return null
   return [...candidatas].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0] ?? null
