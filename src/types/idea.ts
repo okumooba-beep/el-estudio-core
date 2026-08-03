@@ -14,7 +14,15 @@
  */
 import type { FurnitureId, HistoryEntry } from '@world/studio/furniture'
 
-export type IdeaDestino = 'hoy' | 'misiones' | 'habitos' | 'trading' | 'finanzas' | 'biblioteca' | 'archivo'
+export type IdeaDestino =
+  | 'hoy'
+  | 'misiones'
+  | 'asuntos'
+  | 'habitos'
+  | 'trading'
+  | 'finanzas'
+  | 'biblioteca'
+  | 'archivo'
 
 export interface Idea {
   id: string

@@ -1,5 +1,6 @@
 import { MODULE as diario } from '@modules/journal/public'
 import { MODULE as misiones } from '@modules/missions/public'
+import { MODULE as asuntos } from '@modules/asuntos/public'
 import { MODULE as habitos } from '@modules/habits/public'
 import { MODULE as trading } from '@modules/trading/public'
 import { MODULE as finanzas } from '@modules/finance/public'
@@ -40,6 +41,7 @@ export interface Space {
 export const SPACES: readonly Space[] = [
   { destino: null, path: diario.path, label: diario.label, proposito: 'Pensá con claridad.' },
   { destino: 'misiones', path: misiones.path, label: misiones.label, proposito: 'Lo que merece acción.' },
+  { destino: 'asuntos', path: asuntos.path, label: asuntos.label, proposito: 'Lo que espera a otro.' },
   { destino: 'habitos', path: habitos.path, label: habitos.label, proposito: 'Un día a la vez.' },
   { destino: 'trading', path: trading.path, label: trading.label, proposito: 'Operá con disciplina.' },
   {

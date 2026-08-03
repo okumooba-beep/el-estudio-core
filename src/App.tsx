@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router-dom'
 import { AppShell } from '@/components/layout/AppShell'
 import { RoomBackground } from '@/components/room/RoomBackground'
 import { HoyScreen } from '@modules/today/HoyScreen'
+import { AsuntosScreen } from '@modules/asuntos/public'
 import { MisionesScreen } from '@modules/missions/MisionesScreen'
 import { HabitosScreen } from '@modules/habits/HabitosScreen'
 import { TradingScreen } from '@modules/trading/TradingScreen'
@@ -22,6 +23,7 @@ function App() {
         <Route element={<AppShell />}>
           <Route index element={<HoyScreen />} />
           <Route path="misiones" element={<MisionesScreen />} />
+          <Route path="asuntos" element={<AsuntosScreen />} />
           <Route path="habitos" element={<HabitosScreen />} />
           <Route path="trading" element={<TradingScreen />} />
           <Route path="diario" element={<DiarioScreen />} />

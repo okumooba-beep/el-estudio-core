@@ -10,6 +10,7 @@ import type { IdeaDestino } from '@/types/idea'
 export const DESTINO_TO_FURNITURE: Record<IdeaDestino, FurnitureId> = {
   hoy: 'escritorio',
   misiones: 'tablero',
+  asuntos: 'bandeja',
   habitos: 'habitos',
   trading: 'mesa-analisis',
   finanzas: 'finanzas',
@@ -20,6 +21,7 @@ export const DESTINO_TO_FURNITURE: Record<IdeaDestino, FurnitureId> = {
 export const FURNITURE_TO_DESTINO: Partial<Record<FurnitureId, IdeaDestino>> = {
   escritorio: 'hoy',
   tablero: 'misiones',
+  bandeja: 'asuntos',
   habitos: 'habitos',
   'mesa-analisis': 'trading',
   finanzas: 'finanzas',

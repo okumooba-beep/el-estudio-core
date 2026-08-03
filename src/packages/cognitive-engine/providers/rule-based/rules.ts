@@ -7,7 +7,15 @@ import type { ClassificationRule, StructuralRule } from '../../ports/Classificat
  * `IdeaDestino` cambia sus valores, este tipo debe actualizarse junto
  * con él.
  */
-export type Destino = 'hoy' | 'misiones' | 'habitos' | 'trading' | 'finanzas' | 'biblioteca' | 'archivo'
+export type Destino =
+  | 'hoy'
+  | 'misiones'
+  | 'asuntos'
+  | 'habitos'
+  | 'trading'
+  | 'finanzas'
+  | 'biblioteca'
+  | 'archivo'
 
 /**
  * Reglas simples y transparentes (Sprint 2.1, punto 01): palabra clave
@@ -19,6 +27,15 @@ export type Destino = 'hoy' | 'misiones' | 'habitos' | 'trading' | 'finanzas' | 
  * que una coincidencia léxica ya no alcanza para mover una hoja: vale
  * PESO_LEXICO, que es confianza media, o sea propuesta sin movimiento.
  */
+/**
+ * Contrato del Umbral §6, familia sintáctica: una marca de dependencia
+ * ("me tienen que", "esperando") describe quién actúa, no de qué se
+ * habla, y por eso le gana a una palabra de tema. Sigue por debajo de
+ * UMBRAL_ALTA a propósito — nunca mueve una hoja sola, solo decide cuál
+ * de los dos destinos se propone primero.
+ */
+export const PESO_DEPENDENCIA = 0.72
+
 export const RULES: readonly ClassificationRule<Destino>[] = [
   { id: 'habito-meditar', keyword: 'meditar', destino: 'habitos' },
   { id: 'habito-gimnasio', keyword: 'gimnasio', destino: 'habitos' },
@@ -29,6 +46,17 @@ export const RULES: readonly ClassificationRule<Destino>[] = [
   { id: 'mision-comprar', keyword: 'comprar', destino: 'misiones' },
   { id: 'mision-llamar', keyword: 'llamar', destino: 'misiones' },
   { id: 'mision-turno', keyword: 'turno', destino: 'misiones' },
+  // Asuntos (Sprint 003): la marca de un asunto no es el tema, es la
+  // espera. Todas estas expresiones dicen "depende de otro" — que es
+  // exactamente la pregunta que lo separa de una misión. Se eligen
+  // formas cerradas: 'pendiente' suelto o 'todavía no' calificarían
+  // media docena de pensamientos que no son asuntos.
+  { id: 'asunto-esperando', keyword: 'esperando', destino: 'asuntos', peso: PESO_DEPENDENCIA },
+  { id: 'asunto-a-la-espera', keyword: 'a la espera', destino: 'asuntos', peso: PESO_DEPENDENCIA },
+  { id: 'asunto-pendiente-de', keyword: 'pendiente de', destino: 'asuntos', peso: PESO_DEPENDENCIA },
+  { id: 'asunto-me-tienen-que', keyword: 'me tienen que', destino: 'asuntos', peso: PESO_DEPENDENCIA },
+  { id: 'asunto-quedo-en', keyword: 'quedó en', destino: 'asuntos', peso: PESO_DEPENDENCIA },
+  { id: 'asunto-quedo-en-sin-tilde', keyword: 'quedo en', destino: 'asuntos', peso: PESO_DEPENDENCIA },
   { id: 'finanzas-presupuesto', keyword: 'presupuesto', destino: 'finanzas' },
   { id: 'finanzas-factura', keyword: 'factura', destino: 'finanzas' },
   { id: 'finanzas-ahorro', keyword: 'ahorro', destino: 'finanzas' },

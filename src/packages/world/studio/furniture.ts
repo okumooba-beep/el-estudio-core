@@ -10,6 +10,7 @@ import type { MaterialId } from './materials'
 export type FurnitureId =
   | 'escritorio'
   | 'tablero'
+  | 'bandeja'
   | 'habitos'
   | 'mesa-analisis'
   | 'diario'
@@ -37,7 +38,7 @@ export const FURNITURE: Record<FurnitureId, Furniture> = {
     id: 'escritorio',
     nombre: 'Escritorio',
     recibe: [],
-    enviaA: ['tablero', 'habitos', 'mesa-analisis', 'finanzas', 'biblioteca'],
+    enviaA: ['tablero', 'bandeja', 'habitos', 'mesa-analisis', 'finanzas', 'biblioteca'],
     icono: 'hoja',
     material: 'wood',
   },
@@ -48,6 +49,21 @@ export const FURNITURE: Record<FurnitureId, Furniture> = {
     enviaA: ['archivador'],
     icono: 'corcho',
     material: 'cork',
+  },
+  /**
+   * Asuntos (Sprint de Producto 003). El Tablero es para lo que podés
+   * empezar vos; la Bandeja es donde descansa lo que depende de otro.
+   * `enviaA: ['tablero']` no es decorativo: el día que un asunto deja de
+   * depender de un tercero, deja de ser un asunto y pasa a ser una
+   * misión — el grafo lo dice antes que cualquier pantalla.
+   */
+  bandeja: {
+    id: 'bandeja',
+    nombre: 'Bandeja',
+    recibe: ['escritorio'],
+    enviaA: ['tablero', 'archivador'],
+    icono: 'bandeja de madera',
+    material: 'wood',
   },
   habitos: {
     id: 'habitos',

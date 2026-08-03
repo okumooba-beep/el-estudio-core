@@ -6,7 +6,7 @@
  * `IdeaDestino` cambia sus valores, este tipo debe actualizarse junto
  * con él.
  */
-type Destino = 'hoy' | 'misiones' | 'habitos' | 'trading' | 'finanzas' | 'biblioteca' | 'archivo'
+type Destino = 'hoy' | 'misiones' | 'asuntos' | 'habitos' | 'trading' | 'finanzas' | 'biblioteca' | 'archivo'
 
 /**
  * El lenguaje interno del Estudio (Sprint 2.2, punto 06): "módulo" deja
@@ -28,6 +28,7 @@ type Destino = 'hoy' | 'misiones' | 'habitos' | 'trading' | 'finanzas' | 'biblio
 export const MUEBLES: Partial<Record<Destino, string>> = {
   hoy: 'Escritorio',
   misiones: 'Tablero de Corcho',
+  asuntos: 'Bandeja',
   habitos: 'Calendario',
   trading: 'Mesa de Análisis',
   archivo: 'Archivador',

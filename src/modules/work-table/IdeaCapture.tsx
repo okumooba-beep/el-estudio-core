@@ -29,6 +29,7 @@ const PROPOSAL_DELAY_MS = 2200
  */
 const CORRECCION_DESTINOS: readonly { id: FurnitureId; label: string }[] = [
   { id: 'tablero', label: 'Misiones' },
+  { id: 'bandeja', label: 'Asuntos' },
   { id: 'habitos', label: 'Hábitos' },
   { id: 'mesa-analisis', label: 'Trading' },
   { id: 'finanzas', label: 'Finanzas' },
@@ -45,6 +46,7 @@ const CORRECCION_DESTINOS: readonly { id: FurnitureId; label: string }[] = [
 const DESTINO_PREVIEW_MESSAGE: Record<IdeaDestino, string> = {
   hoy: 'Se queda como idea.',
   misiones: 'Parece una misión.',
+  asuntos: 'Parece un asunto abierto.',
   habitos: 'Parece un hábito.',
   trading: 'Parece una nota de trading.',
   finanzas: 'Parece algo de finanzas.',
@@ -60,6 +62,7 @@ const DESTINO_PREVIEW_MESSAGE: Record<IdeaDestino, string> = {
 const DESTINO_ASIGNADO_MESSAGE: Record<IdeaDestino, string> = {
   hoy: 'Se queda como idea.',
   misiones: 'Vive en Misiones.',
+  asuntos: 'Vive en Asuntos.',
   habitos: 'Vive en Hábitos.',
   trading: 'Vive en Trading.',
   finanzas: 'Vive en Finanzas.',
@@ -70,6 +73,7 @@ const DESTINO_ASIGNADO_MESSAGE: Record<IdeaDestino, string> = {
 const DESTINO_LABEL: Record<IdeaDestino, string> = {
   hoy: 'Cuaderno',
   misiones: 'Misiones',
+  asuntos: 'Asuntos',
   habitos: 'Hábitos',
   trading: 'Trading',
   finanzas: 'Finanzas',

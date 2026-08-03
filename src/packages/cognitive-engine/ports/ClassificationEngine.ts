@@ -25,6 +25,14 @@ export interface ClassificationRule<TDestino extends string> {
   readonly id: string
   readonly keyword: string
   readonly destino: TDestino
+  /**
+   * Peso propio, para las reglas que no son léxicas sino sintácticas
+   * (Contrato del Umbral §6: la familia sintáctica rankea por encima de
+   * la léxica). "Me tienen que" no nombra un tema, describe quién
+   * depende de quién — vale más que una palabra suelta como "turno".
+   * Sin peso propio se usa PESO_LEXICO.
+   */
+  readonly peso?: number
 }
 
 /**

@@ -125,7 +125,7 @@ export class RuleBasedClassifier implements ClassificationEngine<Destino> {
       const indice = normalizado.indexOf(rule.keyword)
       if (indice === -1) continue
       if (estaNegado(normalizado, indice)) continue
-      sumar(rule.destino, PESO_LEXICO, { kind: 'regla', ruleId: rule.id, keyword: rule.keyword })
+      sumar(rule.destino, rule.peso ?? PESO_LEXICO, { kind: 'regla', ruleId: rule.id, keyword: rule.keyword })
     }
 
     const ordenado = [...acumulado.entries()].sort(([, a], [, b]) => b.puntuacion - a.puntuacion)

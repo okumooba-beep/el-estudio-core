@@ -146,3 +146,40 @@ describe('RuleBasedClassifier', () => {
     expect(result.reason).toEqual({ kind: 'aprendizaje', texto })
   })
 })
+
+/**
+ * Asuntos (Sprint 003). La marca de un asunto es la espera, no el tema.
+ * Ninguno llega a 'alta': una palabra léxica sola nunca mueve una hoja.
+ */
+describe('Asuntos', () => {
+  const clasificador = new RuleBasedClassifier()
+
+  it.each([
+    ['Esperando la transferencia del cliente'],
+    ['Quedo en mandarme el presupuesto el lunes'],
+    ['Me tienen que confirmar el turno'],
+    ['A la espera de la respuesta del contador'],
+  ])('reconoce una situación que depende de otro: %s', (texto) => {
+    const resultado = clasificador.classify(texto)
+    expect(resultado.destino).toBe('asuntos')
+    expect(resultado.nivel).toBe('media')
+  })
+
+  it('no confunde una acción propia con un asunto', () => {
+    expect(clasificador.classify('Comprar café').destino).toBe('misiones')
+  })
+
+  it('la marca de dependencia le gana a la palabra de tema, sin llegar a alta', () => {
+    // "turno" es de Misiones y "me tienen que" es de Asuntos: conflicto
+    // real. Gana la señal sintáctica (Contrato §6) pero sigue en media,
+    // así que la hoja no se mueve y se ofrecen los dos destinos.
+    const resultado = clasificador.classify('Me tienen que confirmar el turno')
+    expect(resultado.destino).toBe('asuntos')
+    expect(resultado.alternativa).toBe('misiones')
+    expect(resultado.nivel).toBe('media')
+  })
+
+  it('una espera negada no dispara', () => {
+    expect(clasificador.classify('Ya no estoy esperando nada de ellos').nivel).toBe('baja')
+  })
+})
