@@ -59,6 +59,23 @@ export function MisionesIcon(props: IconProps) {
   )
 }
 
+/**
+ * Asuntos — una bandeja. El resto de los muebles guardan lo que ya es
+ * tuyo; la bandeja sostiene lo que todavía está en manos de otro, así
+ * que el ícono es un recipiente abierto con algo apoyado encima,
+ * esperando que alguien lo retire.
+ */
+export function AsuntosIcon(props: IconProps) {
+  return (
+    <svg {...BASE} {...props}>
+      <path d="M3.5 13.5v4a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-4" />
+      <path d="M3.5 13.5h4l1.2 2h6.6l1.2-2h4" />
+      <path d="M8.5 9.5 12 6l3.5 3.5" />
+      <path d="M12 6v4.5" />
+    </svg>
+  )
+}
+
 /** Hábitos — un círculo ya marcado. */
 export function HabitosIcon(props: IconProps) {
   return (
@@ -109,6 +126,7 @@ export const MODULE_ICONS: Record<string, ComponentType<IconProps>> = {
   '/': HoyIcon,
   '/diario': CuadernoIcon,
   '/misiones': MisionesIcon,
+  '/asuntos': AsuntosIcon,
   '/habitos': HabitosIcon,
   '/trading': TradingIcon,
   '/finanzas': FinanzasIcon,

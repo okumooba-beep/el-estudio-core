@@ -67,3 +67,25 @@ describe('extraerMovimiento', () => {
     expect(resultado).toEqual({ monto: 250_000, tipo: 'ingreso', categoria: 'otros', categoriaSegura: false })
   })
 })
+
+/**
+ * Casos traídos del uso real, no inventados: cada uno es una captura
+ * que quedó varada en el Umbral por no tener una señal reconocible.
+ */
+describe('formas de escribir plata que aparecieron usándolo', () => {
+  it('miles con puntos y sin moneda', () => {
+    expect(extraerMonto('Ingreso primera semana de agosto = 1.090.000')).toBe(1_090_000)
+  })
+
+  it('el signo pospuesto', () => {
+    expect(extraerMonto('Me quedaron 200$ en efectivo')).toBe(200)
+  })
+
+  it('"Ingreso" sin verbo conjugado sigue siendo dinero que entra', () => {
+    expect(extraerTipo('Ingreso primera semana de agosto = 1.090.000')).toBe('ingreso')
+  })
+
+  it('un sueldo es un ingreso aunque no diga "cobré"', () => {
+    expect(extraerTipo('Sueldo de agosto 900.000')).toBe('ingreso')
+  })
+})

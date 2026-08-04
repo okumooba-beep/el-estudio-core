@@ -78,7 +78,14 @@ export const RULES: readonly ClassificationRule<Destino>[] = [
 export const ESTRUCTURA: readonly StructuralRule<Destino>[] = [
   {
     id: 'finanzas-monto',
-    patron: /\$\s?\d|(?:\d[\d.,]*)\s?(?:pesos|d[oó]lares|usd|mil|luca|lucas|palo|palos)\b/i,
+    // Tres formas, todas vistas en uso real:
+    //   $35.000        signo adelante
+    //   200$ / 200 usd signo o moneda atrás
+    //   1.090.000      miles con puntos, sin ninguna moneda
+    // La tercera faltaba, y era la que dejaba "Ingreso primera semana =
+    // 1.090.000" sin una sola señal: la captura quedaba varada en el
+    // Umbral en vez de llegar a Finanzas.
+    patron: /\$\s?\d|\d\s?\$|(?:\d[\d.,]*)\s?(?:pesos|d[oó]lares|dolares|usd|mil|luca|lucas|palo|palos)\b|\d{1,3}(?:\.\d{3})+(?:,\d+)?/i,
     destino: 'finanzas',
   },
 ]
@@ -93,6 +100,9 @@ export const VERBOS_GASTO_PASADO: readonly string[] = [
   'gasté', 'gaste', 'pagué', 'pague', 'compré', 'compre', 'cobré', 'cobre',
   'transferí', 'transferi', 'deposité', 'deposite', 'me salió', 'me salio',
   'me costó', 'me costo',
+  // Un movimiento no siempre se enuncia con verbo: "Ingreso primera
+  // semana de agosto" es tan financiero como "cobré".
+  'ingreso', 'ingresó', 'ingrese', 'ingresé', 'me pagaron', 'me depositaron', 'facturé', 'facture',
 ]
 
 /**

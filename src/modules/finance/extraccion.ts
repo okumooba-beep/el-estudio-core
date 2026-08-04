@@ -12,7 +12,8 @@ export interface MovimientoExtraido {
 
 /** "cobré", "me pagaron", "me depositaron" → entra plata. Todo lo demás sale. */
 const VERBOS_INGRESO = ['cobré', 'cobre ', 'me pagaron', 'me depositaron', 'me transfirieron',
-  'ingresó', 'ingreso de', 'entró', 'entro ', 'recibí', 'recibi ', 'facturé', 'facture ']
+  'ingreso', 'ingresó', 'ingresé', 'entró', 'entro ', 'recibí', 'recibi ', 'facturé', 'facture ',
+  'sueldo', 'honorarios', 'venta']
 
 /**
  * Multiplicadores del habla real, no del teclado numérico. Nadie
@@ -27,7 +28,8 @@ const MULTIPLICADORES: readonly { patron: RegExp; factor: number }[] = [
 ]
 
 /** `$35.000`, `35.000 pesos`, `1.250,50`. El punto es miles y la coma decimales. */
-const MONTO_PLANO = /\$\s?(\d[\d.]*(?:,\d+)?)|(\d{1,3}(?:\.\d{3})+(?:,\d+)?)\s*(?:pesos|d[oó]lares|usd)?|(\d+(?:,\d+)?)\s*(?:pesos|d[oó]lares|usd)/i
+const MONTO_PLANO =
+  /\$\s?(\d[\d.]*(?:,\d+)?)|(\d{1,3}(?:\.\d{3})+(?:,\d+)?)\s*(?:pesos|d[oó]lares|dolares|usd)?|(\d+(?:,\d+)?)\s*(?:pesos|d[oó]lares|dolares|usd|\$)/i
 
 function aNumero(bruto: string, factor: number): number {
   const normalizado = factor === 1 ? bruto.replace(/\./g, '').replace(',', '.') : bruto.replace(',', '.')

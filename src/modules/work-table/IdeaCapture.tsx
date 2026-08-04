@@ -255,6 +255,23 @@ export function IdeaCapture() {
     setProposal(null)
   }
 
+  /**
+   * Umbral V1.2 — la salida que faltaba. Con confianza baja el Estudio
+   * no propone nada (Contrato §7), y hasta ahora eso dejaba la hoja sin
+   * ninguna forma de moverse: los botones de destino solo existían
+   * dentro de una propuesta. Una captura que el clasificador no
+   * reconocía quedaba varada para siempre sobre el escritorio.
+   *
+   * El silencio del Estudio nunca puede convertirse en una jaula. Tocar
+   * una hoja abre sus destinos, haya propuesta o no.
+   */
+  async function handleMoverAbierta(furniture: FurnitureId) {
+    const idea = ideas.find((i) => i.id === openedId)
+    if (!idea) return
+    await moveSheet(idea, furniture)
+    setOpenedId(null)
+  }
+
   async function handleCorreccion(furniture: FurnitureId) {
     if (!proposal) return
     const idea = ideas.find((i) => i.id === proposal.ideaId)
@@ -313,6 +330,23 @@ export function IdeaCapture() {
                 Cambiar destino
               </button>
             </p>
+          ) : null}
+          {abierta && !proposal ? (
+            <>
+              <p className="idea-proposal">¿Dónde vive?</p>
+              <div className="idea-destinos" role="group" aria-label="Elegir destino">
+                {CORRECCION_DESTINOS.map((destino) => (
+                  <button
+                    key={destino.id}
+                    type="button"
+                    className="idea-destino"
+                    onClick={() => handleMoverAbierta(destino.id)}
+                  >
+                    {destino.label}
+                  </button>
+                ))}
+              </div>
+            </>
           ) : null}
           {propuesta && proposal?.expanded ? (
             <div className="idea-destinos" role="group" aria-label="Corregir destino">
