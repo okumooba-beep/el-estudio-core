@@ -200,6 +200,16 @@ class LifeosDB extends Dexie {
     // tablas nuevas, mismo índice mínimo ('id, createdAt') que ya usa
     // `operaciones`: nada las consulta todavía por otro campo, así que
     // agregar más índices ahora sería especulativo (Regla 4/8).
+    /**
+     * Sprint 004 — `categoria` e `ideaId` en financeMovimientos. Dexie
+     * no necesita reescribir filas para campos que no se indexan: los
+     * movimientos viejos quedan sin categoría y la pantalla los lee
+     * como 'otros' (ver categoriaDe). Nada se pierde ni se migra a mano.
+     */
+    this.version(9).stores({
+      financeMovimientos: 'id, createdAt, categoria, ideaId',
+    })
+
     this.version(8).stores({
       notas: 'id, createdAt',
       ideas: 'id, createdAt, destino',

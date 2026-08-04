@@ -12,6 +12,8 @@
  * (FinanceMovimiento) porque un saldo por sí solo no dice nada sobre lo
  * que entró/salió este mes. Goals es lo único que no se deriva de nada.
  */
+import type { FinanceCategoria } from '@modules/finance/categorias'
+
 export type FinanceAccountTipo = 'liquidez' | 'inversion' | 'deuda'
 
 export interface FinanceAccount {
@@ -32,6 +34,20 @@ export interface FinanceMovimiento {
   tipo: FinanceMovimientoTipo
   monto: number
   concepto: string
+  /**
+   * Sprint 004 — sin esto Finanzas no podía agrupar nada, y agrupar es
+   * literalmente lo que EL_ESTUDIO_CORE.md le pide: "Al finalizar la
+   * semana El Estudio agrupa automáticamente esos movimientos.
+   * Vehículo. Comida. Servicios." Lista cerrada (ver categorias.ts):
+   * categorías libres devuelven la planilla que el documento rechaza.
+   */
+  categoria: FinanceCategoria
+  /**
+   * La hoja del Umbral que originó este movimiento, cuando vino de una
+   * captura. Existe para no contar dos veces lo mismo: Finanzas puede
+   * saber qué capturas ya se convirtieron sin tocar la tabla de Ideas.
+   */
+  ideaId?: string
   /** YYYY-MM-DD, igual que Idea/Operacion. */
   fecha: string
   createdAt: string

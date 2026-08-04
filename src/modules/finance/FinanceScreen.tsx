@@ -1,389 +1,192 @@
-import { useMemo, useState, type FormEvent } from 'react'
-import { useFinance } from './useFinance'
-import { EmptyState } from '@/components/ui/EmptyState'
+import { useMemo, useState } from 'react'
 import { useIdeas } from '@modules/work-table/public'
-import type { FinanceAccountTipo, FinanceMovimientoTipo } from '@/types/finance'
-
-const TIPO_LABEL: Record<FinanceAccountTipo, string> = {
-  liquidez: 'Liquidez',
-  inversion: 'Inversión',
-  deuda: 'Deuda',
-}
-
-const MONEY = new Intl.NumberFormat('es', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
-
-function formatMoney(valor: number): string {
-  return MONEY.format(valor)
-}
-
-function sumaPorTipo(cuentas: readonly { tipo: FinanceAccountTipo; saldo: number }[], tipo: FinanceAccountTipo): number {
-  return cuentas.filter((c) => c.tipo === tipo).reduce((total, c) => total + c.saldo, 0)
-}
+import { EmptyState } from '@/components/ui/EmptyState'
+import { useFinance } from './useFinance'
+import { AnilloCategorias } from './AnilloCategorias'
+import { CATEGORIAS, CATEGORIA_COLOR, CATEGORIA_LABEL, type FinanceCategoria } from './categorias'
+import { extraerMovimiento } from './extraccion'
+import { formatearMonto, mesDe, resumirMes } from './mes'
+import type { Idea } from '@/types/idea'
 
 /**
- * Threshold Experience V1 — "Finanzas empieza, no una planilla": lo
- * único que hace esta pantalla es sumar lo que ya está guardado. Nunca
- * un gráfico, nunca una barra de progreso decorativa (Regla 7): cada
- * número se lee como una frase, igual que el resto del Estudio.
- * Patrimonio Neto/Liquidez/Inversiones/Deudas se derivan de una sola
- * lista de cuentas agrupada por `tipo` — nunca se guardan por separado,
- * así que nunca pueden desincronizarse entre sí.
+ * Finanzas (Sprint de Producto 004) — el motor de movimientos.
+ *
+ * La pantalla anterior abría con Patrimonio Neto, Liquidez, Inversiones
+ * y Deudas calculados sobre saldos cargados a mano, antes de que
+ * existiera un solo movimiento. EL_ESTUDIO_CORE.md rechaza exactamente
+ * esa inversión: "Primero registras. Después El Estudio organiza." Y
+ * también: "No queremos balances. No queremos patrimonio neto."
+ *
+ * Ahora la pantalla es el mes. Escribís "Gasté 80k en gasolina" en el
+ * Umbral, la hoja aterriza acá, y el motor saca monto, tipo y categoría
+ * sin que elijas nada. Lo que no puede resolver —un texto sin número—
+ * espera, visible, hasta que lo completes: el Umbral resuelve dónde, el
+ * módulo resuelve qué falta (Contrato del Umbral §10).
+ *
+ * Las tablas de cuentas y metas siguen existiendo intactas en Dexie;
+ * simplemente ya no gobiernan la pantalla. Nada se borró.
  */
 export function FinanceScreen() {
-  const { accounts, movimientos, goals, ready, addAccount, updateAccount, addMovimiento, addGoal, updateGoal } = useFinance()
+  const { movimientos, ready, addMovimiento } = useFinance()
   const { ideas } = useIdeas()
-  const [creatingAccount, setCreatingAccount] = useState(false)
-  const [creatingMovimiento, setCreatingMovimiento] = useState(false)
-  const [creatingGoal, setCreatingGoal] = useState(false)
+  const [mes] = useState(() => mesDe(new Date()))
+  const [editando, setEditando] = useState<string | null>(null)
 
-  const liquidez = useMemo(() => sumaPorTipo(accounts, 'liquidez'), [accounts])
-  const inversion = useMemo(() => sumaPorTipo(accounts, 'inversion'), [accounts])
-  const deuda = useMemo(() => sumaPorTipo(accounts, 'deuda'), [accounts])
-  const patrimonioNeto = liquidez + inversion - deuda
+  const resumen = useMemo(() => resumirMes(movimientos, mes), [movimientos, mes])
+  const convertidas = useMemo(
+    () => new Set(movimientos.map((movimiento) => movimiento.ideaId).filter(Boolean)),
+    [movimientos],
+  )
 
-  const cashFlow = useMemo(() => {
-    const mesActual = new Date().toISOString().slice(0, 7)
-    const delMes = movimientos.filter((m) => m.fecha.startsWith(mesActual))
-    const ingresos = delMes.filter((m) => m.tipo === 'ingreso').reduce((total, m) => total + m.monto, 0)
-    const egresos = delMes.filter((m) => m.tipo === 'egreso').reduce((total, m) => total + m.monto, 0)
-    return { ingresos, egresos, neto: ingresos - egresos }
-  }, [movimientos])
+  /** Capturas que el Umbral mandó acá y todavía no son un movimiento. */
+  const pendientes = ideas.filter((idea) => idea.destino === 'finanzas' && !convertidas.has(idea.id))
+
+  async function registrar(idea: Idea, categoria?: FinanceCategoria) {
+    const extraido = extraerMovimiento(idea.texto)
+    if (extraido.monto === null) return
+    await addMovimiento({
+      tipo: extraido.tipo,
+      monto: extraido.monto,
+      concepto: idea.texto,
+      categoria: categoria ?? extraido.categoria,
+      ideaId: idea.id,
+      fecha: idea.fecha,
+    })
+    setEditando(null)
+  }
 
   if (!ready) return null
 
-  /**
-   * Umbral V1.1 — las hojas que el Umbral enruta acá (Contrato del
-   * Umbral §10: una captura puede llegar a su destino sin estar
-   * completa). Hasta este sprint Finanzas no sabía siquiera que las
-   * Ideas existían: leía solo sus propias tablas Dexie, así que
-   * escribir "Gasté 80k en gasolina" mandaba la hoja a un destino que
-   * nunca la mostraba — llegaba a Finanzas y Finanzas no se enteraba.
-   *
-   * Todavía NO se convierten en FinanceMovimiento: extraer el monto,
-   * inferir la categoría y agrupar por mes es el motor de movimientos,
-   * y ese es su propio sprint. Acá solo se cumple la mitad que le toca
-   * al destino — mostrar lo que le llegó. El Umbral resuelve dónde; el
-   * módulo resuelve qué falta.
-   *
-   * Importa `work-table/public.ts`, la única superficie que un módulo
-   * de contenido puede tomar de otro (.dependency-cruiser.cjs,
-   * module-no-cross-module-import), igual que ya hace Misiones.
-   */
-  const capturas = ideas.filter((idea) => idea.destino === 'finanzas')
+  const nombreMes = new Date(`${mes}-02`).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
+  const sinNada = resumen.movimientos.length === 0 && pendientes.length === 0
 
-  const sinNada = accounts.length === 0 && movimientos.length === 0 && goals.length === 0 && capturas.length === 0
+  if (sinNada) {
+    return (
+      <EmptyState
+        title="Todavía no se movió un peso."
+        description="Escribí un gasto en el Umbral — “Gasté 80k en gasolina” — y el Estudio lo trae acá con su categoría."
+      />
+    )
+  }
 
   return (
-    <div className="mx-auto flex max-w-xl flex-col gap-8 pt-2">
-      {capturas.length > 0 ? (
+    <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10">
+      <section className="flex flex-col items-center gap-3">
+        <p className="font-mono text-[11px] uppercase tracking-wide text-accent">{nombreMes}</p>
+        <AnilloCategorias grupos={resumen.grupos} total={formatearMonto(resumen.gastado)} />
+        {resumen.ingresado > 0 ? (
+          <p className="font-mono text-[12.5px] text-ink-faint">
+            Entró {formatearMonto(resumen.ingresado)} · Balance{' '}
+            <span className={resumen.balance >= 0 ? 'text-good' : 'text-critical'}>
+              {formatearMonto(resumen.balance)}
+            </span>
+          </p>
+        ) : null}
+      </section>
+
+      {pendientes.length > 0 ? (
         <section>
-          <h2 className="mb-2 font-mono text-[11px] uppercase tracking-wide text-accent">Llegaron acá</h2>
+          <h2 className="mb-1 font-mono text-[11px] uppercase tracking-wide text-accent">Sin registrar</h2>
           <ul className="flex flex-col">
-            {capturas.map((captura) => (
-              <li key={captura.id} className="border-b border-border/40 py-2.5 last:border-b-0">
-                <p className="text-[17px] text-ink">{captura.texto}</p>
-                <p className="mt-0.5 font-mono text-[12.5px] text-ink-faint">{captura.hora}</p>
+            {pendientes.map((idea) => {
+              const extraido = extraerMovimiento(idea.texto)
+              const abierto = editando === idea.id
+              return (
+                <li key={idea.id} className="border-b border-border/40 py-3 last:border-b-0">
+                  <p className="text-[16px] leading-snug text-ink">{idea.texto}</p>
+                  {extraido.monto === null ? (
+                    <p className="mt-1 text-[13px] text-ink-faint">
+                      No encontré un monto. Escribilo de nuevo con la cifra.
+                    </p>
+                  ) : (
+                    <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                      <span className="font-mono text-[13px] text-ink-dim">{formatearMonto(extraido.monto)}</span>
+                      <button type="button" className="idea-destino" onClick={() => registrar(idea)}>
+                        {CATEGORIA_LABEL[extraido.categoria]}
+                      </button>
+                      <button
+                        type="button"
+                        className="idea-destino"
+                        onClick={() => setEditando(abierto ? null : idea.id)}
+                      >
+                        Otra categoría
+                      </button>
+                    </div>
+                  )}
+                  {abierto ? (
+                    <div className="idea-destinos mt-2" role="group" aria-label="Elegir categoría">
+                      {CATEGORIAS.map((categoria) => (
+                        <button
+                          key={categoria}
+                          type="button"
+                          className="idea-destino"
+                          onClick={() => registrar(idea, categoria)}
+                        >
+                          {CATEGORIA_LABEL[categoria]}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </li>
+              )
+            })}
+          </ul>
+        </section>
+      ) : null}
+
+      {resumen.grupos.length > 0 ? (
+        <section>
+          <h2 className="mb-2 font-mono text-[11px] uppercase tracking-wide text-accent">En qué se fue</h2>
+          <ul className="flex flex-col gap-3">
+            {resumen.grupos.map((grupo) => (
+              <li key={grupo.categoria} className="flex flex-col gap-1.5">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="flex items-center gap-2 text-[15px] text-ink">
+                    <span
+                      className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: CATEGORIA_COLOR[grupo.categoria] }}
+                      aria-hidden="true"
+                    />
+                    {CATEGORIA_LABEL[grupo.categoria]}
+                  </span>
+                  <span className="font-mono text-[14px] text-ink-dim">{formatearMonto(grupo.total)}</span>
+                </div>
+                <div className="h-[3px] w-full overflow-hidden rounded-full bg-border/60">
+                  <div
+                    className="h-full rounded-full"
+                    style={{ width: `${grupo.parte * 100}%`, backgroundColor: CATEGORIA_COLOR[grupo.categoria] }}
+                  />
+                </div>
               </li>
             ))}
           </ul>
         </section>
       ) : null}
 
-      <section>
-        <h2 className="mb-1 font-mono text-[11px] uppercase tracking-wide text-accent">Patrimonio neto</h2>
-        <p className="text-[28px] text-ink">{formatMoney(patrimonioNeto)}</p>
-        <p className="mt-1 text-[13.5px] text-ink-faint">
-          Liquidez {formatMoney(liquidez)} · Inversiones {formatMoney(inversion)} · Deudas {formatMoney(deuda)}
-        </p>
-      </section>
-
-      <section>
-        <h2 className="mb-1 font-mono text-[11px] uppercase tracking-wide text-accent">Flujo de caja de este mes</h2>
-        <p className="text-[19px] text-ink-dim">{formatMoney(cashFlow.neto)}</p>
-        <p className="mt-1 text-[13.5px] text-ink-faint">
-          Ingresos {formatMoney(cashFlow.ingresos)} · Egresos {formatMoney(cashFlow.egresos)}
-        </p>
-        {creatingMovimiento ? (
-          <NuevoMovimientoForm
-            onCreate={(input) => {
-              void addMovimiento(input)
-              setCreatingMovimiento(false)
-            }}
-            onCancel={() => setCreatingMovimiento(false)}
-          />
-        ) : (
-          <button
-            type="button"
-            onClick={() => setCreatingMovimiento(true)}
-            className="mt-2 text-[13px] text-ink-faint transition-colors duration-150 hover:text-ink active:text-ink"
-          >
-            Registrar movimiento
-          </button>
-        )}
-      </section>
-
-      <section>
-        <h2 className="mb-2 font-mono text-[11px] uppercase tracking-wide text-accent">Cuentas</h2>
-        {accounts.length > 0 ? (
-          <ul className="flex flex-col gap-2.5">
-            {accounts.map((account) => (
-              <li key={account.id} className="flex items-center justify-between gap-3">
-                <span className="text-[15px] text-ink-dim">{account.nombre}</span>
-                <span className="flex items-center gap-2">
-                  <span className="text-[12px] text-ink-faint">{TIPO_LABEL[account.tipo]}</span>
-                  <input
-                    type="number"
-                    step="any"
-                    defaultValue={account.saldo}
-                    onBlur={(event) => {
-                      const saldo = Number(event.target.value)
-                      if (!Number.isNaN(saldo) && saldo !== account.saldo) void updateAccount(account.id, { saldo })
-                    }}
-                    aria-label={`Saldo de ${account.nombre}`}
-                    className="w-24 border-b border-border/60 bg-transparent text-right text-[14px] text-ink outline-none focus:border-accent/70"
-                  />
+      {resumen.movimientos.length > 0 ? (
+        <section>
+          <h2 className="mb-1 font-mono text-[11px] uppercase tracking-wide text-ink-faint">Movimientos</h2>
+          <ul className="flex flex-col">
+            {resumen.movimientos.map((movimiento) => (
+              <li
+                key={movimiento.id}
+                className="flex items-baseline justify-between gap-3 border-b border-border/40 py-2.5 last:border-b-0"
+              >
+                <span className="text-[15px] leading-snug text-ink-dim">{movimiento.concepto}</span>
+                <span
+                  className={[
+                    'shrink-0 font-mono text-[13.5px]',
+                    movimiento.tipo === 'ingreso' ? 'text-good' : 'text-ink-faint',
+                  ].join(' ')}
+                >
+                  {movimiento.tipo === 'ingreso' ? '+' : ''}
+                  {formatearMonto(movimiento.monto)}
                 </span>
               </li>
             ))}
           </ul>
-        ) : null}
-        {creatingAccount ? (
-          <NuevaCuentaForm
-            onCreate={(input) => {
-              void addAccount(input)
-              setCreatingAccount(false)
-            }}
-            onCancel={() => setCreatingAccount(false)}
-          />
-        ) : (
-          <button
-            type="button"
-            onClick={() => setCreatingAccount(true)}
-            className="mt-2 text-[13px] text-ink-faint transition-colors duration-150 hover:text-ink active:text-ink"
-          >
-            Agregar cuenta
-          </button>
-        )}
-      </section>
-
-      <section>
-        <h2 className="mb-2 font-mono text-[11px] uppercase tracking-wide text-accent">Metas</h2>
-        {goals.length > 0 ? (
-          <ul className="flex flex-col gap-2.5">
-            {goals.map((goal) => (
-              <li key={goal.id} className="flex items-center justify-between gap-3">
-                <span className="text-[15px] text-ink-dim">{goal.texto}</span>
-                <span className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    step="any"
-                    defaultValue={goal.actual}
-                    onBlur={(event) => {
-                      const actual = Number(event.target.value)
-                      if (!Number.isNaN(actual) && actual !== goal.actual) void updateGoal(goal.id, { actual })
-                    }}
-                    aria-label={`Progreso de ${goal.texto}`}
-                    className="w-20 border-b border-border/60 bg-transparent text-right text-[14px] text-ink outline-none focus:border-accent/70"
-                  />
-                  <span className="text-[12px] text-ink-faint">de {formatMoney(goal.objetivo)}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-        {creatingGoal ? (
-          <NuevaMetaForm
-            onCreate={(input) => {
-              void addGoal(input)
-              setCreatingGoal(false)
-            }}
-            onCancel={() => setCreatingGoal(false)}
-          />
-        ) : (
-          <button
-            type="button"
-            onClick={() => setCreatingGoal(true)}
-            className="mt-2 text-[13px] text-ink-faint transition-colors duration-150 hover:text-ink active:text-ink"
-          >
-            Agregar meta
-          </button>
-        )}
-      </section>
-
-      {sinNada ? (
-        <EmptyState
-          title="Ninguna cuenta vive acá todavía."
-          description="Agregá una cuenta para que Patrimonio Neto empiece a significar algo."
-        />
+        </section>
       ) : null}
     </div>
-  )
-}
-
-function NuevaCuentaForm({
-  onCreate,
-  onCancel,
-}: {
-  onCreate: (input: { nombre: string; tipo: FinanceAccountTipo; saldo: number }) => void
-  onCancel: () => void
-}) {
-  const [nombre, setNombre] = useState('')
-  const [tipo, setTipo] = useState<FinanceAccountTipo>('liquidez')
-  const [saldo, setSaldo] = useState('')
-
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (!nombre.trim()) return
-    onCreate({ nombre, tipo, saldo: Number(saldo) || 0 })
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="mt-2 flex flex-col gap-2.5">
-      <input
-        value={nombre}
-        onChange={(event) => setNombre(event.target.value)}
-        placeholder="Nombre de la cuenta"
-        className="border-b border-border/60 bg-transparent pb-1 text-[14px] text-ink outline-none placeholder:text-ink-dim focus:border-accent/70"
-      />
-      <div className="flex gap-4" role="radiogroup" aria-label="Tipo de cuenta">
-        {(Object.keys(TIPO_LABEL) as FinanceAccountTipo[]).map((valor) => (
-          <button
-            key={valor}
-            type="button"
-            role="radio"
-            aria-checked={tipo === valor}
-            onClick={() => setTipo(valor)}
-            className={`text-[13px] ${tipo === valor ? 'text-ink' : 'text-ink-faint'}`}
-          >
-            {TIPO_LABEL[valor]}
-          </button>
-        ))}
-      </div>
-      <input
-        type="number"
-        step="any"
-        value={saldo}
-        onChange={(event) => setSaldo(event.target.value)}
-        placeholder="Saldo actual"
-        className="border-b border-border/60 bg-transparent pb-1 text-[14px] text-ink outline-none placeholder:text-ink-dim focus:border-accent/70"
-      />
-      <div className="flex gap-4">
-        <button type="submit" className="accion-primaria self-start px-3.5 py-2 text-[13.5px]">
-          Guardar
-        </button>
-        <button type="button" onClick={onCancel} className="self-start text-[13.5px] text-ink-faint">
-          Cancelar
-        </button>
-      </div>
-    </form>
-  )
-}
-
-function NuevoMovimientoForm({
-  onCreate,
-  onCancel,
-}: {
-  onCreate: (input: { tipo: FinanceMovimientoTipo; monto: number; concepto: string }) => void
-  onCancel: () => void
-}) {
-  const [tipo, setTipo] = useState<FinanceMovimientoTipo>('ingreso')
-  const [monto, setMonto] = useState('')
-  const [concepto, setConcepto] = useState('')
-
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (!monto) return
-    onCreate({ tipo, monto: Number(monto) || 0, concepto })
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="mt-2 flex flex-col gap-2.5">
-      <div className="flex gap-4" role="radiogroup" aria-label="Tipo de movimiento">
-        <button
-          type="button"
-          role="radio"
-          aria-checked={tipo === 'ingreso'}
-          onClick={() => setTipo('ingreso')}
-          className={`text-[13px] ${tipo === 'ingreso' ? 'text-ink' : 'text-ink-faint'}`}
-        >
-          Ingreso
-        </button>
-        <button
-          type="button"
-          role="radio"
-          aria-checked={tipo === 'egreso'}
-          onClick={() => setTipo('egreso')}
-          className={`text-[13px] ${tipo === 'egreso' ? 'text-ink' : 'text-ink-faint'}`}
-        >
-          Egreso
-        </button>
-      </div>
-      <input
-        type="number"
-        step="any"
-        value={monto}
-        onChange={(event) => setMonto(event.target.value)}
-        placeholder="Monto"
-        className="border-b border-border/60 bg-transparent pb-1 text-[14px] text-ink outline-none placeholder:text-ink-dim focus:border-accent/70"
-      />
-      <input
-        value={concepto}
-        onChange={(event) => setConcepto(event.target.value)}
-        placeholder="Concepto (opcional)"
-        className="border-b border-border/60 bg-transparent pb-1 text-[14px] text-ink outline-none placeholder:text-ink-dim focus:border-accent/70"
-      />
-      <div className="flex gap-4">
-        <button type="submit" className="accion-primaria self-start px-3.5 py-2 text-[13.5px]">
-          Guardar
-        </button>
-        <button type="button" onClick={onCancel} className="self-start text-[13.5px] text-ink-faint">
-          Cancelar
-        </button>
-      </div>
-    </form>
-  )
-}
-
-function NuevaMetaForm({
-  onCreate,
-  onCancel,
-}: {
-  onCreate: (input: { texto: string; objetivo: number }) => void
-  onCancel: () => void
-}) {
-  const [texto, setTexto] = useState('')
-  const [objetivo, setObjetivo] = useState('')
-
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (!texto.trim() || !objetivo) return
-    onCreate({ texto, objetivo: Number(objetivo) || 0 })
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="mt-2 flex flex-col gap-2.5">
-      <input
-        value={texto}
-        onChange={(event) => setTexto(event.target.value)}
-        placeholder="¿Qué querés lograr?"
-        className="border-b border-border/60 bg-transparent pb-1 text-[14px] text-ink outline-none placeholder:text-ink-dim focus:border-accent/70"
-      />
-      <input
-        type="number"
-        step="any"
-        value={objetivo}
-        onChange={(event) => setObjetivo(event.target.value)}
-        placeholder="Objetivo"
-        className="border-b border-border/60 bg-transparent pb-1 text-[14px] text-ink outline-none placeholder:text-ink-dim focus:border-accent/70"
-      />
-      <div className="flex gap-4">
-        <button type="submit" className="accion-primaria self-start px-3.5 py-2 text-[13.5px]">
-          Guardar
-        </button>
-        <button type="button" onClick={onCancel} className="self-start text-[13.5px] text-ink-faint">
-          Cancelar
-        </button>
-      </div>
-    </form>
   )
 }
