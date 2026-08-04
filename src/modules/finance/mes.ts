@@ -10,6 +10,13 @@ export interface GrupoCategoria {
   parte: number
 }
 
+export interface GrupoSemana {
+  /** 1-based: la semana calendario dentro del mes (día 1-7 = semana 1, etc). */
+  semana: number
+  total: number
+  cantidad: number
+}
+
 export interface ResumenMes {
   /** YYYY-MM */
   mes: string
@@ -20,7 +27,14 @@ export interface ResumenMes {
   ingresado: number
   balance: number
   grupos: readonly GrupoCategoria[]
+  /** Ingresos del mes agrupados por semana (modelo Monefy: Ingresos separado de Egresos). */
+  ingresos: readonly GrupoSemana[]
   movimientos: readonly FinanceMovimiento[]
+}
+
+function semanaDelMes(fecha: string): number {
+  const dia = Number(fecha.slice(8, 10))
+  return Math.ceil(dia / 7)
 }
 
 /** Los movimientos anteriores a Sprint 004 no tienen categoría: se leen como 'otros'. */
@@ -77,6 +91,18 @@ export function resumirMes(
     .filter((grupo) => grupo.cantidad > 0)
     .sort((a, b) => b.total - a.total)
 
+  const porSemana = new Map<number, { total: number; cantidad: number }>()
+  for (const movimiento of delMes.filter((m) => m.tipo === 'ingreso')) {
+    const semana = semanaDelMes(movimiento.fecha)
+    const actual = porSemana.get(semana) ?? { total: 0, cantidad: 0 }
+    actual.total += movimiento.monto
+    actual.cantidad += 1
+    porSemana.set(semana, actual)
+  }
+  const ingresos = [...porSemana.entries()]
+    .map(([semana, valores]) => ({ semana, ...valores }))
+    .sort((a, b) => a.semana - b.semana)
+
   return {
     mes,
     moneda,
@@ -88,6 +114,7 @@ export function resumirMes(
     ingresado,
     balance: ingresado - gastado,
     grupos,
+    ingresos,
     movimientos: delMes.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
   }
 }

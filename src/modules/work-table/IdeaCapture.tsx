@@ -139,6 +139,16 @@ export function IdeaCapture() {
   const [proposal, setProposal] = useState<Proposal | null>(null)
   const [openedId, setOpenedId] = useState<string | null>(null)
   const [justSaved, setJustSaved] = useState(false)
+  /**
+   * Postic (E): cerrar el aviso solo apaga el aviso. Antes la única
+   * forma de "cerrar" era la hoja densa (DeskPaperStack + IdeaSheet)
+   * con su × de descarte, que archiva de verdad — así que el usuario
+   * que solo quería silenciar el recordatorio terminaba, sin saberlo,
+   * archivando el mismo contenido que Cuaderno muestra. Este set es
+   * puro estado de sesión: nunca toca la Idea ni su destino, por eso
+   * cerrarlo acá no afecta lo que se ve en Cuaderno.
+   */
+  const [avisoDescartados, setAvisoDescartados] = useState<Set<string>>(new Set())
   const proposalTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -316,7 +326,7 @@ export function IdeaCapture() {
 
   return (
     <div className="flex flex-col gap-3" data-mueble={MUEBLES.hoy}>
-      {activa ? (
+      {activa && (propuesta || abierta) ? (
         <DeskPaperStack ideas={hoyIdeas} activeId={activa.id} onOpen={setOpenedId}>
           <IdeaSheet idea={activa} open={Boolean(propuesta)} onDescartar={() => handleDescartar(activa)} />
           {propuesta && proposal ? (
@@ -385,6 +395,22 @@ export function IdeaCapture() {
             </div>
           ) : null}
         </DeskPaperStack>
+      ) : activa && !avisoDescartados.has(activa.id) ? (
+        <p className="idea-aviso">
+          Hay una idea esperando un lugar.{' '}
+          <button type="button" className="idea-aviso-link" onClick={() => setOpenedId(activa.id)}>
+            Ver
+          </button>
+          {' · '}
+          <button
+            type="button"
+            className="idea-aviso-cerrar"
+            aria-label="Cerrar aviso"
+            onClick={() => setAvisoDescartados((actual) => new Set(actual).add(activa.id))}
+          >
+            ×
+          </button>
+        </p>
       ) : null}
       <form
         onSubmit={handleSubmit}

@@ -34,7 +34,7 @@ const ABIERTOS: readonly AsuntoEstado[] = ['pendiente', 'en-progreso', 'en-esper
  * excepciones son código anterior a F16 y un módulo nuevo no las hereda.
  */
 export function AsuntosScreen() {
-  const { ideas, ready, update } = useIdeas()
+  const { ideas, ready, update, moveSheet } = useIdeas()
   const [abiertoId, setAbiertoId] = useState<string | null>(null)
   const ahora = new Date()
 
@@ -66,19 +66,34 @@ export function AsuntosScreen() {
 
     return (
       <li key={asunto.id} className="border-b border-border/40 last:border-b-0">
-        <button
-          type="button"
-          onClick={() => setAbiertoId(abierto ? null : asunto.id)}
-          className="flex w-full flex-col items-start gap-1 py-3.5 text-left"
-          aria-expanded={abierto}
-        >
-          <span className={['text-[17px] leading-snug', completado ? 'text-ink-faint line-through' : 'text-ink'].join(' ')}>
-            {asunto.texto}
-          </span>
-          <span className="font-mono text-[12px] text-ink-faint">
-            {describirEspera(diasEsperando(asunto, ahora))}
-          </span>
-        </button>
+        <div className="flex items-start">
+          <button
+            type="button"
+            onClick={() => setAbiertoId(abierto ? null : asunto.id)}
+            className="flex w-full flex-col items-start gap-1 py-3.5 text-left"
+            aria-expanded={abierto}
+          >
+            <span className={['text-[17px] leading-snug', completado ? 'text-ink-faint line-through' : 'text-ink'].join(' ')}>
+              {asunto.texto}
+            </span>
+            <span className="font-mono text-[12px] text-ink-faint">
+              {describirEspera(diasEsperando(asunto, ahora))}
+            </span>
+          </button>
+          {completado ? (
+            // Contrato §8: un asunto cumplido no se borra, se archiva
+            // (mismo acuerdo que Umbral/Cuaderno) — desaparece de esta
+            // vista y queda visible entre las archivadas de Cuaderno.
+            <button
+              type="button"
+              className="asunto-archivar"
+              aria-label="Archivar"
+              onClick={() => void moveSheet(asunto, 'archivador')}
+            >
+              ×
+            </button>
+          ) : null}
+        </div>
         {abierto ? (
           <div className="idea-destinos pb-3" role="group" aria-label="Cambiar estado">
             {ASUNTO_ESTADOS.filter((siguiente) => siguiente !== estado).map((siguiente) => (

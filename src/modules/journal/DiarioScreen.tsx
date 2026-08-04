@@ -1,6 +1,25 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useIdeas } from '@modules/work-table/public'
 import type { Idea } from '@/types/idea'
+import type { FurnitureId } from '@world/studio/furniture'
+
+/**
+ * Reclasificar (D): una hoja que el Umbral clasificó mal ("Leer el
+ * código de la disciplina" fue a Cuaderno en vez de Misiones) no tenía
+ * forma de corregirse una vez que ya dejó el Umbral. Mismo vocabulario
+ * de destinos que CORRECCION_DESTINOS en IdeaCapture.tsx, sin
+ * 'escritorio': acá la hoja ya está en Cuaderno, así que no tiene
+ * sentido "mudarla" al mismo lugar.
+ */
+const RECLASIFICAR_DESTINOS: readonly { id: FurnitureId; label: string }[] = [
+  { id: 'tablero', label: 'Misiones' },
+  { id: 'bandeja', label: 'Asuntos' },
+  { id: 'habitos', label: 'Hábitos' },
+  { id: 'mesa-analisis', label: 'Trading' },
+  { id: 'finanzas', label: 'Finanzas' },
+  { id: 'biblioteca', label: 'Biblioteca' },
+  { id: 'archivador', label: 'Archivo' },
+]
 
 /**
  * "THE NOTEBOOK" — rediseño completo, se descarta la versión anterior
@@ -94,6 +113,7 @@ export function DiarioScreen() {
   const archivadas = paginasArchivadas.get(fechaActual) ?? []
 
   const [mostrarArchivadas, setMostrarArchivadas] = useState(false)
+  const [moviendoId, setMoviendoId] = useState<string | null>(null)
   const [borrador, setBorrador] = useState('')
   const [justSaved, setJustSaved] = useState(false)
   const borradorRef = useRef('')
@@ -158,6 +178,11 @@ export function DiarioScreen() {
     void moveSheet(idea, 'escritorio')
   }
 
+  function handleMover(idea: Idea, furniture: FurnitureId) {
+    void moveSheet(idea, furniture)
+    setMoviendoId(null)
+  }
+
   if (!ready) return null
 
   return (
@@ -171,14 +196,37 @@ export function DiarioScreen() {
         {entradas.map((idea) => (
           <div key={idea.id} className="diario-entrada">
             <p className="diario-parrafo">{idea.texto}</p>
-            <button
-              type="button"
-              className="diario-entrada-borrar"
-              aria-label="Borrar"
-              onClick={() => handleArchivar(idea)}
-            >
-              ×
-            </button>
+            <div className="diario-entrada-acciones">
+              <button
+                type="button"
+                className="diario-entrada-mover"
+                onClick={() => setMoviendoId((actual) => (actual === idea.id ? null : idea.id))}
+              >
+                Mover
+              </button>
+              <button
+                type="button"
+                className="diario-entrada-borrar"
+                aria-label="Borrar"
+                onClick={() => handleArchivar(idea)}
+              >
+                ×
+              </button>
+            </div>
+            {moviendoId === idea.id ? (
+              <div className="idea-destinos" role="group" aria-label="Mover a otro destino">
+                {RECLASIFICAR_DESTINOS.map((destino) => (
+                  <button
+                    key={destino.id}
+                    type="button"
+                    className="idea-destino"
+                    onClick={() => handleMover(idea, destino.id)}
+                  >
+                    {destino.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </div>
         ))}
 
