@@ -428,7 +428,7 @@ export function IdeaCapture() {
           onBlur={() => setGaze(null)}
           aria-label="Idea"
           placeholder="¿Qué tenés en mente?"
-          className="min-w-0 flex-1 bg-transparent px-1 py-4 text-[16px] leading-relaxed text-ink caret-ink outline-none placeholder:text-ink-dim"
+          className="captura-input min-w-0 flex-1 bg-transparent px-1 py-4 text-[16px] leading-relaxed text-ink caret-ink outline-none placeholder:text-ink-dim"
         />
         {value.trim() ? (
           <button type="submit" className="accion-primaria shrink-0 px-3.5 py-2 text-[13.5px]">

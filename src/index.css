@@ -183,6 +183,17 @@ html.light-boot *::after {
 }
 
 /*
+  El input de captura ya tiene su propio foco sutil (borde inferior
+  madera vía focus-within en el <form>, IdeaCapture.tsx) — el anillo
+  naranja de :focus-visible de arriba se le superponía encima, así que
+  acá se apaga puntualmente para este input en vez de tocar la regla
+  global (que sí sirve de indicador de foco en el resto de la app).
+*/
+.captura-input:focus-visible {
+  outline: none;
+}
+
+/*
   Sprint "Visual Refinement", Prioridad 4 — `bg-surface/95` + `border-t
   border-border/40` se sentía "plano y transparente" (queja explícita
   del brief). Esta barra pasa a leerse como una placa tallada aparte de
