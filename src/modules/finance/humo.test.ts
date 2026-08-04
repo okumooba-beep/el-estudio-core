@@ -16,7 +16,10 @@ describe('el ingreso semanal, de punta a punta', () => {
     expect(resultado.nivel).toBe('alta')
   })
 
-  it('el motor lo lee como un ingreso de 1.090.000', () => {
-    expect(extraerMovimiento(texto)).toMatchObject({ monto: 1_090_000, tipo: 'ingreso' })
+  it('el motor lo lee como un ingreso, sin perder ningún monto', () => {
+    const extraido = extraerMovimiento(texto)
+    expect(extraido.tipo).toBe('ingreso')
+    expect(extraido.medio).toBe('efectivo')
+    expect(extraido.montos.map((m) => m.monto)).toEqual([1_090_000, 200])
   })
 })

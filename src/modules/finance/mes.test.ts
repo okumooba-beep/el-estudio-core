@@ -5,7 +5,7 @@ import type { FinanceMovimiento } from '@/types/finance'
 function mov(over: Partial<FinanceMovimiento>): FinanceMovimiento {
   return {
     id: Math.random().toString(36), tipo: 'egreso', monto: 1000, concepto: 'x',
-    categoria: 'otros', fecha: '2026-08-03', createdAt: '2026-08-03T10:00:00.000Z',
+    categoria: 'otros', moneda: 'ars', medio: 'transferencia', fecha: '2026-08-03', createdAt: '2026-08-03T10:00:00.000Z',
     updatedAt: '2026-08-03T10:00:00.000Z', pendingSync: false, ...over,
   }
 }
@@ -44,6 +44,25 @@ describe('resumirMes', () => {
     const resumen = resumirMes([mov({ monto: 5000, tipo: 'ingreso' })], '2026-08')
     expect(resumen.gastado).toBe(0)
     expect(resumen.grupos).toEqual([])
+  })
+})
+
+describe('separación por moneda', () => {
+  it('los dólares nunca se suman con los pesos', () => {
+    const mezcla = [
+      mov({ monto: 1_090_000, moneda: 'ars' }),
+      mov({ monto: 200, moneda: 'usd' }),
+    ]
+    expect(resumirMes(mezcla, '2026-08', 'ars').gastado).toBe(1_090_000)
+    expect(resumirMes(mezcla, '2026-08', 'usd').gastado).toBe(200)
+  })
+
+  it('separa efectivo de transferencia', () => {
+    const resumen = resumirMes(
+      [mov({ monto: 5000, medio: 'efectivo' }), mov({ monto: 3000, medio: 'transferencia' })],
+      '2026-08',
+    )
+    expect(resumen.porMedio).toEqual({ efectivo: 5000, transferencia: 3000 })
   })
 })
 

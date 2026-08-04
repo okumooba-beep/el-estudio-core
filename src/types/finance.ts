@@ -13,6 +13,7 @@
  * que entró/salió este mes. Goals es lo único que no se deriva de nada.
  */
 import type { FinanceCategoria } from '@modules/finance/categorias'
+import type { Medio, Moneda } from '@modules/finance/extraccion'
 
 export type FinanceAccountTipo = 'liquidez' | 'inversion' | 'deuda'
 
@@ -42,6 +43,14 @@ export interface FinanceMovimiento {
    * categorías libres devuelven la planilla que el documento rechaza.
    */
   categoria: FinanceCategoria
+  /**
+   * Sprint 006. Sin moneda, "1.090.000 + 200 usd" era un solo número en
+   * pesos y los dólares desaparecían. Pesos y dólares nunca se suman:
+   * la pantalla los muestra en columnas separadas, jamás convertidos.
+   */
+  moneda: Moneda
+  /** Cómo se movió: efectivo o transferencia. No es una cuenta. */
+  medio: Medio
   /**
    * La hoja del Umbral que originó este movimiento, cuando vino de una
    * captura. Existe para no contar dos veces lo mismo: Finanzas puede

@@ -2,6 +2,7 @@ import { db } from '@/lib/db/db'
 import { generateId } from '@shared-kernel/id'
 import type { Repository } from '@shared-kernel/persistence/Repository'
 import type { FinanceCategoria } from './categorias'
+import type { Medio, Moneda } from './extraccion'
 import type { FinanceAccount, FinanceAccountTipo, FinanceMovimiento, FinanceMovimientoTipo, FinanceGoal } from '@/types/finance'
 
 /**
@@ -57,6 +58,8 @@ export interface NuevaFinanceMovimiento {
   monto: number
   concepto: string
   categoria: FinanceCategoria
+  moneda: Moneda
+  medio: Medio
   /** La hoja del Umbral de la que salió, si vino de una captura. */
   ideaId?: string
   /** YYYY-MM-DD. Por defecto hoy — una captura vieja conserva su día. */
@@ -81,6 +84,8 @@ class DexieFinanceMovimientoRepository implements FinanceMovimientoRepository {
       monto: input.monto,
       concepto: input.concepto.trim(),
       categoria: input.categoria,
+      moneda: input.moneda,
+      medio: input.medio,
       ...(input.ideaId ? { ideaId: input.ideaId } : {}),
       fecha: input.fecha ?? now.toISOString().slice(0, 10),
       createdAt: now.toISOString(),

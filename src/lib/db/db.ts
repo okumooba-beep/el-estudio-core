@@ -206,6 +206,11 @@ class LifeosDB extends Dexie {
      * movimientos viejos quedan sin categoría y la pantalla los lee
      * como 'otros' (ver categoriaDe). Nada se pierde ni se migra a mano.
      */
+    /** Sprint 006 — `moneda` y `medio`. Los movimientos previos se leen como pesos/transferencia. */
+    this.version(10).stores({
+      financeMovimientos: 'id, createdAt, categoria, ideaId, moneda, medio',
+    })
+
     this.version(9).stores({
       financeMovimientos: 'id, createdAt, categoria, ideaId',
     })

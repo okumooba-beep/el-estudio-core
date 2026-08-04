@@ -1,4 +1,5 @@
 import { CATEGORIAS, type FinanceCategoria } from './categorias'
+import type { Medio, Moneda } from './extraccion'
 import type { FinanceMovimiento } from '@/types/finance'
 
 export interface GrupoCategoria {
@@ -12,6 +13,9 @@ export interface GrupoCategoria {
 export interface ResumenMes {
   /** YYYY-MM */
   mes: string
+  moneda: Moneda
+  /** Cuánto se gastó en efectivo y cuánto por transferencia, en esta moneda. */
+  porMedio: Record<Medio, number>
   gastado: number
   ingresado: number
   balance: number
@@ -41,8 +45,23 @@ export function mesDe(fecha: Date): string {
  * son módulos, son vistas. Cambiar la agrupación no debería migrar
  * nunca un solo dato.
  */
-export function resumirMes(movimientos: readonly FinanceMovimiento[], mes: string): ResumenMes {
-  const delMes = movimientos.filter((movimiento) => movimiento.fecha.startsWith(mes))
+/** Los movimientos anteriores al Sprint 006 no tienen moneda: son pesos. */
+export function monedaDe(movimiento: FinanceMovimiento): Moneda {
+  return movimiento.moneda === 'usd' ? 'usd' : 'ars'
+}
+
+export function medioDe(movimiento: FinanceMovimiento): Medio {
+  return movimiento.medio === 'efectivo' ? 'efectivo' : 'transferencia'
+}
+
+export function resumirMes(
+  movimientos: readonly FinanceMovimiento[],
+  mes: string,
+  moneda: Moneda = 'ars',
+): ResumenMes {
+  const delMes = movimientos.filter(
+    (movimiento) => movimiento.fecha.startsWith(mes) && monedaDe(movimiento) === moneda,
+  )
   const egresos = delMes.filter((movimiento) => movimiento.tipo === 'egreso')
 
   const gastado = egresos.reduce((total, movimiento) => total + movimiento.monto, 0)
@@ -60,6 +79,11 @@ export function resumirMes(movimientos: readonly FinanceMovimiento[], mes: strin
 
   return {
     mes,
+    moneda,
+    porMedio: {
+      efectivo: egresos.filter((m) => medioDe(m) === 'efectivo').reduce((t, m) => t + m.monto, 0),
+      transferencia: egresos.filter((m) => medioDe(m) === 'transferencia').reduce((t, m) => t + m.monto, 0),
+    },
     gastado,
     ingresado,
     balance: ingresado - gastado,
@@ -69,6 +93,7 @@ export function resumirMes(movimientos: readonly FinanceMovimiento[], mes: strin
 }
 
 /** Sin decimales: en pesos los centavos son ruido, y el número tiene que leerse de un vistazo. */
-export function formatearMonto(monto: number): string {
-  return `$${Math.round(monto).toLocaleString('es-AR')}`
+export function formatearMonto(monto: number, moneda: Moneda = 'ars'): string {
+  const cifra = Math.round(monto).toLocaleString('es-AR')
+  return moneda === 'usd' ? `US$${cifra}` : `$${cifra}`
 }

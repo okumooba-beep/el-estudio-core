@@ -4,8 +4,8 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { useFinance } from './useFinance'
 import { AnilloCategorias } from './AnilloCategorias'
 import { CATEGORIAS, CATEGORIA_COLOR, CATEGORIA_LABEL, type FinanceCategoria } from './categorias'
-import { extraerMovimiento } from './extraccion'
-import { formatearMonto, mesDe, resumirMes } from './mes'
+import { extraerMovimiento, type Moneda } from './extraccion'
+import { formatearMonto, mesDe, monedaDe, resumirMes } from './mes'
 import type { Idea } from '@/types/idea'
 
 /**
@@ -30,9 +30,15 @@ export function FinanceScreen() {
   const { movimientos, ready, addMovimiento } = useFinance()
   const { ideas } = useIdeas()
   const [mes] = useState(() => mesDe(new Date()))
+  const [moneda, setMoneda] = useState<Moneda>('ars')
   const [editando, setEditando] = useState<string | null>(null)
 
-  const resumen = useMemo(() => resumirMes(movimientos, mes), [movimientos, mes])
+  const resumen = useMemo(() => resumirMes(movimientos, mes, moneda), [movimientos, mes, moneda])
+  /** El selector de moneda solo aparece si de verdad hay dólares: nada sobra por si acaso. */
+  const hayDolares = useMemo(
+    () => movimientos.some((movimiento) => movimiento.fecha.startsWith(mes) && monedaDe(movimiento) === 'usd'),
+    [movimientos, mes],
+  )
   const convertidas = useMemo(
     () => new Set(movimientos.map((movimiento) => movimiento.ideaId).filter(Boolean)),
     [movimientos],
@@ -41,17 +47,26 @@ export function FinanceScreen() {
   /** Capturas que el Umbral mandó acá y todavía no son un movimiento. */
   const pendientes = ideas.filter((idea) => idea.destino === 'finanzas' && !convertidas.has(idea.id))
 
+  /**
+   * Un movimiento por cada monto del texto. "Ingreso de agosto =
+   * 1.090.000 + 200 usd" genera dos: uno en pesos y uno en dólares.
+   * Quedarse con el primero borraba el otro sin avisar.
+   */
   async function registrar(idea: Idea, categoria?: FinanceCategoria) {
     const extraido = extraerMovimiento(idea.texto)
-    if (extraido.monto === null) return
-    await addMovimiento({
-      tipo: extraido.tipo,
-      monto: extraido.monto,
-      concepto: idea.texto,
-      categoria: categoria ?? extraido.categoria,
-      ideaId: idea.id,
-      fecha: idea.fecha,
-    })
+    if (extraido.montos.length === 0) return
+    for (const montoExtraido of extraido.montos) {
+      await addMovimiento({
+        tipo: extraido.tipo,
+        monto: montoExtraido.monto,
+        moneda: montoExtraido.moneda,
+        medio: extraido.medio,
+        concepto: idea.texto,
+        categoria: categoria ?? extraido.categoria,
+        ideaId: idea.id,
+        fecha: idea.fecha,
+      })
+    }
     setEditando(null)
   }
 
@@ -73,16 +88,39 @@ export function FinanceScreen() {
     <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10">
       <section className="flex flex-col items-center gap-3">
         <p className="font-mono text-[11px] uppercase tracking-wide text-accent">{nombreMes}</p>
-        <AnilloCategorias grupos={resumen.grupos} total={formatearMonto(resumen.gastado)} />
+        {hayDolares ? (
+          <div className="idea-destinos" role="group" aria-label="Moneda">
+            {(['ars', 'usd'] as const).map((opcion) => (
+              <button
+                key={opcion}
+                type="button"
+                className="idea-destino"
+                aria-pressed={moneda === opcion}
+                style={moneda === opcion ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
+                onClick={() => setMoneda(opcion)}
+              >
+                {opcion === 'ars' ? 'Pesos' : 'Dólares'}
+              </button>
+            ))}
+          </div>
+        ) : null}
+        <AnilloCategorias grupos={resumen.grupos} total={formatearMonto(resumen.gastado, moneda)} />
         {resumen.ingresado > 0 ? (
           <p className="font-mono text-[12.5px] text-ink-faint">
-            Entró {formatearMonto(resumen.ingresado)} · Balance{' '}
+            Entró {formatearMonto(resumen.ingresado, moneda)} · Balance{' '}
             <span className={resumen.balance >= 0 ? 'text-good' : 'text-critical'}>
-              {formatearMonto(resumen.balance)}
+              {formatearMonto(resumen.balance, moneda)}
             </span>
           </p>
         ) : null}
       </section>
+
+      {resumen.gastado > 0 ? (
+        <p className="text-center font-mono text-[12px] text-ink-faint">
+          {formatearMonto(resumen.porMedio.efectivo, moneda)} en efectivo ·{' '}
+          {formatearMonto(resumen.porMedio.transferencia, moneda)} por transferencia
+        </p>
+      ) : null}
 
       {pendientes.length > 0 ? (
         <section>
@@ -91,16 +129,19 @@ export function FinanceScreen() {
             {pendientes.map((idea) => {
               const extraido = extraerMovimiento(idea.texto)
               const abierto = editando === idea.id
+              const principal = extraido.montos[0]
               return (
                 <li key={idea.id} className="border-b border-border/40 py-3 last:border-b-0">
                   <p className="text-[16px] leading-snug text-ink">{idea.texto}</p>
-                  {extraido.monto === null ? (
+                  {!principal ? (
                     <p className="mt-1 text-[13px] text-ink-faint">
                       No encontré un monto. Escribilo de nuevo con la cifra.
                     </p>
                   ) : (
                     <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                      <span className="font-mono text-[13px] text-ink-dim">{formatearMonto(extraido.monto)}</span>
+                      <span className="font-mono text-[13px] text-ink-dim">
+                        {extraido.montos.map((m) => formatearMonto(m.monto, m.moneda)).join(' + ')}
+                      </span>
                       <button type="button" className="idea-destino" onClick={() => registrar(idea)}>
                         {CATEGORIA_LABEL[extraido.categoria]}
                       </button>
@@ -180,7 +221,7 @@ export function FinanceScreen() {
                   ].join(' ')}
                 >
                   {movimiento.tipo === 'ingreso' ? '+' : ''}
-                  {formatearMonto(movimiento.monto)}
+                  {formatearMonto(movimiento.monto, moneda)}
                 </span>
               </li>
             ))}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { extraerCategoria, extraerMonto, extraerMovimiento, extraerTipo } from './extraccion'
+import { extraerCategoria, extraerMedio, extraerMonto, extraerMontos, extraerMovimiento, extraerTipo } from './extraccion'
 
 describe('extraerMonto', () => {
   it.each([
@@ -56,15 +56,49 @@ describe('extraerCategoria', () => {
 })
 
 describe('extraerMovimiento', () => {
-  it('resuelve las tres cosas de una sola pasada', () => {
-    expect(extraerMovimiento('Gasté 80k en gasolina')).toEqual({
-      monto: 80_000, tipo: 'egreso', categoria: 'auto', categoriaSegura: true,
+  it('resuelve todo de una sola pasada', () => {
+    expect(extraerMovimiento('Gasté 80k en gasolina en efectivo')).toEqual({
+      montos: [{ monto: 80_000, moneda: 'ars' }],
+      tipo: 'egreso', medio: 'efectivo', categoria: 'auto', categoriaSegura: true,
     })
   })
 
   it('un ingreso sin categoría reconocible sigue siendo un movimiento válido', () => {
-    const resultado = extraerMovimiento('Cobré 250k del trabajo de Juan')
-    expect(resultado).toEqual({ monto: 250_000, tipo: 'ingreso', categoria: 'otros', categoriaSegura: false })
+    expect(extraerMovimiento('Cobré 250k del trabajo de Juan')).toMatchObject({
+      montos: [{ monto: 250_000, moneda: 'ars' }], tipo: 'ingreso', categoria: 'otros',
+    })
+  })
+})
+
+/**
+ * Monedas y medios (Sprint 006). El caso que lo motivó: una sola línea
+ * con pesos y dólares mezclados.
+ */
+describe('monedas', () => {
+  it('separa pesos de dólares en la misma línea', () => {
+    expect(extraerMontos('Ingreso de agosto = 1.090.000 + 200 usd')).toEqual([
+      { monto: 1_090_000, moneda: 'ars' },
+      { monto: 200, moneda: 'usd' },
+    ])
+  })
+
+  it('un $ suelto es peso, no dólar', () => {
+    expect(extraerMontos('Gasté 5.000$')[0]).toEqual({ monto: 5_000, moneda: 'ars' })
+  })
+
+  it.each([['u$s 300'], ['300 dólares'], ['US$ 300']])('%s es dólar', (texto) => {
+    expect(extraerMontos(texto)[0]?.moneda).toBe('usd')
+  })
+})
+
+describe('extraerMedio', () => {
+  it.each([
+    ['Pagué 5k en efectivo', 'efectivo'],
+    ['Transferencia de 20k a Juan', 'transferencia'],
+    ['Pagué con Mercado Pago', 'transferencia'],
+    ['Gasté 10k en el súper', 'transferencia'],
+  ])('%s → %s', (texto, esperado) => {
+    expect(extraerMedio(texto)).toBe(esperado)
   })
 })
 
