@@ -31,7 +31,7 @@ const AHORRO_KEY = 'finanzas-ahorro-pct'
  */
 export function FinanceScreen() {
   const { movimientos, ready, addMovimiento } = useFinance()
-  const { ideas } = useIdeas()
+  const { ideas, moveSheet } = useIdeas()
   const [mes] = useState(() => mesDe(new Date()))
   const [moneda, setMoneda] = useState<Moneda>('ars')
   const [editando, setEditando] = useState<string | null>(null)
@@ -82,6 +82,12 @@ export function FinanceScreen() {
       })
     }
     setEditando(null)
+  }
+
+  /** Contrato §8: una captura que Finanzas no puede resolver se archiva, nunca se borra de verdad — mismo patrón que Cuaderno/Asuntos/Hábitos. */
+  function handleDescartarPendiente(idea: Idea) {
+    if (editando === idea.id) setEditando(null)
+    void moveSheet(idea, 'archivador')
   }
 
   if (!ready) return null
@@ -184,8 +190,16 @@ export function FinanceScreen() {
                 <li key={idea.id} className="border-b border-border/40 py-3 last:border-b-0">
                   <p className="text-[16px] leading-snug text-ink">{idea.texto}</p>
                   {!principal ? (
-                    <p className="mt-1 text-[13px] text-ink-faint">
+                    <p className="mt-1 flex items-baseline gap-2 text-[13px] text-ink-faint">
                       No encontré un monto. Escribilo de nuevo con la cifra.
+                      <button
+                        type="button"
+                        className="idea-aviso-cerrar"
+                        aria-label="Descartar"
+                        onClick={() => handleDescartarPendiente(idea)}
+                      >
+                        ×
+                      </button>
                     </p>
                   ) : (
                     <div className="mt-1.5 flex flex-wrap items-center gap-2">
