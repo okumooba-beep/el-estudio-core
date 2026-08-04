@@ -43,13 +43,32 @@ function fechaDePagina(fecha: string, hoy: string): string {
 }
 
 export function DiarioScreen() {
-  const { ideas, ready, add } = useIdeas()
+  const { ideas, ready, add, moveSheet } = useIdeas()
   const hoy = fechaDeHoy()
 
   const paginas = useMemo(() => {
     const porFecha = new Map<string, Idea[]>()
     for (const idea of ideas) {
       if (idea.destino !== 'hoy') continue
+      const entradas = porFecha.get(idea.fecha)
+      if (entradas) entradas.push(idea)
+      else porFecha.set(idea.fecha, [idea])
+    }
+    for (const entradas of porFecha.values()) entradas.sort((a, b) => a.hora.localeCompare(b.hora))
+    return porFecha
+  }, [ideas])
+
+  /**
+   * Cuaderno V1.1 — antes una hoja mudada a Archivo desaparecía sin
+   * dejar rastro en ningún lugar del Estudio (no existe pantalla propia
+   * para 'archivo'). Acá, junto a la página del día que la vio nacer,
+   * es donde tiene sentido volver a verla: mismo criterio que ya usa
+   * `paginas`, filtrando por el otro destino.
+   */
+  const paginasArchivadas = useMemo(() => {
+    const porFecha = new Map<string, Idea[]>()
+    for (const idea of ideas) {
+      if (idea.destino !== 'archivo') continue
       const entradas = porFecha.get(idea.fecha)
       if (entradas) entradas.push(idea)
       else porFecha.set(idea.fecha, [idea])
@@ -72,7 +91,9 @@ export function DiarioScreen() {
   const puedeVerSiguiente = indice > 0
   const esHoy = fechaActual === hoy
   const entradas = paginas.get(fechaActual) ?? []
+  const archivadas = paginasArchivadas.get(fechaActual) ?? []
 
+  const [mostrarArchivadas, setMostrarArchivadas] = useState(false)
   const [borrador, setBorrador] = useState('')
   const [justSaved, setJustSaved] = useState(false)
   const borradorRef = useRef('')
@@ -121,6 +142,22 @@ export function DiarioScreen() {
     savedTimer.current = setTimeout(() => setJustSaved(false), 900)
   }
 
+  /**
+   * Borrar por hoja (Cuaderno V1.1): el Contrato del Umbral §8 prohíbe
+   * el borrado real ("las cosas se cierran o se archivan"), así que
+   * "borrar" acá es mudar a Archivo — silencioso, sin confirmación,
+   * igual que el descarte del Umbral (ver handleDescartar en
+   * IdeaCapture.tsx). Reversible en cualquier momento desde la lista de
+   * archivadas.
+   */
+  function handleArchivar(idea: Idea) {
+    void moveSheet(idea, 'archivador')
+  }
+
+  function handleRestaurar(idea: Idea) {
+    void moveSheet(idea, 'escritorio')
+  }
+
   if (!ready) return null
 
   return (
@@ -132,9 +169,17 @@ export function DiarioScreen() {
 
       <div>
         {entradas.map((idea) => (
-          <p key={idea.id} className="diario-parrafo">
-            {idea.texto}
-          </p>
+          <div key={idea.id} className="diario-entrada">
+            <p className="diario-parrafo">{idea.texto}</p>
+            <button
+              type="button"
+              className="diario-entrada-borrar"
+              aria-label="Borrar"
+              onClick={() => handleArchivar(idea)}
+            >
+              ×
+            </button>
+          </div>
         ))}
 
         {esHoy ? (
@@ -156,6 +201,24 @@ export function DiarioScreen() {
         <p className="diario-guardado" aria-live="polite">
           Guardado.
         </p>
+      ) : null}
+
+      {archivadas.length > 0 ? (
+        <div className="diario-archivadas">
+          <button type="button" className="diario-archivadas-toggle" onClick={() => setMostrarArchivadas((v) => !v)}>
+            {mostrarArchivadas ? 'Ocultar archivadas' : 'Ver archivadas'}
+          </button>
+          {mostrarArchivadas
+            ? archivadas.map((idea) => (
+                <div key={idea.id} className="diario-archivada">
+                  <p className="diario-parrafo diario-parrafo-archivada">{idea.texto}</p>
+                  <button type="button" className="diario-archivada-restaurar" onClick={() => handleRestaurar(idea)}>
+                    Restaurar
+                  </button>
+                </div>
+              ))
+            : null}
+        </div>
       ) : null}
 
       {fechas.length > 1 ? (

@@ -1088,6 +1088,34 @@ html.light-boot *::after {
 }
 
 /*
+  Descartar (Umbral V1.3): la misma voz baja que .idea-destino — sin
+  borde, sin fondo, casi invisible hasta que se la busca. Se ve apenas
+  (opacity 0.5) para no competir con el texto de la hoja, y gana
+  presencia recién al pasar el mouse — nunca un ícono de papelera, que
+  sugeriría borrado permanente en vez de archivo silencioso.
+*/
+.idea-hoja-descartar {
+  position: absolute;
+  top: 0.3rem;
+  right: 0.5rem;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--ink-faint);
+  opacity: 0.5;
+  cursor: pointer;
+  transition: opacity 150ms ease, color 150ms ease;
+}
+
+.idea-hoja-descartar:hover,
+.idea-hoja-descartar:focus-visible {
+  opacity: 1;
+  color: var(--ink);
+}
+
+/*
   "¿Dónde debería vivir esto?" — nunca un modal, nunca botones con
   borde: palabras en voz baja que aparecen debajo de la hoja, con el
   mismo peso visual que el resto del escritorio.
@@ -1322,8 +1350,14 @@ html.light-boot *::after {
 }
 
 .material-paper .idea-hoja-time,
-.material-paper .idea-hoja-check {
+.material-paper .idea-hoja-check,
+.material-paper .idea-hoja-descartar {
   color: var(--paper-ink-faint);
+}
+
+.material-paper .idea-hoja-descartar:hover,
+.material-paper .idea-hoja-descartar:focus-visible {
+  color: var(--paper-ink);
 }
 
 .material-paper::after {
@@ -2942,6 +2976,92 @@ html.light-boot *::after {
   margin-top: 0.75rem;
   font-size: 12.5px;
   color: var(--ink-dim);
+}
+
+/*
+  Borrar por hoja (Cuaderno V1.1): la misma voz baja que .idea-hoja-descartar
+  en el Umbral — casi invisible hasta que se la busca, gana presencia
+  recién al pasar el mouse. position: relative en el wrapper, nunca en
+  .diario-parrafo, para no interferir con su propio layout de texto.
+*/
+.diario-entrada {
+  position: relative;
+}
+
+.diario-entrada-borrar {
+  position: absolute;
+  top: -0.1rem;
+  right: -0.25rem;
+  padding: 0.2rem 0.4rem;
+  border: none;
+  background: none;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--ink-faint);
+  opacity: 0.4;
+  cursor: pointer;
+  transition: opacity 150ms ease, color 150ms ease;
+}
+
+.diario-entrada-borrar:hover,
+.diario-entrada-borrar:focus-visible {
+  opacity: 1;
+  color: var(--ink);
+}
+
+/*
+  Archivadas (Cuaderno V1.1): una hoja mudada a Archivo no tenía ningún
+  lugar donde volver a verse — acá aparece atenuada, con el mismo
+  vocabulario de disclosure que .diario-nav (texto plano, sin fondo,
+  nunca un contador — Contrato del Umbral §11).
+*/
+.diario-archivadas {
+  margin-top: 1.5rem;
+}
+
+.diario-archivadas-toggle {
+  padding: 0;
+  font-size: 13px;
+  color: var(--ink-dim);
+  transition: color 150ms ease;
+}
+
+.diario-archivadas-toggle:hover,
+.diario-archivadas-toggle:focus-visible {
+  color: var(--ink);
+}
+
+.diario-archivada {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.9rem;
+}
+
+.diario-parrafo-archivada {
+  margin-bottom: 0;
+  opacity: 0.6;
+}
+
+.diario-archivada-restaurar {
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--ink-faint);
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 255, 255, 0.18);
+  text-underline-offset: 2px;
+  cursor: pointer;
+  transition: color 150ms ease;
+}
+
+.diario-archivada-restaurar:hover,
+.diario-archivada-restaurar:focus-visible {
+  color: var(--ink);
 }
 
 /*

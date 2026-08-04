@@ -12,6 +12,15 @@ interface IdeaSheetProps {
   onEmptyBlur?: () => void
   /** Sprint 3.2, prioridad 6: una misión terminada queda visiblemente distinta, nunca desaparece de golpe. */
   completed?: boolean
+  /**
+   * Umbral V1.3 — la salida que faltaba junto a la de mudar destino
+   * (ver handleMoverAbierta en IdeaCapture.tsx): descartar no es un
+   * destino más, es sacar la hoja de la vista sin preguntar a dónde va.
+   * Por el Contrato del Umbral §8 ("nada se borra: las cosas se cierran
+   * o se archivan") esto nunca borra el registro — quien lo dispara
+   * decide a qué mueble en silencio.
+   */
+  onDescartar?: () => void
 }
 
 /**
@@ -21,7 +30,7 @@ interface IdeaSheetProps {
  * cambiarle una línea. Lo que cambia es siempre lo que la rodea — una
  * pila, una chincheta — nunca la hoja en sí.
  */
-export function IdeaSheet({ idea, open, editable, onTextoChange, onEmptyBlur, completed }: IdeaSheetProps) {
+export function IdeaSheet({ idea, open, editable, onTextoChange, onEmptyBlur, completed, onDescartar }: IdeaSheetProps) {
   const spanRef = useRef<HTMLSpanElement>(null)
 
   useEffect(() => {
@@ -54,6 +63,11 @@ export function IdeaSheet({ idea, open, editable, onTextoChange, onEmptyBlur, co
         <span className="idea-hoja-check" aria-hidden="true">
           ✓
         </span>
+      ) : null}
+      {onDescartar ? (
+        <button type="button" className="idea-hoja-descartar" aria-label="Descartar" onClick={onDescartar}>
+          ×
+        </button>
       ) : null}
       <span
         ref={spanRef}

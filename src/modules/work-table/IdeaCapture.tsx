@@ -12,7 +12,7 @@ import { setGaze } from '@world/world/gaze'
 import { WORLD_PLACES } from '@world/world/worldMap'
 import { DESTINO_TO_FURNITURE, FURNITURE_TO_DESTINO } from './destinoFurniture'
 import type { ClassificationReason, NivelConfianza } from '@cognitive-engine/ports/ClassificationEngine'
-import type { IdeaDestino } from '@/types/idea'
+import type { Idea, IdeaDestino } from '@/types/idea'
 import type { FurnitureId } from '@world/studio/furniture'
 
 const DRAFT_KEY = 'idea-draft'
@@ -202,6 +202,15 @@ export function IdeaCapture() {
     // honesto.
     if (nivel === 'baja') return
 
+    // Umbral V1.3: 'hoy' es Cuaderno, y Cuaderno es donde la hoja ya
+    // vive — no hay adónde "mudarla". Sin esta guarda, una corrección
+    // aprendida hacia Cuaderno (ver memory.ts) llega con nivel 'alta' y
+    // dispara moveSheet() igual que cualquier otro destino: un
+    // auto-movimiento sin que el usuario lo haya pedido. El mismo
+    // contrato que rige alta/media/baja para los otros seis destinos
+    // acá resuelve en silencio, como la confianza baja.
+    if (destino === 'hoy') return
+
     proposalTimer.current = setTimeout(() => {
       setProposal({
         ideaId: created.id,
@@ -265,6 +274,19 @@ export function IdeaCapture() {
    * El silencio del Estudio nunca puede convertirse en una jaula. Tocar
    * una hoja abre sus destinos, haya propuesta o no.
    */
+  /**
+   * Umbral V1.3 — la salida que faltaba junto a "¿Dónde vive?": no toda
+   * hoja necesita un destino, algunas solo necesitan dejar de estar a
+   * la vista. Contrato §8: nada se borra, así que descartar es mudar a
+   * Archivo (silencioso, sin pasar por la propuesta ni por "¿Dónde
+   * vive?") — la misma reversibilidad de siempre, nunca un borrado real.
+   */
+  async function handleDescartar(idea: Idea) {
+    if (proposal?.ideaId === idea.id) clearProposalState()
+    if (openedId === idea.id) setOpenedId(null)
+    await moveSheet(idea, 'archivador')
+  }
+
   async function handleMoverAbierta(furniture: FurnitureId) {
     const idea = ideas.find((i) => i.id === openedId)
     if (!idea) return
@@ -296,7 +318,7 @@ export function IdeaCapture() {
     <div className="flex flex-col gap-3" data-mueble={MUEBLES.hoy}>
       {activa ? (
         <DeskPaperStack ideas={hoyIdeas} activeId={activa.id} onOpen={setOpenedId}>
-          <IdeaSheet idea={activa} open={Boolean(propuesta)} />
+          <IdeaSheet idea={activa} open={Boolean(propuesta)} onDescartar={() => handleDescartar(activa)} />
           {propuesta && proposal ? (
             <p className="idea-proposal">
               {proposal.nivel === 'alta'
@@ -367,8 +389,8 @@ export function IdeaCapture() {
       <form
         onSubmit={handleSubmit}
         className={[
-          'flex items-center gap-3 border-b pb-4 transition-[border-color,box-shadow] duration-150 ease-out focus-within:border-accent/70 focus-within:shadow-[0_1px_0_0_rgba(216,162,74,0.3)] motion-reduce:transition-none',
-          justSaved ? 'border-accent/70 shadow-[0_1px_0_0_rgba(216,162,74,0.3)]' : 'border-border/60',
+          'flex items-center gap-3 border-b pb-4 transition-[border-color] duration-150 ease-out focus-within:border-[#5a4430]/70 motion-reduce:transition-none',
+          justSaved ? 'border-[#5a4430]/70' : 'border-border/60',
         ].join(' ')}
       >
         <input
@@ -380,7 +402,7 @@ export function IdeaCapture() {
           onBlur={() => setGaze(null)}
           aria-label="Idea"
           placeholder="¿Qué tenés en mente?"
-          className="min-w-0 flex-1 bg-transparent px-1 py-4 text-[21px] leading-relaxed text-ink caret-accent outline-none placeholder:text-ink-dim"
+          className="min-w-0 flex-1 bg-transparent px-1 py-4 text-[16px] leading-relaxed text-ink caret-ink outline-none placeholder:text-ink-dim"
         />
         {value.trim() ? (
           <button type="submit" className="accion-primaria shrink-0 px-3.5 py-2 text-[13.5px]">
