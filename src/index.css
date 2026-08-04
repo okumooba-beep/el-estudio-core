@@ -1827,6 +1827,77 @@ html.light-boot *::after {
   border-bottom: none;
 }
 
+.frase-lista {
+  display: flex;
+  flex-direction: column;
+}
+
+.frase-registro {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.9rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.frase-registro:last-child {
+  border-bottom: none;
+}
+
+.frase-texto {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ink);
+  white-space: pre-wrap;
+}
+
+.frase-archivar {
+  flex-shrink: 0;
+  padding: 0.2rem 0.4rem;
+  border: none;
+  background: none;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--ink-faint);
+  opacity: 0.4;
+  cursor: pointer;
+  transition: opacity 150ms ease, color 150ms ease;
+}
+
+.frase-archivar:hover,
+.frase-archivar:focus-visible {
+  opacity: 1;
+  color: var(--ink);
+}
+
+.habito-registro-encabezado {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.habito-archivar {
+  flex-shrink: 0;
+  padding: 0.2rem 0.4rem;
+  border: none;
+  background: none;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--ink-faint);
+  opacity: 0.4;
+  cursor: pointer;
+  transition: opacity 150ms ease, color 150ms ease;
+}
+
+.habito-archivar:hover,
+.habito-archivar:focus-visible {
+  opacity: 1;
+  color: var(--ink);
+}
+
 .habito-semana {
   display: flex;
   gap: 0.35rem;

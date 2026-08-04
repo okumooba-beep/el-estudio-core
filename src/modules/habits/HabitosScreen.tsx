@@ -26,7 +26,7 @@ function fechasSemanaActual(): string[] {
  * círculos debajo, con su propia tabla mínima (ver habitCheckRepository).
  */
 export function HabitosScreen() {
-  const { ideas, ready, add, update } = useIdeas()
+  const { ideas, ready, add, update, moveSheet } = useIdeas()
   const { checks, ready: checksReady, toggle } = useHabitChecks()
   const [openId, setOpenId] = useState<string | null>(null)
   const [draft, setDraft] = useState<Idea | null>(null)
@@ -48,6 +48,12 @@ export function HabitosScreen() {
   function handleDraftDiscard() {
     setDraft(null)
     setOpenId(null)
+  }
+
+  /** Contrato §8: quitar un hábito es archivarlo, mismo acuerdo que Asuntos/Cuaderno — nunca un borrado real. */
+  function handleArchivar(habito: Idea) {
+    if (openId === habito.id) setOpenId(null)
+    void moveSheet(habito, 'archivador')
   }
 
   return (
@@ -79,13 +85,23 @@ export function HabitosScreen() {
           ) : null}
           {habitos.map((habito) => (
             <li key={habito.id} className="habito-registro">
-              <div onClick={() => setOpenId(habito.id)}>
-                <IdeaSheet
-                  idea={habito}
-                  open={openId === habito.id}
-                  editable={openId === habito.id}
-                  onTextoChange={(texto) => update(habito.id, { texto })}
-                />
+              <div className="habito-registro-encabezado">
+                <div className="min-w-0 flex-1" onClick={() => setOpenId(habito.id)}>
+                  <IdeaSheet
+                    idea={habito}
+                    open={openId === habito.id}
+                    editable={openId === habito.id}
+                    onTextoChange={(texto) => update(habito.id, { texto })}
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="habito-archivar"
+                  aria-label="Archivar"
+                  onClick={() => handleArchivar(habito)}
+                >
+                  ×
+                </button>
               </div>
               <div className="habito-semana">
                 {semana.map((fecha, i) => {
