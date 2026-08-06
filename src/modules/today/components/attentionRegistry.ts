@@ -22,5 +22,6 @@ export interface AttentionSignal {
 export function useAttentionSignals(): AttentionSignal[] {
   const finanzas = useFinanzasAttention()
   const asuntos = useAsuntosAttention()
-  return [finanzas, asuntos].filter((signal): signal is AttentionSignal => signal !== null)
+  const señales: (AttentionSignal | null)[] = [finanzas, asuntos]
+  return señales.filter((signal): signal is AttentionSignal => signal !== null)
 }

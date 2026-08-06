@@ -34,7 +34,7 @@ describe('estadoDe', () => {
 
 describe('prioridadDe', () => {
   it('un asunto recién capturado es prioridad normal', () => {
-    expect(prioridadDe(asunto({ prioridad: undefined }))).toBe('normal')
+    expect(prioridadDe(asunto({}))).toBe('normal')
   })
 
   it('respeta "importante" cuando el usuario lo marcó', () => {
