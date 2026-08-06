@@ -1,23 +1,24 @@
 import type { Idea } from '@/types/idea'
 
 /**
- * Los cuatro estados de un asunto, en el orden que fijó
- * EL_ESTUDIO_CORE.md: "Cada asunto únicamente cambia de estado.
- * Pendiente. En progreso. En espera. Completado. Nada más."
+ * Los cuatro estados de un asunto (Sprint 005 — "Sistema de
+ * seguimiento"): Pendiente, En espera, Resuelto, Archivado. Nada más.
  *
- * No hay prioridad, ni fecha límite, ni responsable, ni notas. Un
- * asunto no es un proyecto en miniatura: es una situación abierta que
- * solo cambia de estado.
+ * No hay "en progreso": un asunto por definición depende de otro, así
+ * que nunca hay nada que "progrese" desde este lado. Si empezás a
+ * poder avanzarlo vos mismo, dejó de ser un asunto — se resuelve, y lo
+ * que sigue es una Misión nueva (módulos independientes, nunca una
+ * conversión automática).
  */
-export type AsuntoEstado = 'pendiente' | 'en-progreso' | 'en-espera' | 'completado'
+export type AsuntoEstado = 'pendiente' | 'en-espera' | 'resuelto' | 'archivado'
 
-export const ASUNTO_ESTADOS: readonly AsuntoEstado[] = ['pendiente', 'en-progreso', 'en-espera', 'completado']
+export const ASUNTO_ESTADOS: readonly AsuntoEstado[] = ['pendiente', 'en-espera', 'resuelto', 'archivado']
 
 export const ESTADO_LABEL: Record<AsuntoEstado, string> = {
   pendiente: 'Pendiente',
-  'en-progreso': 'En progreso',
   'en-espera': 'En espera',
-  completado: 'Completado',
+  resuelto: 'Resuelto',
+  archivado: 'Archivado',
 }
 
 /**
@@ -25,38 +26,35 @@ export const ESTADO_LABEL: Record<AsuntoEstado, string> = {
  * usa para 'terminada'), así que acá se normaliza en vez de confiar en
  * él: una idea recién llegada de El Umbral tiene `estado: null` y eso
  * es un asunto pendiente, no un asunto sin estado.
+ *
+ * 'en-progreso' y 'completado' son valores heredados del diseño previo
+ * (Sprint de Producto 003, cuatro estados distintos): se migran acá en
+ * lectura para no perder asuntos ya guardados con ese valor, sin tocar
+ * lo persistido.
  */
 export function estadoDe(idea: Idea): AsuntoEstado {
-  const estado = idea.estado as AsuntoEstado | null
-  return estado && ASUNTO_ESTADOS.includes(estado) ? estado : 'pendiente'
+  const estado = idea.estado
+  if (estado === 'completado') return 'resuelto'
+  if (estado === 'en-progreso') return 'pendiente'
+  return estado && (ASUNTO_ESTADOS as readonly string[]).includes(estado) ? (estado as AsuntoEstado) : 'pendiente'
 }
-
-const DIA_MS = 86_400_000
 
 /**
- * Cuánto lleva esperando, contado desde el último cambio de estado.
- *
- * Es el único dato que Asuntos muestra además del texto, y es
- * deliberado: en una situación que depende de otro, el tiempo ES la
- * información — un pago demorado dos días y uno demorado tres semanas
- * son cosas distintas, y ninguna lista con una etiqueta de estado te lo
- * dice.
- *
- * No es un contador de los que el Contrato del Umbral §11 prohíbe:
- * aquellos puntúan al usuario ("tenés 47 sin clasificar"). Este
- * describe al asunto, no a vos, y es justo el dato que decide si hoy
- * toca reclamar algo o no.
+ * Los dos niveles de prioridad (Sprint 005). Nunca "urgente": el brief
+ * es explícito en que un tercer nivel no agrega información, solo
+ * ansiedad — la misma razón por la que el tono visual del módulo debe
+ * quedarse tranquilo.
  */
-export function diasEsperando(idea: Idea, ahora: Date): number {
-  return Math.floor((ahora.getTime() - new Date(idea.updatedAt).getTime()) / DIA_MS)
+export type AsuntoPrioridad = 'normal' | 'importante'
+
+export const ASUNTO_PRIORIDADES: readonly AsuntoPrioridad[] = ['normal', 'importante']
+
+export const PRIORIDAD_LABEL: Record<AsuntoPrioridad, string> = {
+  normal: 'Normal',
+  importante: 'Importante',
 }
 
-export function describirEspera(dias: number): string {
-  if (dias <= 0) return 'Hoy'
-  if (dias === 1) return 'Ayer'
-  if (dias < 7) return `Hace ${dias} días`
-  if (dias < 14) return 'Hace una semana'
-  if (dias < 31) return `Hace ${Math.floor(dias / 7)} semanas`
-  if (dias < 62) return 'Hace un mes'
-  return `Hace ${Math.floor(dias / 30)} meses`
+/** Un asunto recién capturado no trae prioridad — el silencio es 'normal'. */
+export function prioridadDe(idea: Idea): AsuntoPrioridad {
+  return idea.prioridad === 'importante' ? 'importante' : 'normal'
 }

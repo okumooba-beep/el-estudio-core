@@ -50,6 +50,11 @@ export function useFinance() {
     setMovimientos((current) => [created, ...current])
   }
 
+  async function updateMovimiento(id: string, patch: Partial<Omit<FinanceMovimiento, 'id' | 'createdAt'>>): Promise<void> {
+    const updated = await financeMovimientoRepository.update(id, patch)
+    setMovimientos((current) => current.map((movimiento) => (movimiento.id === id ? updated : movimiento)))
+  }
+
   async function addGoal(input: NuevaFinanceGoal): Promise<void> {
     const created = await financeGoalRepository.add(input)
     setGoals((current) => [created, ...current])
@@ -60,5 +65,5 @@ export function useFinance() {
     setGoals((current) => current.map((goal) => (goal.id === id ? updated : goal)))
   }
 
-  return { accounts, movimientos, goals, ready, addAccount, updateAccount, addMovimiento, addGoal, updateGoal }
+  return { accounts, movimientos, goals, ready, addAccount, updateAccount, addMovimiento, updateMovimiento, addGoal, updateGoal }
 }

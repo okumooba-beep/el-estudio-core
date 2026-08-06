@@ -30,17 +30,24 @@ export interface ResumenMes {
   /** Ingresos del mes agrupados por semana (modelo Monefy: Ingresos separado de Egresos). */
   ingresos: readonly GrupoSemana[]
   movimientos: readonly FinanceMovimiento[]
+  /** Sprint 007 — egresos que el léxico no clasificó con confianza: "Por revisar", nunca 'Otros'. */
+  porRevisar: readonly FinanceMovimiento[]
 }
 
-function semanaDelMes(fecha: string): number {
+export function semanaDelMes(fecha: string): number {
   const dia = Number(fecha.slice(8, 10))
   return Math.ceil(dia / 7)
 }
 
-/** Los movimientos anteriores a Sprint 004 no tienen categoría: se leen como 'otros'. */
-export function categoriaDe(movimiento: FinanceMovimiento): FinanceCategoria {
+/**
+ * `null` es "Por revisar" (Sprint 007): un movimiento sin categoría
+ * reconocida nunca se fuerza a una categoría inventada. Incluye la
+ * migración de lo persistido antes de este sprint con `categoria:
+ * 'otros'` — ese valor ya no es válido, se lee igual como "Por revisar".
+ */
+export function categoriaDe(movimiento: FinanceMovimiento): FinanceCategoria | null {
   const categoria = movimiento.categoria
-  return categoria && CATEGORIAS.includes(categoria) ? categoria : 'otros'
+  return categoria && (CATEGORIAS as readonly string[]).includes(categoria) ? (categoria as FinanceCategoria) : null
 }
 
 export function mesDe(fecha: Date): string {
@@ -91,6 +98,8 @@ export function resumirMes(
     .filter((grupo) => grupo.cantidad > 0)
     .sort((a, b) => b.total - a.total)
 
+  const porRevisar = egresos.filter((movimiento) => categoriaDe(movimiento) === null)
+
   const porSemana = new Map<number, { total: number; cantidad: number }>()
   for (const movimiento of delMes.filter((m) => m.tipo === 'ingreso')) {
     const semana = semanaDelMes(movimiento.fecha)
@@ -116,7 +125,36 @@ export function resumirMes(
     grupos,
     ingresos,
     movimientos: delMes.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    porRevisar,
   }
+}
+
+export interface ResumenSemana {
+  semana: number
+  entro: number
+  seFue: number
+  teQuedo: number
+}
+
+/**
+ * Vista semanal (Sprint 007): "Entró, Se fue, Te quedó", sin
+ * comparaciones ni tendencias — la misma pregunta que la vista mensual,
+ * recortada a la semana calendario dentro del mes (día 1-7 = semana 1,
+ * igual que `semanaDelMes`, ya usado para agrupar ingresos).
+ */
+export function resumirSemana(
+  movimientos: readonly FinanceMovimiento[],
+  mes: string,
+  semana: number,
+  moneda: Moneda = 'ars',
+): ResumenSemana {
+  const delaSemana = movimientos.filter(
+    (movimiento) =>
+      movimiento.fecha.startsWith(mes) && monedaDe(movimiento) === moneda && semanaDelMes(movimiento.fecha) === semana,
+  )
+  const entro = delaSemana.filter((m) => m.tipo === 'ingreso').reduce((total, m) => total + m.monto, 0)
+  const seFue = delaSemana.filter((m) => m.tipo === 'egreso').reduce((total, m) => total + m.monto, 0)
+  return { semana, entro, seFue, teQuedo: entro - seFue }
 }
 
 /** Sin decimales: en pesos los centavos son ruido, y el número tiene que leerse de un vistazo. */

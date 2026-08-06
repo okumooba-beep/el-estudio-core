@@ -48,9 +48,9 @@ describe('extraerCategoria', () => {
     expect(extraerCategoria(texto).categoria).toBe(esperado)
   })
 
-  it('lo que no reconoce cae en otros, marcado como inseguro', () => {
+  it('lo que no reconoce pasa a "Por revisar" (null), marcado como inseguro', () => {
     const resultado = extraerCategoria('Le di plata a mi primo')
-    expect(resultado.categoria).toBe('otros')
+    expect(resultado.categoria).toBeNull()
     expect(resultado.segura).toBe(false)
   })
 })
@@ -65,7 +65,7 @@ describe('extraerMovimiento', () => {
 
   it('un ingreso sin categoría reconocible sigue siendo un movimiento válido', () => {
     expect(extraerMovimiento('Cobré 250k del trabajo de Juan')).toMatchObject({
-      montos: [{ monto: 250_000, moneda: 'ars' }], tipo: 'ingreso', categoria: 'otros',
+      montos: [{ monto: 250_000, moneda: 'ars' }], tipo: 'ingreso', categoria: null,
     })
   })
 })

@@ -57,7 +57,8 @@ export interface NuevaFinanceMovimiento {
   tipo: FinanceMovimientoTipo
   monto: number
   concepto: string
-  categoria: FinanceCategoria
+  /** `null` cuando el léxico no reconoció la categoría: el movimiento nace "Por revisar" (Sprint 007). */
+  categoria: FinanceCategoria | null
   moneda: Moneda
   medio: Medio
   /** La hoja del Umbral de la que salió, si vino de una captura. */
@@ -68,6 +69,8 @@ export interface NuevaFinanceMovimiento {
 
 export interface FinanceMovimientoRepository extends Repository<FinanceMovimiento> {
   add(input: NuevaFinanceMovimiento): Promise<FinanceMovimiento>
+  /** Sprint 007 — corrige la categoría de un movimiento "Por revisar" con una interacción simple. */
+  update(id: string, patch: Partial<Omit<FinanceMovimiento, 'id' | 'createdAt'>>): Promise<FinanceMovimiento>
 }
 
 class DexieFinanceMovimientoRepository implements FinanceMovimientoRepository {
@@ -94,6 +97,13 @@ class DexieFinanceMovimientoRepository implements FinanceMovimientoRepository {
     }
     await db.financeMovimientos.add(movimiento)
     return movimiento
+  }
+
+  async update(id: string, patch: Partial<Omit<FinanceMovimiento, 'id' | 'createdAt'>>): Promise<FinanceMovimiento> {
+    await db.financeMovimientos.update(id, { ...patch, updatedAt: new Date().toISOString(), pendingSync: true })
+    const updated = await db.financeMovimientos.get(id)
+    if (!updated) throw new Error(`Movimiento ${id} no encontrado`)
+    return updated
   }
 }
 

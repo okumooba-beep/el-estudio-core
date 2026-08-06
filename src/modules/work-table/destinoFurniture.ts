@@ -14,6 +14,7 @@ export const DESTINO_TO_FURNITURE: Record<IdeaDestino, FurnitureId> = {
   habitos: 'habitos',
   trading: 'mesa-analisis',
   finanzas: 'finanzas',
+  agenda: 'agenda',
   biblioteca: 'biblioteca',
   archivo: 'archivador',
 }
@@ -25,6 +26,7 @@ export const FURNITURE_TO_DESTINO: Partial<Record<FurnitureId, IdeaDestino>> = {
   habitos: 'habitos',
   'mesa-analisis': 'trading',
   finanzas: 'finanzas',
+  agenda: 'agenda',
   biblioteca: 'biblioteca',
   archivador: 'archivo',
 }

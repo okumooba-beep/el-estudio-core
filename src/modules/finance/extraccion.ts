@@ -26,8 +26,8 @@ export interface MovimientoExtraido {
   montos: readonly MontoExtraido[]
   tipo: FinanceMovimientoTipo
   medio: Medio
-  categoria: FinanceCategoria
-  /** true solo si el léxico acertó una categoría; con `false` cayó en 'otros'. */
+  categoria: FinanceCategoria | null
+  /** true solo si el léxico acertó una categoría; con `false` la categoría es `null` — "Por revisar", nunca 'otros'. */
   categoriaSegura: boolean
 }
 
@@ -130,14 +130,14 @@ export function extraerMedio(texto: string): Medio {
   return 'transferencia'
 }
 
-export function extraerCategoria(texto: string): { categoria: FinanceCategoria; segura: boolean } {
+export function extraerCategoria(texto: string): { categoria: FinanceCategoria | null; segura: boolean } {
   const normalizado = texto.toLowerCase()
   for (const [categoria, palabras] of Object.entries(CATEGORIA_LEXICO)) {
     if (palabras.some((palabra) => normalizado.includes(palabra))) {
       return { categoria: categoria as FinanceCategoria, segura: true }
     }
   }
-  return { categoria: 'otros', segura: false }
+  return { categoria: null, segura: false }
 }
 
 /**

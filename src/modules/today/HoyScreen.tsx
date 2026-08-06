@@ -1,8 +1,7 @@
-import { useIdeas } from '@modules/work-table/public'
 import { HoyHeader } from './components/HoyHeader'
 import { PhraseSlot } from './components/PhraseSlot'
 import { IdeaCapture } from '@modules/work-table/IdeaCapture'
-import { ContinueWorking, selectContinueWorking } from './components/ContinueWorking'
+import { AttentionSummary } from './components/AttentionSummary'
 import { Spaces } from './components/Spaces'
 
 /**
@@ -16,8 +15,7 @@ import { Spaces } from './components/Spaces'
  *
  * Orden (un flujo, no una grilla de tarjetas — Bible cap. 11):
  * Saludo + fecha + voz ambiental → Umbral (única puerta de entrada,
- * ahora con más aire y una línea real donde escribir) → Seguir con
- * esto (lo último que se tocó, cualquier destino) → Espacios (los 6
+ * ahora con más aire y una línea real donde escribir) → Espacios (los 6
  * lugares reales — Diario, Misiones, Hábitos, Trading, Finanzas,
  * Biblioteca; el brief sugería también "Planning" y "AI", ninguno de
  * los dos existe como destino, mueble o pantalla en el Estudio, así
@@ -35,6 +33,13 @@ import { Spaces } from './components/Spaces'
  * siguen en el árbol, sin importar de acá) — Home deja de mostrarlos,
  * no deja de existir la función; un sprint futuro puede reusarlos en
  * otro lugar si corresponde (Regla 4).
+ *
+ * Sprint "Home como puerta de entrada": por el mismo motivo, "Seguir
+ * con esto" (`ContinueWorking`) también deja de mostrarse acá — es un
+ * resumen de dónde se quedó el usuario en otro mueble, y Home responde
+ * "¿qué querés hacer ahora?", nunca "¿qué estabas haciendo?". El
+ * componente sigue existiendo en components/ContinueWorking.tsx, solo
+ * sin importar de esta pantalla.
  *
  * El sistema de cámara/habitación que ocupaba este lugar en "Build V1"
  * (features/room, features/workspace, features/memoria,
@@ -56,19 +61,16 @@ import { Spaces } from './components/Spaces'
  * Core V3), así que calcularla acá y pasarla por prop es gratis.
  */
 export function HoyScreen() {
-  const { ideas } = useIdeas()
-  const activa = selectContinueWorking(ideas)
-
   return (
-    <div className="mx-auto flex max-w-xl flex-col gap-10 pb-10">
+    <div className="mx-auto flex max-w-xl flex-col gap-12 pb-10">
       <div className="flex flex-col gap-6">
         <div>
           <HoyHeader />
           <PhraseSlot />
         </div>
         <IdeaCapture />
-        <ContinueWorking activa={activa} />
       </div>
+      <AttentionSummary />
       <Spaces />
     </div>
   )

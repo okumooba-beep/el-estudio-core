@@ -3,6 +3,7 @@ import type { Idea } from '@/types/idea'
 import type { Operacion } from '@/types/operacion'
 import type { HabitCheck } from '@/types/habitCheck'
 import type { FinanceAccount, FinanceMovimiento, FinanceGoal } from '@/types/finance'
+import type { AgendaEvento, AgendaBloque } from '@/types/agenda'
 
 interface LegacyNota {
   id: string
@@ -35,6 +36,8 @@ class LifeosDB extends Dexie {
   financeAccounts!: EntityTable<FinanceAccount, 'id'>
   financeMovimientos!: EntityTable<FinanceMovimiento, 'id'>
   financeGoals!: EntityTable<FinanceGoal, 'id'>
+  agendaEventos!: EntityTable<AgendaEvento, 'id'>
+  agendaBloques!: EntityTable<AgendaBloque, 'id'>
 
   constructor() {
     super('lifeos')
@@ -213,6 +216,15 @@ class LifeosDB extends Dexie {
 
     this.version(9).stores({
       financeMovimientos: 'id, createdAt, categoria, ideaId',
+    })
+
+    // Módulo Agenda — "qué pasa y cuándo". Dos tablas nuevas: Eventos
+    // (nacen en el Umbral, `ideaId` los vincula a la Idea que los
+    // originó) y Bloques (nacen directo en Planificación semanal, sin
+    // Idea de por medio — por eso `dia` es su único índice de fecha).
+    this.version(11).stores({
+      agendaEventos: 'id, createdAt, fecha, ideaId',
+      agendaBloques: 'id, createdAt, dia',
     })
 
     this.version(8).stores({

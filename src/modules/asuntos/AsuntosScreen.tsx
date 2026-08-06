@@ -1,101 +1,152 @@
 import { useState } from 'react'
 import { useIdeas } from '@modules/work-table/public'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { ASUNTO_ESTADOS, ESTADO_LABEL, describirEspera, diasEsperando, estadoDe, type AsuntoEstado } from './estados'
+import {
+  ASUNTO_ESTADOS,
+  ESTADO_LABEL,
+  PRIORIDAD_LABEL,
+  estadoDe,
+  prioridadDe,
+  type AsuntoEstado,
+} from './estados'
 import type { Idea } from '@/types/idea'
 
-/** Los abiertos primero, en el orden de EL_ESTUDIO_CORE.md; lo completado cierra abajo. */
-const ABIERTOS: readonly AsuntoEstado[] = ['pendiente', 'en-progreso', 'en-espera']
+/** Pendiente y en espera son lo que sigue abierto; resuelto/archivado cierran abajo, en voz baja. */
+const ABIERTOS: readonly AsuntoEstado[] = ['pendiente', 'en-espera']
+const CERRADOS: readonly AsuntoEstado[] = ['resuelto', 'archivado']
 
 /**
- * Asuntos (Sprint de Producto 003) — el destino que faltaba.
+ * Asuntos (Sprint 005 — "Sistema de seguimiento"), reemplaza la versión
+ * de Sprint de Producto 003: misma pregunta ("¿qué sigue abierto y
+ * requiere seguimiento?"), arquitectura de información distinta.
  *
- * EL_ESTUDIO_CORE.md lo define por lo que NO es: "No son tareas. No son
- * proyectos. No son recordatorios. Son situaciones que requieren
- * seguimiento." La pregunta que lo separa de Misiones es una sola:
- * ¿podés empezarlo vos ahora mismo? Si sí, es una misión. Si dependés
- * de que otro haga algo, es un asunto.
+ * Un asunto ya no es una sola línea de texto con un reloj al lado — son
+ * cuatro datos, ni uno más: qué se espera, de quién o qué se espera,
+ * estado, prioridad. La pantalla se organiza sola por estado (nunca
+ * pestañas/filtros/vistas): lo abierto (Pendiente, En espera) arriba,
+ * lo cerrado (Resuelto, Archivado) abajo y en voz baja — el mismo
+ * patrón "lo activo pesa, lo cerrado no" que ya usan Cuaderno y
+ * Hábitos.
  *
- * Por eso esta pantalla no se parece al Tablero. Una misión se clava en
- * el corcho porque te espera a vos; un asunto descansa en la bandeja
- * porque espera a otro. Lo único que un asunto hace es cambiar de
- * estado, así que el estado es la estructura de la pantalla — no una
- * etiqueta colgada al costado de una lista.
+ * "Archivado" es ahora un estado del propio asunto, no un traslado de
+ * mueble (a diferencia de Hábitos/Cuaderno, que archivan con
+ * moveSheet): acá archivar y resolver son la misma clase de operación
+ * — cambiar de estado —, así que comparten el mismo selector en vez de
+ * tener un botón "×" aparte.
  *
- * El tiempo de espera es la única información añadida, y es la que hace
- * la pantalla útil: en algo que depende de un tercero, cuánto lleva
- * esperando es exactamente el dato que decide si hoy toca reclamarlo.
- *
- * Deliberadamente ausentes: prioridad, fecha límite, responsable,
- * notas, recordatorios. Todos convertirían un asunto en un proyecto en
- * miniatura, que es lo que el propio documento prohíbe.
+ * Filosofía (brief): un asunto nunca se convierte en misión. Cuando
+ * deja de depender de afuera se resuelve, y la misión nueva (si hace
+ * falta) se crea a mano en Misiones — los módulos quedan
+ * independientes, así que esta pantalla no ofrece ningún botón
+ * "convertir".
  *
  * No importa `@world` (dependency-cruiser `module-no-world`): las
  * excepciones son código anterior a F16 y un módulo nuevo no las hereda.
  */
 export function AsuntosScreen() {
-  const { ideas, ready, update, moveSheet } = useIdeas()
+  const { ideas, ready, add, update } = useIdeas()
   const [abiertoId, setAbiertoId] = useState<string | null>(null)
-  const ahora = new Date()
+  const [draftTexto, setDraftTexto] = useState<string | null>(null)
 
   const asuntos = ideas.filter((idea) => idea.destino === 'asuntos')
   const porEstado = (estado: AsuntoEstado) => asuntos.filter((asunto) => estadoDe(asunto) === estado)
-  const completados = porEstado('completado')
   const hayAbiertos = ABIERTOS.some((estado) => porEstado(estado).length > 0)
 
   function cambiarEstado(asunto: Idea, estado: AsuntoEstado) {
-    update(asunto.id, { estado })
+    void update(asunto.id, { estado })
     setAbiertoId(null)
+  }
+
+  function cambiarPrioridad(asunto: Idea) {
+    const siguiente = prioridadDe(asunto) === 'importante' ? 'normal' : 'importante'
+    void update(asunto.id, { prioridad: siguiente })
+  }
+
+  function handleQueBlur(asunto: Idea, event: React.FocusEvent<HTMLSpanElement>) {
+    const texto = event.currentTarget.textContent?.trim() ?? ''
+    if (texto && texto !== asunto.texto) void update(asunto.id, { texto })
+    else if (!texto) event.currentTarget.textContent = asunto.texto
+  }
+
+  function handleContraparteBlur(asunto: Idea, event: React.FocusEvent<HTMLSpanElement>) {
+    const contraparte = event.currentTarget.textContent?.trim() ?? ''
+    if (contraparte !== (asunto.contraparte ?? '')) void update(asunto.id, { contraparte })
+  }
+
+  function handleEditKeyDown(event: React.KeyboardEvent<HTMLSpanElement>) {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      event.currentTarget.blur()
+    }
+  }
+
+  function handleNuevoAsunto() {
+    setDraftTexto('')
+  }
+
+  async function handleDraftBlur() {
+    const texto = (draftTexto ?? '').trim()
+    setDraftTexto(null)
+    if (!texto) return
+    await add(texto, { destino: 'asuntos', origen: 'asuntos' })
+  }
+
+  function handleDraftKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === 'Enter') event.currentTarget.blur()
   }
 
   if (!ready) return null
 
-  if (asuntos.length === 0) {
-    return (
-      <EmptyState
-        title="Nada esperando a nadie."
-        description="Escribí algo que dependa de otra persona — “esperando la factura de César” — y el Estudio lo va a traer acá."
-      />
-    )
-  }
-
   function renderAsunto(asunto: Idea) {
     const estado = estadoDe(asunto)
+    const prioridad = prioridadDe(asunto)
     const abierto = abiertoId === asunto.id
-    const completado = estado === 'completado'
+    const cerrado = estado === 'resuelto' || estado === 'archivado'
 
     return (
-      <li key={asunto.id} className="border-b border-border/40 last:border-b-0">
-        <div className="flex items-start">
-          <button
-            type="button"
-            onClick={() => setAbiertoId(abierto ? null : asunto.id)}
-            className="flex w-full flex-col items-start gap-1 py-3.5 text-left"
-            aria-expanded={abierto}
-          >
-            <span className={['text-[17px] leading-snug', completado ? 'text-ink-faint line-through' : 'text-ink'].join(' ')}>
+      <li key={asunto.id} className="border-b border-border/40 py-3.5 last:border-b-0">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <span
+              className={['asunto-que', cerrado ? 'asunto-que-cerrado' : ''].join(' ').trim()}
+              contentEditable
+              suppressContentEditableWarning
+              onBlur={(event) => handleQueBlur(asunto, event)}
+              onKeyDown={handleEditKeyDown}
+            >
               {asunto.texto}
             </span>
-            <span className="font-mono text-[12px] text-ink-faint">
-              {describirEspera(diasEsperando(asunto, ahora))}
-            </span>
-          </button>
-          {completado ? (
-            // Contrato §8: un asunto cumplido no se borra, se archiva
-            // (mismo acuerdo que Umbral/Cuaderno) — desaparece de esta
-            // vista y queda visible entre las archivadas de Cuaderno.
-            <button
-              type="button"
-              className="asunto-archivar"
-              aria-label="Archivar"
-              onClick={() => void moveSheet(asunto, 'archivador')}
+            <span
+              className="asunto-contraparte"
+              contentEditable
+              suppressContentEditableWarning
+              data-placeholder="¿De quién o qué se espera?"
+              onBlur={(event) => handleContraparteBlur(asunto, event)}
+              onKeyDown={handleEditKeyDown}
             >
-              ×
-            </button>
-          ) : null}
+              {asunto.contraparte ?? ''}
+            </span>
+          </div>
+          <button
+            type="button"
+            className={['asunto-prioridad', prioridad === 'importante' ? 'asunto-prioridad-importante' : '']
+              .join(' ')
+              .trim()}
+            onClick={() => cambiarPrioridad(asunto)}
+          >
+            {PRIORIDAD_LABEL[prioridad]}
+          </button>
         </div>
+        <button
+          type="button"
+          className="asunto-estado-boton"
+          onClick={() => setAbiertoId(abierto ? null : asunto.id)}
+          aria-expanded={abierto}
+        >
+          {ESTADO_LABEL[estado]}
+        </button>
         {abierto ? (
-          <div className="idea-destinos pb-3" role="group" aria-label="Cambiar estado">
+          <div className="idea-destinos pb-1" role="group" aria-label="Cambiar estado">
             {ASUNTO_ESTADOS.filter((siguiente) => siguiente !== estado).map((siguiente) => (
               <button
                 key={siguiente}
@@ -109,6 +160,37 @@ export function AsuntosScreen() {
           </div>
         ) : null}
       </li>
+    )
+  }
+
+  function renderNuevo() {
+    return draftTexto !== null ? (
+      <input
+        type="text"
+        autoFocus
+        value={draftTexto}
+        onChange={(event) => setDraftTexto(event.target.value)}
+        onBlur={handleDraftBlur}
+        onKeyDown={handleDraftKeyDown}
+        placeholder="¿Qué estás esperando?"
+        className="asunto-nuevo-input"
+      />
+    ) : (
+      <button type="button" className="asunto-nuevo-boton" onClick={handleNuevoAsunto}>
+        + Nuevo asunto
+      </button>
+    )
+  }
+
+  if (asuntos.length === 0) {
+    return (
+      <div className="mx-auto flex max-w-xl flex-col gap-6 pb-10">
+        <EmptyState
+          title="Nada esperando a nadie."
+          description="Escribí algo que dependa de otra persona — “esperando la factura de César” — y el Estudio lo va a traer acá."
+        />
+        {renderNuevo()}
+      </div>
     )
   }
 
@@ -129,14 +211,18 @@ export function AsuntosScreen() {
         <EmptyState title="Nada abierto." description="Todo lo que dependía de alguien más está resuelto." />
       ) : null}
 
-      {completados.length > 0 ? (
-        <section>
-          <h2 className="mb-1 font-mono text-[11px] uppercase tracking-wide text-ink-faint">
-            {ESTADO_LABEL.completado}
-          </h2>
-          <ul className="flex flex-col">{completados.map(renderAsunto)}</ul>
-        </section>
-      ) : null}
+      {renderNuevo()}
+
+      {CERRADOS.map((estado) => {
+        const delEstado = porEstado(estado)
+        if (delEstado.length === 0) return null
+        return (
+          <section key={estado}>
+            <h2 className="mb-1 font-mono text-[11px] uppercase tracking-wide text-ink-faint">{ESTADO_LABEL[estado]}</h2>
+            <ul className="flex flex-col">{delEstado.map(renderAsunto)}</ul>
+          </section>
+        )
+      })}
     </div>
   )
 }

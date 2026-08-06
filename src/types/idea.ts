@@ -21,6 +21,7 @@ export type IdeaDestino =
   | 'habitos'
   | 'trading'
   | 'finanzas'
+  | 'agenda'
   | 'biblioteca'
   | 'archivo'
 
@@ -44,6 +45,19 @@ export interface Idea {
    * significado real — muchos destinos todavía no lo necesitan.
    */
   estado: string | null
+  /**
+   * Reservado para Asuntos (Sprint 005): prioridad del seguimiento.
+   * Ausente para cualquier otro destino, y ausente también en un
+   * asunto recién capturado — la captura rápida no la pide, el
+   * silencio significa 'normal'.
+   */
+  prioridad?: 'normal' | 'importante'
+  /**
+   * Reservado para Asuntos (Sprint 005): de quién o de qué se espera
+   * algo. Ausente hasta que el usuario lo escribe a mano — la captura
+   * rápida desde El Umbral solo trae el texto de qué se espera.
+   */
+  contraparte?: string
   /**
    * Dónde vive físicamente esta hoja ahora (Sprint 3.6, ver
    * src/packages/world/studio/furniture.ts). No reemplaza a `destino`: destino es

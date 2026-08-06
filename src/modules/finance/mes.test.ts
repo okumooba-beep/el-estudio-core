@@ -5,7 +5,7 @@ import type { FinanceMovimiento } from '@/types/finance'
 function mov(over: Partial<FinanceMovimiento>): FinanceMovimiento {
   return {
     id: Math.random().toString(36), tipo: 'egreso', monto: 1000, concepto: 'x',
-    categoria: 'otros', moneda: 'ars', medio: 'transferencia', fecha: '2026-08-03', createdAt: '2026-08-03T10:00:00.000Z',
+    categoria: null, moneda: 'ars', medio: 'transferencia', fecha: '2026-08-03', createdAt: '2026-08-03T10:00:00.000Z',
     updatedAt: '2026-08-03T10:00:00.000Z', pendingSync: false, ...over,
   }
 }
@@ -15,7 +15,7 @@ describe('resumirMes', () => {
     mov({ monto: 80_000, categoria: 'auto' }),
     mov({ monto: 20_000, categoria: 'auto' }),
     mov({ monto: 50_000, categoria: 'comida' }),
-    mov({ monto: 300_000, tipo: 'ingreso', categoria: 'otros' }),
+    mov({ monto: 300_000, tipo: 'ingreso' }),
     mov({ monto: 999_999, fecha: '2026-07-15', categoria: 'ocio' }),
   ]
 
@@ -67,9 +67,14 @@ describe('separación por moneda', () => {
 })
 
 describe('categoriaDe', () => {
-  it('un movimiento anterior al sprint, sin categoría, se lee como otros', () => {
+  it('un movimiento sin categoría reconocida es "Por revisar", nunca "otros"', () => {
     const viejo = { ...mov({}), categoria: undefined } as unknown as FinanceMovimiento
-    expect(categoriaDe(viejo)).toBe('otros')
+    expect(categoriaDe(viejo)).toBeNull()
+  })
+
+  it('migra el valor heredado "otros" (Sprint 004) a "Por revisar"', () => {
+    const heredado = { ...mov({}), categoria: 'otros' } as unknown as FinanceMovimiento
+    expect(categoriaDe(heredado)).toBeNull()
   })
 })
 

@@ -33,6 +33,7 @@ const CORRECCION_DESTINOS: readonly { id: FurnitureId; label: string }[] = [
   { id: 'habitos', label: 'Hábitos' },
   { id: 'mesa-analisis', label: 'Trading' },
   { id: 'finanzas', label: 'Finanzas' },
+  { id: 'agenda', label: 'Agenda' },
   { id: 'biblioteca', label: 'Biblioteca' },
   { id: 'archivador', label: 'Archivo' },
   { id: 'escritorio', label: 'Cuaderno' },
@@ -50,6 +51,7 @@ const DESTINO_PREVIEW_MESSAGE: Record<IdeaDestino, string> = {
   habitos: 'Parece un hábito.',
   trading: 'Parece una nota de trading.',
   finanzas: 'Parece algo de finanzas.',
+  agenda: 'Parece algo con fecha y hora.',
   biblioteca: 'Parece una frase para la biblioteca.',
   archivo: 'Parece algo para archivar.',
 }
@@ -66,6 +68,7 @@ const DESTINO_ASIGNADO_MESSAGE: Record<IdeaDestino, string> = {
   habitos: 'Vive en Hábitos.',
   trading: 'Vive en Trading.',
   finanzas: 'Vive en Finanzas.',
+  agenda: 'Vive en Agenda.',
   biblioteca: 'Vive en la Biblioteca.',
   archivo: 'Vive en el Archivo.',
 }
@@ -77,6 +80,7 @@ const DESTINO_LABEL: Record<IdeaDestino, string> = {
   habitos: 'Hábitos',
   trading: 'Trading',
   finanzas: 'Finanzas',
+  agenda: 'Agenda',
   biblioteca: 'Biblioteca',
   archivo: 'Archivo',
 }

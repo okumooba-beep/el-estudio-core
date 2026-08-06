@@ -1,8 +1,9 @@
 /**
- * Las categorías de gasto (Sprint de Producto 004). Son las que nombró
- * el brief, más `auto` y `salud` que se pidieron explícitamente, más
- * `otros` como red: un movimiento sin categoría clara se registra igual
- * — el monto nunca se pierde por no saber dónde ponerlo.
+ * Las categorías de gasto (Sprint 007 — "Comprender el movimiento del
+ * dinero"). Lista cerrada, exactamente la que valida el brief: ni una
+ * categoría más. No hay `otros` — un movimiento que el léxico no
+ * reconoce nunca se fuerza a una categoría, pasa a "Por revisar"
+ * (ver `extraerCategoria` en extraccion.ts y `categoriaDe` en mes.ts).
  *
  * Es una lista cerrada a propósito. Categorías libres convierten esto
  * en la planilla que EL_ESTUDIO_CORE.md rechaza: "No obliga a pensar en
@@ -18,11 +19,10 @@ export type FinanceCategoria =
   | 'ocio'
   | 'inversion'
   | 'ahorro'
-  | 'otros'
 
 export const CATEGORIAS: readonly FinanceCategoria[] = [
   'comida', 'auto', 'salud', 'servicios', 'suscripciones',
-  'alquiler', 'ocio', 'inversion', 'ahorro', 'otros',
+  'alquiler', 'ocio', 'inversion', 'ahorro',
 ]
 
 export const CATEGORIA_LABEL: Record<FinanceCategoria, string> = {
@@ -35,7 +35,6 @@ export const CATEGORIA_LABEL: Record<FinanceCategoria, string> = {
   ocio: 'Ocio',
   inversion: 'Inversión',
   ahorro: 'Ahorro',
-  otros: 'Otros',
 }
 
 /**
@@ -55,15 +54,14 @@ export const CATEGORIA_COLOR: Record<FinanceCategoria, string> = {
   ocio: '#C99A55',
   inversion: '#6FAE85',
   ahorro: '#5C8C7A',
-  otros: '#5A5048',
 }
 
 /**
  * Palabras que delatan la categoría. No pretende ser exhaustivo: lo que
- * no matchea cae en `otros` y se corrige de un toque, que es más barato
- * que un léxico enorme lleno de falsos positivos.
+ * no matchea pasa a "Por revisar" y se corrige de un toque, que es más
+ * barato que un léxico enorme lleno de falsos positivos.
  */
-export const CATEGORIA_LEXICO: Record<Exclude<FinanceCategoria, 'otros'>, readonly string[]> = {
+export const CATEGORIA_LEXICO: Record<FinanceCategoria, readonly string[]> = {
   comida: ['super', 'súper', 'supermercado', 'almuerzo', 'cena', 'desayuno', 'comida', 'café', 'cafe',
     'restaurante', 'delivery', 'verduler', 'carnicer', 'panader', 'kiosco', 'mercado', 'pedido'],
   auto: ['nafta', 'gasolina', 'combustible', 'aceite', 'peaje', 'cochera', 'estacionamiento', 'neumático',

@@ -14,6 +14,7 @@ export type Destino =
   | 'habitos'
   | 'trading'
   | 'finanzas'
+  | 'agenda'
   | 'biblioteca'
   | 'archivo'
 
@@ -46,17 +47,25 @@ export const RULES: readonly ClassificationRule<Destino>[] = [
   { id: 'mision-comprar', keyword: 'comprar', destino: 'misiones' },
   { id: 'mision-llamar', keyword: 'llamar', destino: 'misiones' },
   { id: 'mision-turno', keyword: 'turno', destino: 'misiones' },
-  // Asuntos (Sprint 003): la marca de un asunto no es el tema, es la
-  // espera. Todas estas expresiones dicen "depende de otro" — que es
-  // exactamente la pregunta que lo separa de una misión. Se eligen
-  // formas cerradas: 'pendiente' suelto o 'todavía no' calificarían
-  // media docena de pensamientos que no son asuntos.
+  // Sprint 005: un verbo de acción propia es la señal de que la
+  // resolución depende de mí, no de un tercero — por definición eso es
+  // una Misión, nunca un Asunto (ver rules.ts §Asuntos abajo).
+  { id: 'mision-enviar', keyword: 'enviar', destino: 'misiones' },
+  { id: 'mision-revisar', keyword: 'revisar', destino: 'misiones' },
+  { id: 'mision-pagar', keyword: 'pagar', destino: 'misiones' },
+  // Asuntos (Sprint 003, ampliado Sprint 005): la marca de un asunto no
+  // es el tema, es la espera. Todas estas expresiones dicen "depende de
+  // otro" — que es exactamente la pregunta que lo separa de una misión.
+  // Se eligen formas cerradas: 'pendiente' suelto o 'todavía no'
+  // calificarían media docena de pensamientos que no son asuntos.
   { id: 'asunto-esperando', keyword: 'esperando', destino: 'asuntos', peso: PESO_DEPENDENCIA },
   { id: 'asunto-a-la-espera', keyword: 'a la espera', destino: 'asuntos', peso: PESO_DEPENDENCIA },
   { id: 'asunto-pendiente-de', keyword: 'pendiente de', destino: 'asuntos', peso: PESO_DEPENDENCIA },
   { id: 'asunto-me-tienen-que', keyword: 'me tienen que', destino: 'asuntos', peso: PESO_DEPENDENCIA },
   { id: 'asunto-quedo-en', keyword: 'quedó en', destino: 'asuntos', peso: PESO_DEPENDENCIA },
   { id: 'asunto-quedo-en-sin-tilde', keyword: 'quedo en', destino: 'asuntos', peso: PESO_DEPENDENCIA },
+  { id: 'asunto-cuando-confirmen', keyword: 'cuando confirmen', destino: 'asuntos', peso: PESO_DEPENDENCIA },
+  { id: 'asunto-falta-que', keyword: 'falta que', destino: 'asuntos', peso: PESO_DEPENDENCIA },
   { id: 'finanzas-presupuesto', keyword: 'presupuesto', destino: 'finanzas' },
   { id: 'finanzas-factura', keyword: 'factura', destino: 'finanzas' },
   { id: 'finanzas-ahorro', keyword: 'ahorro', destino: 'finanzas' },
@@ -75,7 +84,20 @@ export const RULES: readonly ClassificationRule<Destino>[] = [
  * PESO_MONTO — media — y solo llega a confianza alta acompañado de un
  * verbo de gasto en pasado.
  */
+/**
+ * Agenda (módulo Agenda): "sugiere cuando la captura tiene referencia
+ * temporal explícita y concreta (fecha, día, hora)". Nunca frecuencia
+ * ("todos los días", "cuando pueda") — esas frases no traen un nombre
+ * de día, una fecha o una hora, así que el patrón no las reconoce y
+ * el texto se queda donde ya estaba (Hábitos, sin cambios acá).
+ */
 export const ESTRUCTURA: readonly StructuralRule<Destino>[] = [
+  {
+    id: 'agenda-temporal',
+    patron:
+      /\b(lunes|martes|mi[ée]rcoles|jueves|viernes|s[áa]bado|domingo|mañana)\b|\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b|\ba las?\s?\d{1,2}\b|\b\d{1,2}[:.]\d{2}\s?(?:hs?)?\b|\b\d{1,2}\s?(?:am|pm|hs)\b/i,
+    destino: 'agenda',
+  },
   {
     id: 'finanzas-monto',
     // Tres formas, todas vistas en uso real:

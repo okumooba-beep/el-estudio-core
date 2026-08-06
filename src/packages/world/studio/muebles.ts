@@ -6,7 +6,7 @@
  * `IdeaDestino` cambia sus valores, este tipo debe actualizarse junto
  * con él.
  */
-type Destino = 'hoy' | 'misiones' | 'asuntos' | 'habitos' | 'trading' | 'finanzas' | 'biblioteca' | 'archivo'
+type Destino = 'hoy' | 'misiones' | 'asuntos' | 'habitos' | 'trading' | 'finanzas' | 'agenda' | 'biblioteca' | 'archivo'
 
 /**
  * El lenguaje interno del Estudio (Sprint 2.2, punto 06): "módulo" deja

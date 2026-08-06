@@ -4,6 +4,7 @@ import { MODULE as asuntos } from '@modules/asuntos/public'
 import { MODULE as habitos } from '@modules/habits/public'
 import { MODULE as trading } from '@modules/trading/public'
 import { MODULE as finanzas } from '@modules/finance/public'
+import { MODULE as agenda } from '@modules/agenda/public'
 import { MODULE as biblioteca } from '@modules/frases/public'
 import type { IdeaDestino } from '@/types/idea'
 
@@ -49,6 +50,12 @@ export const SPACES: readonly Space[] = [
     path: finanzas.path,
     label: finanzas.label,
     proposito: 'Entendé tu dinero.',
+  },
+  {
+    destino: 'agenda',
+    path: agenda.path,
+    label: agenda.label,
+    proposito: '¿Qué pasa y cuándo?',
   },
   {
     destino: 'biblioteca',

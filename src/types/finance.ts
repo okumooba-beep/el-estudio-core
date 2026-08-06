@@ -41,8 +41,12 @@ export interface FinanceMovimiento {
    * semana El Estudio agrupa automáticamente esos movimientos.
    * Vehículo. Comida. Servicios." Lista cerrada (ver categorias.ts):
    * categorías libres devuelven la planilla que el documento rechaza.
+   *
+   * Sprint 007 — `null` es "Por revisar": el sistema nunca inventa una
+   * categoría cuando el léxico no reconoce el texto (antes caía en
+   * 'otros', que el nuevo brief prohíbe explícitamente).
    */
-  categoria: FinanceCategoria
+  categoria: FinanceCategoria | null
   /**
    * Sprint 006. Sin moneda, "1.090.000 + 200 usd" era un solo número en
    * pesos y los dólares desaparecían. Pesos y dólares nunca se suman:

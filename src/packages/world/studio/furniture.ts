@@ -16,6 +16,7 @@ export type FurnitureId =
   | 'diario'
   | 'archivador'
   | 'finanzas'
+  | 'agenda'
   | 'biblioteca'
 
 export interface Furniture {
@@ -38,7 +39,7 @@ export const FURNITURE: Record<FurnitureId, Furniture> = {
     id: 'escritorio',
     nombre: 'Escritorio',
     recibe: [],
-    enviaA: ['tablero', 'bandeja', 'habitos', 'mesa-analisis', 'finanzas', 'biblioteca'],
+    enviaA: ['tablero', 'bandeja', 'habitos', 'mesa-analisis', 'finanzas', 'agenda', 'biblioteca'],
     icono: 'hoja',
     material: 'wood',
   },
@@ -103,6 +104,14 @@ export const FURNITURE: Record<FurnitureId, Furniture> = {
     recibe: ['escritorio'],
     enviaA: [],
     icono: 'libro contable',
+    material: 'paper',
+  },
+  agenda: {
+    id: 'agenda',
+    nombre: 'Agenda',
+    recibe: ['escritorio'],
+    enviaA: [],
+    icono: 'calendario de pared',
     material: 'paper',
   },
   biblioteca: {

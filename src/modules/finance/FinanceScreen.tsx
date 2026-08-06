@@ -1,99 +1,102 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useIdeas } from '@modules/work-table/public'
-import { readJSON, writeJSON } from '@shared-kernel/storage/localStorage'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useFinance } from './useFinance'
 import { AnilloCategorias } from './AnilloCategorias'
 import { CATEGORIAS, CATEGORIA_COLOR, CATEGORIA_LABEL, type FinanceCategoria } from './categorias'
 import { extraerMovimiento, type Moneda } from './extraccion'
-import { formatearMonto, mesDe, monedaDe, resumirMes } from './mes'
-import type { Idea } from '@/types/idea'
+import { formatearMonto, mesDe, monedaDe, resumirMes, resumirSemana, semanaDelMes } from './mes'
+import type { FinanceMovimiento } from '@/types/finance'
 
-const AHORRO_KEY = 'finanzas-ahorro-pct'
+type Vista = 'semana' | 'mes'
 
 /**
- * Finanzas (Sprint de Producto 004) — el motor de movimientos.
+ * Finanzas (Sprint 007 — "Comprender el movimiento del dinero"),
+ * reemplaza la versión de Sprint de Producto 004/006: misma pregunta
+ * ("¿en qué se me va y de dónde me entra el dinero?"), pero el brief es
+ * ahora explícito en un punto que la versión anterior no resolvía: acá
+ * nadie "registra" nada a mano. Antes, cada captura del Umbral esperaba
+ * en "Sin registrar" hasta que el usuario tocaba una categoría — eso es
+ * exactamente el "usuario organiza" que la Filosofía rechaza. Ahora el
+ * efecto de abajo registra solo, apenas hay un monto: si el léxico
+ * reconoce la categoría con confianza, el movimiento nace clasificado;
+ * si no, nace igual (el monto ya es real, cuenta en Entró/Se fue/Te
+ * quedó) pero con `categoria: null` — "Por revisar", nunca "Otros" — y
+ * se corrige con un toque, no con un formulario.
  *
- * La pantalla anterior abría con Patrimonio Neto, Liquidez, Inversiones
- * y Deudas calculados sobre saldos cargados a mano, antes de que
- * existiera un solo movimiento. EL_ESTUDIO_CORE.md rechaza exactamente
- * esa inversión: "Primero registras. Después El Estudio organiza." Y
- * también: "No queremos balances. No queremos patrimonio neto."
+ * Nunca hay botón de crear movimiento acá (Principio fundamental): todo
+ * nace en El Umbral. Lo único que sigue esperando es lo que no trae
+ * número — ahí no hay nada que registrar todavía, solo pedir que se
+ * reescriba con la cifra.
  *
- * Ahora la pantalla es el mes. Escribís "Gasté 80k en gasolina" en el
- * Umbral, la hoja aterriza acá, y el motor saca monto, tipo y categoría
- * sin que elijas nada. Lo que no puede resolver —un texto sin número—
- * espera, visible, hasta que lo completes: el Umbral resuelve dónde, el
- * módulo resuelve qué falta (Contrato del Umbral §10).
- *
- * Las tablas de cuentas y metas siguen existiendo intactas en Dexie;
- * simplemente ya no gobiernan la pantalla. Nada se borró.
+ * La pantalla responde primero Entró/Se fue/Te quedó (Experiencia) y
+ * solo la vista mensual agrega desglose por categoría y % de ahorro —
+ * nunca un listado de cada movimiento (eso es la planilla que el brief
+ * rechaza).
  */
 export function FinanceScreen() {
-  const { movimientos, ready, addMovimiento } = useFinance()
+  const { movimientos, ready, addMovimiento, updateMovimiento } = useFinance()
   const { ideas, moveSheet } = useIdeas()
   const [mes] = useState(() => mesDe(new Date()))
   const [moneda, setMoneda] = useState<Moneda>('ars')
-  const [editando, setEditando] = useState<string | null>(null)
-  /** % de ahorro configurable por el usuario, persistido localmente (mismo patrón que DRAFT_KEY en IdeaCapture). */
-  const [ahorroPct, setAhorroPct] = useState(() => readJSON(AHORRO_KEY, 0))
+  const [vista, setVista] = useState<Vista>('semana')
+  const [corrigiendo, setCorrigiendo] = useState<string | null>(null)
 
+  const convertidas = useMemo(
+    () => new Set(movimientos.map((movimiento) => movimiento.ideaId).filter(Boolean)),
+    [movimientos],
+  )
+  /** Capturas que el Umbral mandó acá y todavía no encontraron un monto. */
+  const pendientes = ideas.filter((idea) => idea.destino === 'finanzas' && !convertidas.has(idea.id))
+  const sinMonto = pendientes.filter((idea) => extraerMovimiento(idea.texto).montos.length === 0)
+
+  useEffect(() => {
+    if (!ready) return
+    for (const idea of pendientes) {
+      const extraido = extraerMovimiento(idea.texto)
+      if (extraido.montos.length === 0) continue
+      for (const montoExtraido of extraido.montos) {
+        void addMovimiento({
+          tipo: extraido.tipo,
+          monto: montoExtraido.monto,
+          moneda: montoExtraido.moneda,
+          medio: extraido.medio,
+          concepto: idea.texto,
+          categoria: extraido.categoriaSegura ? extraido.categoria : null,
+          ideaId: idea.id,
+          fecha: idea.fecha,
+        })
+      }
+    }
+    // Se re-ejecuta cuando cambian ideas o movimientos: cada alta reduce
+    // `pendientes` en el próximo render, hasta que solo quedan las que
+    // de verdad no traen un monto (esas no vuelven a intentarse).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, ideas, movimientos])
+
+  const semanaActual = useMemo(() => semanaDelMes(new Date().toISOString().slice(0, 10)), [])
   const resumen = useMemo(() => resumirMes(movimientos, mes, moneda), [movimientos, mes, moneda])
-  const ahorro = resumen.ingresado * (ahorroPct / 100)
-  /** Monefy: un ingreso no es un gasto más, así que no comparte esta lista (tiene su propio bloque arriba). */
-  const egresosLista = useMemo(() => resumen.movimientos.filter((m) => m.tipo === 'egreso'), [resumen.movimientos])
+  const semanal = useMemo(
+    () => resumirSemana(movimientos, mes, semanaActual, moneda),
+    [movimientos, mes, semanaActual, moneda],
+  )
+  const ahorroPct = resumen.ingresado > 0 ? Math.round((resumen.balance / resumen.ingresado) * 100) : 0
 
-  function handleAhorroChange(valor: number) {
-    const limitado = Math.min(100, Math.max(0, Math.round(valor)))
-    setAhorroPct(limitado)
-    writeJSON(AHORRO_KEY, limitado)
-  }
   /** El selector de moneda solo aparece si de verdad hay dólares: nada sobra por si acaso. */
   const hayDolares = useMemo(
     () => movimientos.some((movimiento) => movimiento.fecha.startsWith(mes) && monedaDe(movimiento) === 'usd'),
     [movimientos, mes],
   )
-  const convertidas = useMemo(
-    () => new Set(movimientos.map((movimiento) => movimiento.ideaId).filter(Boolean)),
-    [movimientos],
-  )
 
-  /** Capturas que el Umbral mandó acá y todavía no son un movimiento. */
-  const pendientes = ideas.filter((idea) => idea.destino === 'finanzas' && !convertidas.has(idea.id))
-
-  /**
-   * Un movimiento por cada monto del texto. "Ingreso de agosto =
-   * 1.090.000 + 200 usd" genera dos: uno en pesos y uno en dólares.
-   * Quedarse con el primero borraba el otro sin avisar.
-   */
-  async function registrar(idea: Idea, categoria?: FinanceCategoria) {
-    const extraido = extraerMovimiento(idea.texto)
-    if (extraido.montos.length === 0) return
-    for (const montoExtraido of extraido.montos) {
-      await addMovimiento({
-        tipo: extraido.tipo,
-        monto: montoExtraido.monto,
-        moneda: montoExtraido.moneda,
-        medio: extraido.medio,
-        concepto: idea.texto,
-        categoria: categoria ?? extraido.categoria,
-        ideaId: idea.id,
-        fecha: idea.fecha,
-      })
-    }
-    setEditando(null)
-  }
-
-  /** Contrato §8: una captura que Finanzas no puede resolver se archiva, nunca se borra de verdad — mismo patrón que Cuaderno/Asuntos/Hábitos. */
-  function handleDescartarPendiente(idea: Idea) {
-    if (editando === idea.id) setEditando(null)
-    void moveSheet(idea, 'archivador')
+  function corregirCategoria(movimiento: FinanceMovimiento, categoria: FinanceCategoria) {
+    void updateMovimiento(movimiento.id, { categoria })
+    setCorrigiendo(null)
   }
 
   if (!ready) return null
 
   const nombreMes = new Date(`${mes}-02`).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
-  const sinNada = resumen.movimientos.length === 0 && pendientes.length === 0
+  const sinNada = resumen.movimientos.length === 0 && sinMonto.length === 0
 
   if (sinNada) {
     return (
@@ -104,10 +107,30 @@ export function FinanceScreen() {
     )
   }
 
+  const entro = vista === 'semana' ? semanal.entro : resumen.ingresado
+  const seFue = vista === 'semana' ? semanal.seFue : resumen.gastado
+  const teQuedo = vista === 'semana' ? semanal.teQuedo : resumen.balance
+
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10">
       <section className="flex flex-col items-center gap-3">
-        <p className="font-mono text-[11px] uppercase tracking-wide text-accent">{nombreMes}</p>
+        <p className="font-mono text-[11px] uppercase tracking-wide text-accent">
+          {vista === 'semana' ? `Semana ${semanaActual} · ${nombreMes}` : nombreMes}
+        </p>
+        <div className="idea-destinos" role="group" aria-label="Vista">
+          {(['semana', 'mes'] as const).map((opcion) => (
+            <button
+              key={opcion}
+              type="button"
+              className="idea-destino"
+              aria-pressed={vista === opcion}
+              style={vista === opcion ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
+              onClick={() => setVista(opcion)}
+            >
+              {opcion === 'semana' ? 'Esta semana' : 'Este mes'}
+            </button>
+          ))}
+        </div>
         {hayDolares ? (
           <div className="idea-destinos" role="group" aria-label="Moneda">
             {(['ars', 'usd'] as const).map((opcion) => (
@@ -124,100 +147,46 @@ export function FinanceScreen() {
             ))}
           </div>
         ) : null}
-        <AnilloCategorias grupos={resumen.grupos} total={formatearMonto(resumen.gastado, moneda)} />
-        {resumen.ingresado > 0 ? (
-          <p className="font-mono text-[12.5px] text-ink-faint">
-            Balance{' '}
-            <span className={resumen.balance >= 0 ? 'text-good' : 'text-critical'}>
-              {formatearMonto(resumen.balance, moneda)}
-            </span>
-          </p>
-        ) : null}
       </section>
 
-      {resumen.ingresado > 0 ? (
-        <section>
-          <h2 className="mb-2 font-mono text-[11px] uppercase tracking-wide text-good">Ingresos</h2>
-          <ul className="flex flex-col gap-1.5">
-            {resumen.ingresos.map((semana) => (
-              <li key={semana.semana} className="flex items-baseline justify-between gap-3">
-                <span className="text-[15px] text-ink">Semana {semana.semana}</span>
-                <span className="font-mono text-[14px] text-good">{formatearMonto(semana.total, moneda)}</span>
-              </li>
-            ))}
-          </ul>
-          <div className="mt-2 flex items-baseline justify-between gap-3 border-t border-border/40 pt-2">
-            <span className="text-[14px] text-ink-dim">Total del mes</span>
-            <span className="font-mono text-[14px] text-good">{formatearMonto(resumen.ingresado, moneda)}</span>
-          </div>
-          <div className="mt-3 flex items-center justify-between gap-3">
-            <label className="flex items-center gap-2 text-[12.5px] text-ink-faint" htmlFor="ahorro-pct">
-              Ahorro
-              <input
-                id="ahorro-pct"
-                type="number"
-                min={0}
-                max={100}
-                value={ahorroPct}
-                onChange={(event) => handleAhorroChange(Number(event.target.value))}
-                className="w-12 border-b border-border/60 bg-transparent text-center text-ink outline-none"
-              />
-              %
-            </label>
-            {ahorroPct > 0 ? (
-              <span className="font-mono text-[13.5px] text-accent">{formatearMonto(ahorro, moneda)}</span>
-            ) : null}
-          </div>
-        </section>
-      ) : null}
+      <section className="flex flex-col gap-1.5">
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="text-[15px] text-ink-dim">Entró</span>
+          <span className="font-mono text-[16px] text-good">{formatearMonto(entro, moneda)}</span>
+        </div>
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="text-[15px] text-ink-dim">Se fue</span>
+          <span className="font-mono text-[16px] text-critical">{formatearMonto(seFue, moneda)}</span>
+        </div>
+        <div className="mt-1 flex items-baseline justify-between gap-3 border-t border-border/40 pt-2">
+          <span className="text-[15px] text-ink">Te quedó</span>
+          <span className={`font-mono text-[17px] ${teQuedo >= 0 ? 'text-good' : 'text-critical'}`}>
+            {formatearMonto(teQuedo, moneda)}
+          </span>
+        </div>
+      </section>
 
-      {resumen.gastado > 0 ? (
-        <p className="text-center font-mono text-[12px] text-ink-faint">
-          {formatearMonto(resumen.porMedio.efectivo, moneda)} en efectivo ·{' '}
-          {formatearMonto(resumen.porMedio.transferencia, moneda)} por transferencia
-        </p>
-      ) : null}
-
-      {pendientes.length > 0 ? (
+      {resumen.porRevisar.length > 0 ? (
         <section>
-          <h2 className="mb-1 font-mono text-[11px] uppercase tracking-wide text-accent">Sin registrar</h2>
+          <h2 className="mb-1 font-mono text-[11px] uppercase tracking-wide text-accent">Por revisar</h2>
           <ul className="flex flex-col">
-            {pendientes.map((idea) => {
-              const extraido = extraerMovimiento(idea.texto)
-              const abierto = editando === idea.id
-              const principal = extraido.montos[0]
+            {resumen.porRevisar.map((movimiento) => {
+              const abierto = corrigiendo === movimiento.id
               return (
-                <li key={idea.id} className="border-b border-border/40 py-3 last:border-b-0">
-                  <p className="text-[16px] leading-snug text-ink">{idea.texto}</p>
-                  {!principal ? (
-                    <p className="mt-1 flex items-baseline gap-2 text-[13px] text-ink-faint">
-                      No encontré un monto. Escribilo de nuevo con la cifra.
-                      <button
-                        type="button"
-                        className="idea-aviso-cerrar"
-                        aria-label="Descartar"
-                        onClick={() => handleDescartarPendiente(idea)}
-                      >
-                        ×
-                      </button>
-                    </p>
-                  ) : (
-                    <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                      <span className="font-mono text-[13px] text-ink-dim">
-                        {extraido.montos.map((m) => formatearMonto(m.monto, m.moneda)).join(' + ')}
-                      </span>
-                      <button type="button" className="idea-destino" onClick={() => registrar(idea)}>
-                        {CATEGORIA_LABEL[extraido.categoria]}
-                      </button>
-                      <button
-                        type="button"
-                        className="idea-destino"
-                        onClick={() => setEditando(abierto ? null : idea.id)}
-                      >
-                        Otra categoría
-                      </button>
-                    </div>
-                  )}
+                <li key={movimiento.id} className="border-b border-border/40 py-3 last:border-b-0">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="text-[15px] leading-snug text-ink">{movimiento.concepto}</span>
+                    <span className="shrink-0 font-mono text-[13.5px] text-ink-faint">
+                      {formatearMonto(movimiento.monto, moneda)}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="idea-destino mt-1"
+                    onClick={() => setCorrigiendo(abierto ? null : movimiento.id)}
+                  >
+                    Elegir categoría
+                  </button>
                   {abierto ? (
                     <div className="idea-destinos mt-2" role="group" aria-label="Elegir categoría">
                       {CATEGORIAS.map((categoria) => (
@@ -225,7 +194,7 @@ export function FinanceScreen() {
                           key={categoria}
                           type="button"
                           className="idea-destino"
-                          onClick={() => registrar(idea, categoria)}
+                          onClick={() => corregirCategoria(movimiento, categoria)}
                         >
                           {CATEGORIA_LABEL[categoria]}
                         </button>
@@ -239,10 +208,34 @@ export function FinanceScreen() {
         </section>
       ) : null}
 
-      {resumen.grupos.length > 0 ? (
+      {sinMonto.length > 0 ? (
         <section>
-          <h2 className="mb-2 font-mono text-[11px] uppercase tracking-wide text-accent">En qué se fue</h2>
-          <ul className="flex flex-col gap-3">
+          <h2 className="mb-1 font-mono text-[11px] uppercase tracking-wide text-accent">Sin monto</h2>
+          <ul className="flex flex-col">
+            {sinMonto.map((idea) => (
+              <li key={idea.id} className="border-b border-border/40 py-3 last:border-b-0">
+                <p className="text-[15px] leading-snug text-ink-dim">{idea.texto}</p>
+                <p className="mt-1 flex items-baseline gap-2 text-[13px] text-ink-faint">
+                  No encontré un monto. Escribilo de nuevo con la cifra.
+                  <button
+                    type="button"
+                    className="idea-aviso-cerrar"
+                    aria-label="Descartar"
+                    onClick={() => void moveSheet(idea, 'archivador')}
+                  >
+                    ×
+                  </button>
+                </p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {vista === 'mes' && resumen.grupos.length > 0 ? (
+        <section className="flex flex-col items-center gap-4">
+          <AnilloCategorias grupos={resumen.grupos} total={formatearMonto(resumen.gastado, moneda)} />
+          <ul className="flex w-full flex-col gap-3">
             {resumen.grupos.map((grupo) => (
               <li key={grupo.categoria} className="flex flex-col gap-1.5">
                 <div className="flex items-baseline justify-between gap-3">
@@ -254,7 +247,7 @@ export function FinanceScreen() {
                     />
                     {CATEGORIA_LABEL[grupo.categoria]}
                   </span>
-                  <span className="font-mono text-[14px] text-ink-dim">{formatearMonto(grupo.total)}</span>
+                  <span className="font-mono text-[14px] text-ink-dim">{formatearMonto(grupo.total, moneda)}</span>
                 </div>
                 <div className="h-[3px] w-full overflow-hidden rounded-full bg-border/60">
                   <div
@@ -265,25 +258,9 @@ export function FinanceScreen() {
               </li>
             ))}
           </ul>
-        </section>
-      ) : null}
-
-      {egresosLista.length > 0 ? (
-        <section>
-          <h2 className="mb-1 font-mono text-[11px] uppercase tracking-wide text-ink-faint">Movimientos</h2>
-          <ul className="flex flex-col">
-            {egresosLista.map((movimiento) => (
-              <li
-                key={movimiento.id}
-                className="flex items-baseline justify-between gap-3 border-b border-border/40 py-2.5 last:border-b-0"
-              >
-                <span className="text-[15px] leading-snug text-ink-dim">{movimiento.concepto}</span>
-                <span className="shrink-0 font-mono text-[13.5px] text-ink-faint">
-                  {formatearMonto(movimiento.monto, moneda)}
-                </span>
-              </li>
-            ))}
-          </ul>
+          {resumen.ingresado > 0 ? (
+            <p className="font-mono text-[12.5px] text-ink-faint">Ahorraste el {ahorroPct}% de lo que entró este mes</p>
+          ) : null}
         </section>
       ) : null}
     </div>
