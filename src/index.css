@@ -1325,6 +1325,15 @@ html.light-boot *::after {
   flex-direction: column;
 }
 
+/* Sprint 013, punto 6: rótulo silencioso — no compite con el texto de la misión. */
+.mision-grupo-titulo {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
 .mision-fila {
   display: flex;
   align-items: center;

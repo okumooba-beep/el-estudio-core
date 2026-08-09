@@ -2,10 +2,21 @@ import { useState } from 'react'
 import { useIdeas } from '@modules/work-table/public'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { MUEBLES } from '@world/studio/muebles'
+import { extraerFecha, extraerHora } from './extraccionFecha'
 import type { Idea } from '@/types/idea'
 
 /** Sprint 006: nunca configurable, nunca un contador — el número vive únicamente acá. */
 const MAX_ACTIVAS = 5
+
+function hoyISO(): string {
+  return new Date().toISOString().slice(0, 10)
+}
+
+function mananaISO(): string {
+  const fecha = new Date()
+  fecha.setDate(fecha.getDate() + 1)
+  return fecha.toISOString().slice(0, 10)
+}
 
 /**
  * Misiones (Sprint 006 — "Sistema de ejecución"), reemplaza el Tablero
@@ -48,6 +59,16 @@ export function MisionesScreen() {
   const pendientes = misiones.filter((m) => m.estado !== 'terminada' && m.estado !== 'completada')
   const activas = [...pendientes].sort((a, b) => a.createdAt.localeCompare(b.createdAt)).slice(0, MAX_ACTIVAS)
 
+  /**
+   * Sprint 013, punto 6: dos grupos automáticos, sin prioridad (eso
+   * sigue siendo exclusivo de Eventos) — "principal" acá es solo
+   * "programada para hoy o mañana", nada más.
+   */
+  const hoy = hoyISO()
+  const manana = mananaISO()
+  const principales = activas.filter((m) => m.programadaFecha === hoy || m.programadaFecha === manana)
+  const secundarias = activas.filter((m) => m.programadaFecha !== hoy && m.programadaFecha !== manana)
+
   function handleCompletar(mision: Idea) {
     void moveSheet(mision, 'archivador')
   }
@@ -73,11 +94,32 @@ export function MisionesScreen() {
     const texto = (draftTexto ?? '').trim()
     setDraftTexto(null)
     if (!texto) return
-    await add(texto, { destino: 'misiones', origen: 'misiones' })
+    const creada = await add(texto, { destino: 'misiones', origen: 'misiones' })
+    const programadaFecha = extraerFecha(texto)
+    if (programadaFecha) await update(creada.id, { programadaFecha, programadaHora: extraerHora(texto) })
   }
 
   function handleDraftKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
     if (event.key === 'Enter') event.currentTarget.blur()
+  }
+
+  function renderFila(mision: Idea) {
+    return (
+      <li key={mision.id} className="mision-fila">
+        <button type="button" className="mision-check" aria-label="Completar" onClick={() => handleCompletar(mision)}>
+          <span className="mision-check-circulo" aria-hidden="true" />
+        </button>
+        <span
+          className="mision-texto"
+          contentEditable
+          suppressContentEditableWarning
+          onBlur={(event) => handleTextoBlur(mision, event)}
+          onKeyDown={handleTextoKeyDown}
+        >
+          {mision.texto}
+        </span>
+      </li>
+    )
   }
 
   if (!ready) return null
@@ -87,24 +129,20 @@ export function MisionesScreen() {
       {activas.length === 0 ? (
         <EmptyState title="Nada que hacer todavía." description="Agregá lo primero que dependa solo de vos." />
       ) : (
-        <ul className="mision-lista">
-          {activas.map((mision) => (
-            <li key={mision.id} className="mision-fila">
-              <button type="button" className="mision-check" aria-label="Completar" onClick={() => handleCompletar(mision)}>
-                <span className="mision-check-circulo" aria-hidden="true" />
-              </button>
-              <span
-                className="mision-texto"
-                contentEditable
-                suppressContentEditableWarning
-                onBlur={(event) => handleTextoBlur(mision, event)}
-                onKeyDown={handleTextoKeyDown}
-              >
-                {mision.texto}
-              </span>
-            </li>
-          ))}
-        </ul>
+        <>
+          {principales.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <h2 className="mision-grupo-titulo">Misiones principales</h2>
+              <ul className="mision-lista">{principales.map(renderFila)}</ul>
+            </div>
+          )}
+          {secundarias.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <h2 className="mision-grupo-titulo">Misiones secundarias</h2>
+              <ul className="mision-lista">{secundarias.map(renderFila)}</ul>
+            </div>
+          )}
+        </>
       )}
 
       {draftTexto !== null ? (

@@ -1,4 +1,5 @@
 import type { AgendaEvento, AgendaBloque } from '@/types/agenda'
+import type { Idea } from '@/types/idea'
 
 /**
  * Vista diaria (spec): "Ahora, Hoy, Mañana, Esta semana", sin archivado
@@ -14,8 +15,20 @@ import type { AgendaEvento, AgendaBloque } from '@/types/agenda'
 export type AgendaItem =
   | { tipo: 'evento'; id: string; texto: string; fecha: string; hora: string | null; completado: boolean; item: AgendaEvento }
   | { tipo: 'bloque'; id: string; texto: string; fecha: string; hora: string | null; completado: boolean; item: AgendaBloque }
+  | { tipo: 'mision'; id: string; texto: string; fecha: string; hora: string | null; completado: boolean; item: Idea }
 
-export function aItems(eventos: readonly AgendaEvento[], bloques: readonly AgendaBloque[]): AgendaItem[] {
+/**
+ * Sprint 013: `misiones` son Ideas (destino='misiones') con
+ * `programadaFecha` — Agenda las lee directo del mismo store
+ * compartido de Misiones (useIdeas), nunca las copia a otra tabla.
+ * `completado` es siempre `false` acá porque el propio filtro de
+ * `programadaFecha` en el llamador ya excluye las archivadas.
+ */
+export function aItems(
+  eventos: readonly AgendaEvento[],
+  bloques: readonly AgendaBloque[],
+  misiones: readonly Idea[] = [],
+): AgendaItem[] {
   const deEventos: AgendaItem[] = eventos.map((evento) => ({
     tipo: 'evento',
     id: evento.id,
@@ -34,7 +47,16 @@ export function aItems(eventos: readonly AgendaEvento[], bloques: readonly Agend
     completado: bloque.completado,
     item: bloque,
   }))
-  return [...deEventos, ...deBloques]
+  const deMisiones: AgendaItem[] = misiones.map((mision) => ({
+    tipo: 'mision',
+    id: mision.id,
+    texto: mision.texto,
+    fecha: mision.programadaFecha!,
+    hora: mision.programadaHora ?? null,
+    completado: false,
+    item: mision,
+  }))
+  return [...deEventos, ...deBloques, ...deMisiones]
 }
 
 export interface Buckets {

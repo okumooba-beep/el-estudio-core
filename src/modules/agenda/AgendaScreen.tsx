@@ -18,8 +18,16 @@ function rotuloPrioridad(prioridad: AgendaPrioridad): string {
   return prioridad === 'normal' ? 'Normal' : prioridad === 'importante' ? 'Importante' : 'Urgente'
 }
 
+/**
+ * Sprint 013, punto 7: con `<` estricto, un Evento-punto (inicio===fin)
+ * que arranca justo en el mismo instante en que empieza un Bloque no
+ * detectaba el conflicto ("Juramentación 10:30" dentro de "Trading
+ * 10:30–13:15" no disparaba nada, porque `b.inicio < a.fin` fallaba con
+ * `10:30 < 10:30`). Con `<=` un instante que cae en el borde de inicio
+ * del otro rango también cuenta como solapamiento.
+ */
 function seSuperponen(a: { inicio: string; fin: string }, b: { inicio: string; fin: string }): boolean {
-  return a.inicio < b.fin && b.inicio < a.fin
+  return a.inicio <= b.fin && b.inicio <= a.fin
 }
 
 /**
@@ -54,7 +62,7 @@ function calcularConflictosDia(eventosDelDia: readonly AgendaEvento[], bloquesDe
  */
 export function AgendaScreen() {
   const { eventos, bloques, ready, addEvento, updateEvento, addBloque, updateBloque, removeBloque } = useAgenda()
-  const { ideas } = useIdeas()
+  const { ideas, moveSheet } = useIdeas()
   const [modo, setModo] = useState<Modo>('diaria')
   const [semanaOffset, setSemanaOffset] = useState(0)
   const [editandoDia, setEditandoDia] = useState<string | null>(null)
@@ -87,9 +95,19 @@ export function AgendaScreen() {
 
   const bloquesActivos = useMemo(() => bloques.filter((bloque) => !bloque.archivado), [bloques])
 
+  /**
+   * Sprint 013, punto 1: Misiones con "Programada para" — Agenda las lee
+   * directo de acá (mismo store que Misiones vía useIdeas), nunca las
+   * copia a otra tabla. Sin `programadaFecha`: no existe para Agenda.
+   */
+  const misionesProgramadas = useMemo(
+    () => ideas.filter((idea) => idea.destino === 'misiones' && idea.programadaFecha),
+    [ideas],
+  )
+
   const itemsPendientes = useMemo(
-    () => aItems(eventos, bloquesActivos).filter((item) => !item.completado),
-    [eventos, bloquesActivos],
+    () => aItems(eventos, bloquesActivos, misionesProgramadas).filter((item) => !item.completado),
+    [eventos, bloquesActivos, misionesProgramadas],
   )
   const buckets = useMemo(() => agruparPorCuando(itemsPendientes), [itemsPendientes])
   /**
@@ -107,14 +125,21 @@ export function AgendaScreen() {
   )
   const semana = useMemo(() => semanaCalendario(undefined, semanaOffset), [semanaOffset])
 
+  /**
+   * Sprint 013, punto 3: completar una Misión desde Agenda usa el mismo
+   * moveSheet que Misiones — no hay sincronización porque ambas vistas
+   * leen del mismo store compartido (useIdeas), el cambio se ve en las
+   * dos apenas se aplica.
+   */
   function completar(item: AgendaItem) {
     if (item.tipo === 'evento') void updateEvento(item.id, { completado: true })
-    else void updateBloque(item.id, { completado: true })
+    else if (item.tipo === 'bloque') void updateBloque(item.id, { completado: true })
+    else void moveSheet(item.item, 'archivador')
   }
 
   function alternarAlarma(item: AgendaItem) {
     if (item.tipo === 'evento') void updateEvento(item.id, { alarma: !item.item.alarma })
-    else void updateBloque(item.id, { alarma: !item.item.alarma })
+    else if (item.tipo === 'bloque') void updateBloque(item.id, { alarma: !item.item.alarma })
   }
 
   /** Sprint 012, punto 5: solo Eventos ciclan prioridad — los Bloques nunca la usan. */
@@ -208,8 +233,9 @@ export function AgendaScreen() {
           {semana.map((dia) => {
             const eventosDelDia = eventos.filter((evento) => evento.fecha === dia)
             const bloquesDelDia = bloquesActivos.filter((bloque) => bloque.dia === dia)
+            const misionesDelDia = misionesProgramadas.filter((mision) => mision.programadaFecha === dia)
             const { conflictosPorEvento, bloqueIdsEnConflicto } = calcularConflictosDia(eventosDelDia, bloquesDelDia)
-            const itemsDelDia = aItems(eventosDelDia, bloquesDelDia).sort((a, b) =>
+            const itemsDelDia = aItems(eventosDelDia, bloquesDelDia, misionesDelDia).sort((a, b) =>
               (a.hora ?? '').localeCompare(b.hora ?? ''),
             )
             return (
@@ -257,6 +283,15 @@ export function AgendaScreen() {
                     return (
                       <p key={item.id} className="text-[14px] text-ink-faint">
                         {item.hora ? `${item.hora} · ` : ''}
+                        {item.texto}
+                      </p>
+                    )
+                  }
+
+                  if (item.tipo === 'mision') {
+                    return (
+                      <p key={item.id} className="text-[14px] text-ink-faint">
+                        □ {item.hora ? `${item.hora} · ` : ''}
                         {item.texto}
                       </p>
                     )
@@ -405,6 +440,7 @@ function Seccion({
             />
             <div className="min-w-0 flex-1">
               <p className="text-[15px] leading-snug text-ink">
+                {item.tipo === 'mision' ? '□ ' : ''}
                 {item.texto}
                 {item.tipo === 'evento' && item.item.prioridad !== 'normal' ? (
                   <span className="ml-1.5 text-[10px] uppercase tracking-wide text-ink-faint">
@@ -425,15 +461,17 @@ function Seccion({
                 {rotuloPrioridad(item.item.prioridad)}
               </button>
             ) : null}
-            <button
-              type="button"
-              className="idea-destino shrink-0"
-              aria-pressed={item.item.alarma}
-              style={item.item.alarma ? { color: 'var(--accent)' } : undefined}
-              onClick={() => onAlarma(item)}
-            >
-              Alarma
-            </button>
+            {item.tipo !== 'mision' ? (
+              <button
+                type="button"
+                className="idea-destino shrink-0"
+                aria-pressed={item.item.alarma}
+                style={item.item.alarma ? { color: 'var(--accent)' } : undefined}
+                onClick={() => onAlarma(item)}
+              >
+                Alarma
+              </button>
+            ) : null}
           </li>
         ))}
       </ul>

@@ -59,6 +59,16 @@ export interface Idea {
    */
   contraparte?: string
   /**
+   * Reservado para Misiones (Sprint 013 — "Agenda como eje temporal"):
+   * cuándo debe aparecer esta Misión en Agenda. Ausente = no programada,
+   * invisible para Agenda — la Misión sigue viviendo únicamente acá
+   * (Idea es la única fuente de verdad, Agenda solo la lee vía
+   * work-table/public.ts, nunca la copia a otra tabla).
+   */
+  programadaFecha?: string
+  /** Reservado para Misiones (Sprint 013). Ausente/null si no se extrajo una hora del texto. */
+  programadaHora?: string | null
+  /**
    * Dónde vive físicamente esta hoja ahora (Sprint 3.6, ver
    * src/packages/world/studio/furniture.ts). No reemplaza a `destino`: destino es
    * la categoría, currentFurniture es el mueble real que la aloja.
