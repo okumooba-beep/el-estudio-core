@@ -21,6 +21,7 @@ export function AgendaScreen() {
   const [semanaOffset, setSemanaOffset] = useState(0)
   const [editandoDia, setEditandoDia] = useState<string | null>(null)
   const [textoBloque, setTextoBloque] = useState('')
+  const [copiarSemana, setCopiarSemana] = useState(false)
   const [editandoBloqueId, setEditandoBloqueId] = useState<string | null>(null)
   const [textoEdicionBloque, setTextoEdicionBloque] = useState('')
 
@@ -63,15 +64,27 @@ export function AgendaScreen() {
   }
 
   /**
-   * Sprint 010, punto 6: cargar varios Bloques seguidos era el problema
-   * real, no un límite de datos — por eso ya no cierra editandoDia acá,
-   * el input queda listo para el siguiente Bloque del mismo día.
+   * Sprint 011, punto 1: el "Bloque desaparece" reportado era el
+   * `onBlur` del input cerrando `editandoDia` — en el teclado virtual
+   * de un celular, Enter dispara blur además del keydown, así que el
+   * panel se cerraba solo tras cada guardado (ver el input más abajo:
+   * ya no tiene onBlur). Acá solo agrega, nunca cierra el contexto.
+   *
+   * Punto 5 — "Copiar al resto de la semana": crea un Bloque
+   * independiente por cada día de `semana`, mismo texto/hora, sin
+   * ninguna relación entre copias (no es una recurrencia).
    */
   function agregarBloque(dia: string) {
     const texto = textoBloque.trim()
+    const copiar = copiarSemana
     setTextoBloque('')
+    setCopiarSemana(false)
     if (!texto) return
-    void addBloque({ texto, dia, hora: extraerHora(texto), alarma: false })
+    const hora = extraerHora(texto)
+    const dias = copiar ? semana : [dia]
+    for (const d of dias) {
+      void addBloque({ texto, dia: d, hora, alarma: false })
+    }
   }
 
   function iniciarEdicionBloque(id: string, texto: string) {
@@ -170,27 +183,34 @@ export function AgendaScreen() {
                   ),
                 )}
                 {editandoDia === dia ? (
-                  <input
-                    autoFocus
-                    className="border-b border-border/60 bg-transparent text-[15px] text-ink outline-none"
-                    value={textoBloque}
-                    placeholder="Gimnasio 7 a 8"
-                    onChange={(evento) => setTextoBloque(evento.target.value)}
-                    onKeyDown={(evento) => {
-                      if (evento.key === 'Enter') {
-                        evento.preventDefault()
-                        agregarBloque(dia)
-                      }
-                      if (evento.key === 'Escape') {
-                        setEditandoDia(null)
-                        setTextoBloque('')
-                      }
-                    }}
-                    onBlur={() => {
-                      setEditandoDia(null)
-                      setTextoBloque('')
-                    }}
-                  />
+                  <div className="flex flex-col gap-1.5">
+                    <input
+                      autoFocus
+                      className="border-b border-border/60 bg-transparent text-[15px] text-ink outline-none"
+                      value={textoBloque}
+                      placeholder="Gimnasio 7 a 8"
+                      onChange={(evento) => setTextoBloque(evento.target.value)}
+                      onKeyDown={(evento) => {
+                        if (evento.key === 'Enter') {
+                          evento.preventDefault()
+                          agregarBloque(dia)
+                        }
+                        if (evento.key === 'Escape') {
+                          setEditandoDia(null)
+                          setTextoBloque('')
+                          setCopiarSemana(false)
+                        }
+                      }}
+                    />
+                    <label className="flex items-center gap-1.5 text-[12.5px] text-ink-faint">
+                      <input
+                        type="checkbox"
+                        checked={copiarSemana}
+                        onChange={(evento) => setCopiarSemana(evento.target.checked)}
+                      />
+                      Copiar al resto de la semana
+                    </label>
+                  </div>
                 ) : (
                   <button type="button" className="idea-destino self-start" onClick={() => setEditandoDia(dia)}>
                     + Bloque
