@@ -9,6 +9,17 @@
  * Nuevo evento ni formulario... para Eventos" — pero los Bloques nacen
  * directo en Planificación semanal). Por eso no tiene `ideaId`.
  */
+/** Sprint 012, punto 5: prioridad — solo Eventos la usan, nunca Bloques. */
+export type AgendaPrioridad = 'normal' | 'importante' | 'urgente'
+
+/**
+ * Sprint 012, punto 7: estructura de aviso por Evento, preparada para
+ * el motor de notificaciones de un sprint futuro — todavía no dispara
+ * nada, solo guarda la preferencia. Los Bloques no la usan ("Bloques →
+ * Sin alarma": siguen con su `alarma: boolean` existente, sin cambios).
+ */
+export type AgendaAviso = 'ninguno' | 'hora' | '5min' | '10min' | '15min' | '30min' | '1hora' | 'personalizado'
+
 export interface AgendaEvento {
   id: string
   texto: string
@@ -25,6 +36,10 @@ export interface AgendaEvento {
   alarma: boolean
   /** Completar y archivar a mano son el mismo gesto (spec). */
   completado: boolean
+  /** Sprint 012, punto 5. Por defecto 'normal'. */
+  prioridad: AgendaPrioridad
+  /** Sprint 012, punto 7. Por defecto '1hora'. */
+  aviso: AgendaAviso
   /** La hoja del Umbral de la que nació. */
   ideaId: string
   createdAt: string

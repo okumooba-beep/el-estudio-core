@@ -2,10 +2,48 @@ import { useEffect, useMemo, useState } from 'react'
 import { useIdeas } from '@modules/work-table/public'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useAgenda } from './useAgenda'
-import { extraerFecha, extraerHora } from './extraccionFecha'
+import { extraerFecha, extraerHora, extraerRangoHora } from './extraccionFecha'
 import { aItems, agruparPorCuando, semanaCalendario, type AgendaItem } from './agrupar'
+import type { AgendaEvento, AgendaBloque, AgendaPrioridad } from '@/types/agenda'
 
 type Modo = 'diaria' | 'planificacion'
+
+const SIGUIENTE_PRIORIDAD: Record<AgendaPrioridad, AgendaPrioridad> = {
+  normal: 'importante',
+  importante: 'urgente',
+  urgente: 'normal',
+}
+
+function rotuloPrioridad(prioridad: AgendaPrioridad): string {
+  return prioridad === 'normal' ? 'Normal' : prioridad === 'importante' ? 'Importante' : 'Urgente'
+}
+
+function seSuperponen(a: { inicio: string; fin: string }, b: { inicio: string; fin: string }): boolean {
+  return a.inicio < b.fin && b.inicio < a.fin
+}
+
+/**
+ * Sprint 012, punto 3: rango recalculado al vuelo (extraerRangoHora, no
+ * persistido) para detectar solapamiento Evento/Bloque dentro de un
+ * mismo día — nunca decide automáticamente, solo marca cuáles chocan.
+ */
+function calcularConflictosDia(eventosDelDia: readonly AgendaEvento[], bloquesDelDia: readonly AgendaBloque[]) {
+  const conflictosPorEvento = new Map<string, AgendaBloque[]>()
+  const bloqueIdsEnConflicto = new Set<string>()
+  for (const evento of eventosDelDia) {
+    const rangoEvento = extraerRangoHora(evento.texto)
+    if (!rangoEvento) continue
+    const enConflicto = bloquesDelDia.filter((bloque) => {
+      const rangoBloque = extraerRangoHora(bloque.texto)
+      return rangoBloque !== null && seSuperponen(rangoEvento, rangoBloque)
+    })
+    if (enConflicto.length > 0) {
+      conflictosPorEvento.set(evento.id, enConflicto)
+      for (const bloque of enConflicto) bloqueIdsEnConflicto.add(bloque.id)
+    }
+  }
+  return { conflictosPorEvento, bloqueIdsEnConflicto }
+}
 
 /**
  * Agenda ("¿qué pasa y cuándo?"). Sin botón de "Nuevo evento": los
@@ -15,7 +53,7 @@ type Modo = 'diaria' | 'planificacion'
  * la vista diaria nunca los crea, solo los muestra.
  */
 export function AgendaScreen() {
-  const { eventos, bloques, ready, addEvento, updateEvento, addBloque, updateBloque } = useAgenda()
+  const { eventos, bloques, ready, addEvento, updateEvento, addBloque, updateBloque, removeBloque } = useAgenda()
   const { ideas } = useIdeas()
   const [modo, setModo] = useState<Modo>('diaria')
   const [semanaOffset, setSemanaOffset] = useState(0)
@@ -24,6 +62,9 @@ export function AgendaScreen() {
   const [copiarSemana, setCopiarSemana] = useState(false)
   const [editandoBloqueId, setEditandoBloqueId] = useState<string | null>(null)
   const [textoEdicionBloque, setTextoEdicionBloque] = useState('')
+  const [conflictoAbierto, setConflictoAbierto] = useState<string | null>(null)
+  const [editandoEventoId, setEditandoEventoId] = useState<string | null>(null)
+  const [textoEdicionEvento, setTextoEdicionEvento] = useState('')
 
   const convertidas = useMemo(() => new Set(eventos.map((evento) => evento.ideaId)), [eventos])
   const pendientes = ideas.filter((idea) => idea.destino === 'agenda' && !convertidas.has(idea.id))
@@ -51,6 +92,19 @@ export function AgendaScreen() {
     [eventos, bloquesActivos],
   )
   const buckets = useMemo(() => agruparPorCuando(itemsPendientes), [itemsPendientes])
+  /**
+   * Sprint 012, punto 6: solo Eventos importantes/urgentes que todavía
+   * no aparecen en Ahora/Hoy/Mañana — evita mostrar el mismo Evento dos
+   * veces (spec: "nunca... dos listas distintas").
+   */
+  const proximoImportante = useMemo(
+    () =>
+      buckets.estaSemana.filter(
+        (item): item is AgendaItem & { tipo: 'evento' } =>
+          item.tipo === 'evento' && (item.item.prioridad === 'importante' || item.item.prioridad === 'urgente'),
+      ),
+    [buckets],
+  )
   const semana = useMemo(() => semanaCalendario(undefined, semanaOffset), [semanaOffset])
 
   function completar(item: AgendaItem) {
@@ -61,6 +115,12 @@ export function AgendaScreen() {
   function alternarAlarma(item: AgendaItem) {
     if (item.tipo === 'evento') void updateEvento(item.id, { alarma: !item.item.alarma })
     else void updateBloque(item.id, { alarma: !item.item.alarma })
+  }
+
+  /** Sprint 012, punto 5: solo Eventos ciclan prioridad — los Bloques nunca la usan. */
+  function ciclarPrioridad(item: AgendaItem) {
+    if (item.tipo !== 'evento') return
+    void updateEvento(item.id, { prioridad: SIGUIENTE_PRIORIDAD[item.item.prioridad] })
   }
 
   /**
@@ -103,6 +163,30 @@ export function AgendaScreen() {
     void updateBloque(id, { archivado: true })
   }
 
+  function iniciarEdicionEvento(id: string, texto: string) {
+    setConflictoAbierto(null)
+    setEditandoEventoId(id)
+    setTextoEdicionEvento(texto)
+  }
+
+  function guardarEdicionEvento(id: string) {
+    const texto = textoEdicionEvento.trim()
+    const eventoActual = eventos.find((evento) => evento.id === id)
+    setEditandoEventoId(null)
+    if (!texto || !eventoActual) return
+    void updateEvento(id, { texto, fecha: extraerFecha(texto, eventoActual.fecha), hora: extraerHora(texto) })
+  }
+
+  function moverBloqueDesdeConflicto(bloque: AgendaBloque) {
+    setConflictoAbierto(null)
+    iniciarEdicionBloque(bloque.id, bloque.texto)
+  }
+
+  function eliminarBloqueDesdeConflicto(bloqueId: string) {
+    setConflictoAbierto(null)
+    void removeBloque(bloqueId)
+  }
+
   if (!ready) return null
 
   if (modo === 'planificacion') {
@@ -113,11 +197,8 @@ export function AgendaScreen() {
         </button>
         <h1 className="font-mono text-[11px] uppercase tracking-wide text-accent">Planificación semanal</h1>
         <div className="flex items-center justify-between">
-          <button type="button" className="idea-destino" onClick={() => setSemanaOffset((o) => o - 1)}>
-            ← Semana anterior
-          </button>
           <button type="button" className="idea-destino" onClick={() => setSemanaOffset(0)}>
-            Semana actual
+            ← Semana actual
           </button>
           <button type="button" className="idea-destino" onClick={() => setSemanaOffset((o) => o + 1)}>
             Semana siguiente →
@@ -125,23 +206,64 @@ export function AgendaScreen() {
         </div>
         <ul className="flex flex-col gap-5">
           {semana.map((dia) => {
-            const eventosDelDia = eventos
-              .filter((evento) => evento.fecha === dia)
-              .sort((a, b) => (a.hora ?? '').localeCompare(b.hora ?? ''))
-            const bloquesDelDia = bloquesActivos
-              .filter((bloque) => bloque.dia === dia)
-              .sort((a, b) => (a.hora ?? '').localeCompare(b.hora ?? ''))
+            const eventosDelDia = eventos.filter((evento) => evento.fecha === dia)
+            const bloquesDelDia = bloquesActivos.filter((bloque) => bloque.dia === dia)
+            const { conflictosPorEvento, bloqueIdsEnConflicto } = calcularConflictosDia(eventosDelDia, bloquesDelDia)
+            const itemsDelDia = aItems(eventosDelDia, bloquesDelDia).sort((a, b) =>
+              (a.hora ?? '').localeCompare(b.hora ?? ''),
+            )
             return (
               <li key={dia} className="flex flex-col gap-2 border-b border-border/40 pb-4 last:border-b-0">
                 <p className="text-[13px] text-ink-dim">{nombreDia(dia)}</p>
-                {eventosDelDia.map((evento) => (
-                  <p key={evento.id} className="text-[14px] text-ink-faint">
-                    {evento.hora ? `${evento.hora} · ` : ''}
-                    {evento.texto}
-                  </p>
-                ))}
-                {bloquesDelDia.map((bloque) =>
-                  editandoBloqueId === bloque.id ? (
+                {itemsDelDia.map((item) => {
+                  if (item.tipo === 'bloque' && bloqueIdsEnConflicto.has(item.id)) return null
+
+                  if (item.tipo === 'evento' && conflictosPorEvento.has(item.id)) {
+                    return (
+                      <ConflictoIndicador
+                        key={item.id}
+                        evento={item.item}
+                        bloques={conflictosPorEvento.get(item.id)!}
+                        abierto={conflictoAbierto === item.id}
+                        onAbrir={() => setConflictoAbierto(item.id)}
+                        onCerrar={() => setConflictoAbierto(null)}
+                        onEditarHorario={() => iniciarEdicionEvento(item.id, item.item.texto)}
+                        onMoverBloque={moverBloqueDesdeConflicto}
+                        onEliminarBloque={eliminarBloqueDesdeConflicto}
+                      />
+                    )
+                  }
+
+                  if (item.tipo === 'evento') {
+                    if (editandoEventoId === item.id) {
+                      return (
+                        <input
+                          key={item.id}
+                          autoFocus
+                          className="border-b border-border/60 bg-transparent text-[15px] text-ink outline-none"
+                          value={textoEdicionEvento}
+                          onChange={(evento) => setTextoEdicionEvento(evento.target.value)}
+                          onKeyDown={(evento) => {
+                            if (evento.key === 'Enter') {
+                              evento.preventDefault()
+                              guardarEdicionEvento(item.id)
+                            }
+                            if (evento.key === 'Escape') setEditandoEventoId(null)
+                          }}
+                          onBlur={() => guardarEdicionEvento(item.id)}
+                        />
+                      )
+                    }
+                    return (
+                      <p key={item.id} className="text-[14px] text-ink-faint">
+                        {item.hora ? `${item.hora} · ` : ''}
+                        {item.texto}
+                      </p>
+                    )
+                  }
+
+                  const bloque = item.item
+                  return editandoBloqueId === bloque.id ? (
                     <input
                       key={bloque.id}
                       autoFocus
@@ -180,8 +302,8 @@ export function AgendaScreen() {
                         </button>
                       </span>
                     </p>
-                  ),
-                )}
+                  )
+                })}
                 {editandoDia === dia ? (
                   <div className="flex flex-col gap-1.5">
                     <input
@@ -228,7 +350,7 @@ export function AgendaScreen() {
     buckets.ahora.length === 0 &&
     buckets.hoy.length === 0 &&
     buckets.manana.length === 0 &&
-    buckets.estaSemana.length === 0
+    proximoImportante.length === 0
 
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10">
@@ -245,10 +367,10 @@ export function AgendaScreen() {
         />
       ) : (
         <>
-          <Seccion titulo="Ahora" items={buckets.ahora} onCompletar={completar} onAlarma={alternarAlarma} />
-          <Seccion titulo="Hoy" items={buckets.hoy} onCompletar={completar} onAlarma={alternarAlarma} />
-          <Seccion titulo="Mañana" items={buckets.manana} onCompletar={completar} onAlarma={alternarAlarma} />
-          <Seccion titulo="Esta semana" items={buckets.estaSemana} onCompletar={completar} onAlarma={alternarAlarma} />
+          <Seccion titulo="Ahora" items={buckets.ahora} onCompletar={completar} onAlarma={alternarAlarma} onPrioridad={ciclarPrioridad} />
+          <Seccion titulo="Hoy" items={buckets.hoy} onCompletar={completar} onAlarma={alternarAlarma} onPrioridad={ciclarPrioridad} />
+          <Seccion titulo="Mañana" items={buckets.manana} onCompletar={completar} onAlarma={alternarAlarma} onPrioridad={ciclarPrioridad} />
+          <Seccion titulo="Próximo importante" items={proximoImportante} onCompletar={completar} onAlarma={alternarAlarma} onPrioridad={ciclarPrioridad} />
         </>
       )}
     </div>
@@ -260,11 +382,13 @@ function Seccion({
   items,
   onCompletar,
   onAlarma,
+  onPrioridad,
 }: {
   titulo: string
   items: AgendaItem[]
   onCompletar: (item: AgendaItem) => void
   onAlarma: (item: AgendaItem) => void
+  onPrioridad: (item: AgendaItem) => void
 }) {
   if (items.length === 0) return null
   return (
@@ -280,9 +404,27 @@ function Seccion({
               onClick={() => onCompletar(item)}
             />
             <div className="min-w-0 flex-1">
-              <p className="text-[15px] leading-snug text-ink">{item.texto}</p>
+              <p className="text-[15px] leading-snug text-ink">
+                {item.texto}
+                {item.tipo === 'evento' && item.item.prioridad !== 'normal' ? (
+                  <span className="ml-1.5 text-[10px] uppercase tracking-wide text-ink-faint">
+                    {rotuloPrioridad(item.item.prioridad)}
+                  </span>
+                ) : null}
+              </p>
               {item.hora ? <p className="text-[12.5px] text-ink-faint">{item.hora}</p> : null}
             </div>
+            {item.tipo === 'evento' ? (
+              <button
+                type="button"
+                className="idea-destino shrink-0"
+                aria-pressed={item.item.prioridad !== 'normal'}
+                style={item.item.prioridad !== 'normal' ? { color: 'var(--accent)' } : undefined}
+                onClick={() => onPrioridad(item)}
+              >
+                {rotuloPrioridad(item.item.prioridad)}
+              </button>
+            ) : null}
             <button
               type="button"
               className="idea-destino shrink-0"
@@ -296,6 +438,68 @@ function Seccion({
         ))}
       </ul>
     </section>
+  )
+}
+
+function ConflictoIndicador({
+  evento,
+  bloques,
+  abierto,
+  onAbrir,
+  onCerrar,
+  onEditarHorario,
+  onMoverBloque,
+  onEliminarBloque,
+}: {
+  evento: AgendaEvento
+  bloques: AgendaBloque[]
+  abierto: boolean
+  onAbrir: () => void
+  onCerrar: () => void
+  onEditarHorario: () => void
+  onMoverBloque: (bloque: AgendaBloque) => void
+  onEliminarBloque: (bloqueId: string) => void
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <button
+        type="button"
+        className="flex flex-col items-start gap-0.5 text-left"
+        onClick={() => (abierto ? onCerrar() : onAbrir())}
+      >
+        <span className="text-[14px] text-ink">⚠ Conflicto detectado</span>
+        <span className="text-[12.5px] text-ink-faint">
+          {evento.hora ? `${evento.hora} · ` : ''}
+          {evento.texto}
+        </span>
+        {bloques.map((bloque) => (
+          <span key={bloque.id} className="text-[12.5px] text-ink-faint">
+            {bloque.hora ? `${bloque.hora} · ` : ''}
+            {bloque.texto}
+          </span>
+        ))}
+      </button>
+      {abierto ? (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 pl-1">
+          <button type="button" className="idea-destino" onClick={onCerrar}>
+            Resolver más tarde
+          </button>
+          <button type="button" className="idea-destino" onClick={onEditarHorario}>
+            Editar horario
+          </button>
+          {bloques.map((bloque) => (
+            <span key={bloque.id} className="flex items-center gap-3">
+              <button type="button" className="idea-destino" onClick={() => onMoverBloque(bloque)}>
+                Mover bloque
+              </button>
+              <button type="button" className="idea-destino" onClick={() => onEliminarBloque(bloque.id)}>
+                Eliminar bloque
+              </button>
+            </span>
+          ))}
+        </div>
+      ) : null}
+    </div>
   )
 }
 

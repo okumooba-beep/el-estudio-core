@@ -36,6 +36,8 @@ class DexieAgendaEventoRepository implements AgendaEventoRepository {
       hora: input.hora,
       alarma: input.alarma,
       completado: false,
+      prioridad: 'normal',
+      aviso: '1hora',
       ideaId: input.ideaId,
       createdAt: now,
       updatedAt: now,
@@ -63,6 +65,13 @@ export interface NuevoAgendaBloque {
 export interface AgendaBloqueRepository extends Repository<AgendaBloque> {
   add(input: NuevoAgendaBloque): Promise<AgendaBloque>
   update(id: string, patch: Partial<Omit<AgendaBloque, 'id' | 'createdAt'>>): Promise<AgendaBloque>
+  /**
+   * Sprint 012, punto 3: "Eliminar bloque" es una acción real para
+   * resolver un conflicto de horario, no el archivado suave del
+   * Sprint 010 — un Bloque nunca pasa por el Umbral, así que el
+   * contrato "nada se borra" no lo alcanza (ver types/agenda.ts).
+   */
+  remove(id: string): Promise<void>
 }
 
 class DexieAgendaBloqueRepository implements AgendaBloqueRepository {
@@ -94,6 +103,10 @@ class DexieAgendaBloqueRepository implements AgendaBloqueRepository {
     const updated = await db.agendaBloques.get(id)
     if (!updated) throw new Error(`Bloque ${id} no encontrado`)
     return updated
+  }
+
+  async remove(id: string): Promise<void> {
+    await db.agendaBloques.delete(id)
   }
 }
 

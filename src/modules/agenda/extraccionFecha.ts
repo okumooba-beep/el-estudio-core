@@ -107,3 +107,30 @@ export function extraerHora(texto: string): string | null {
 
   return null
 }
+
+/**
+ * Sprint 012, punto 3: rango [inicio, fin) para detectar solapamiento
+ * Evento/Bloque. No es un campo nuevo del modelo — se recalcula al vuelo
+ * desde el mismo texto libre, nunca se persiste. Sin un segundo número
+ * ("a las 5", sin rango), el ítem es un punto: fin === inicio.
+ */
+export function extraerRangoHora(texto: string): { inicio: string; fin: string } | null {
+  const normalizado = normalizar(texto)
+
+  const rango = normalizado.match(/\b(\d{1,2})\s+a\s+(\d{1,2})\b/)
+  if (rango) {
+    const h1 = Number(rango[1])
+    const h2 = Number(rango[2])
+    if (h1 <= 23 && h2 <= 23) {
+      return {
+        inicio: `${String(h1).padStart(2, '0')}:00`,
+        fin: `${String(h2).padStart(2, '0')}:00`,
+      }
+    }
+  }
+
+  const punto = extraerHora(texto)
+  if (punto) return { inicio: punto, fin: punto }
+
+  return null
+}
