@@ -1,5 +1,5 @@
 import { getTodaysPhrase } from '@world/phrases/phraseEngine'
-import { getCurrentQuote } from '@world/quotes/quoteEngine'
+import { readJSON, writeJSON } from '@shared-kernel/storage/localStorage'
 import type { Idea } from '@/types/idea'
 
 export type VoiceSource = 'memoria' | 'sabiduria' | 'estudio' | 'frase'
@@ -23,7 +23,7 @@ export interface VoiceEntry {
  * "aconseja", está rompiendo la arquitectura, no extendiéndola.
  */
 export function resolveVoice(ideas: readonly Idea[], now: Date = new Date()): VoiceEntry | null {
-  return getMemoriaViva() ?? getSabiduria(now) ?? getEstudioSignal(ideas, now) ?? getFraseEntry(now)
+  return getMemoriaViva() ?? getSabiduria(ideas, now) ?? getEstudioSignal(ideas, now) ?? getFraseEntry(now)
 }
 
 /**
@@ -35,22 +35,56 @@ function getMemoriaViva(): VoiceEntry | null {
   return null
 }
 
+interface FraseVivaState {
+  dayKey: string | null
+  usedIds: string[]
+  lastId: string | null
+}
+
+const FRASE_VIVA_DEFAULT: FraseVivaState = { dayKey: null, usedIds: [], lastId: null }
+
+function pickFraseId(ids: readonly string[], usedIds: readonly string[]): { id: string; nextUsed: string[] } {
+  let available = ids.filter((id) => !usedIds.includes(id))
+  let cycleReset = false
+  if (available.length === 0) {
+    available = [...ids]
+    cycleReset = true
+  }
+  const id = available[Math.floor(Math.random() * available.length)] ?? ids[0]!
+  const nextUsed = cycleReset ? [id] : [...usedIds, id]
+  return { id, nextUsed }
+}
+
 /**
- * Threshold Experience V1 — Biblioteca de Sabiduría deja de ser un
- * stub: ahora es la colección curada de frases propias del usuario
- * (ver src/packages/world/quotes/), rotando según el tramo del día
- * (quoteEngine.ts) en vez del gate de silencio de 4 días que gobierna
- * la Frase del Manifiesto (ver getFraseEntry) — son fuentes distintas a
- * propósito: una es sabiduría propia ya vivida, la otra es la voz
- * genérica del Estudio. Mismo contrato que Memoria Viva (`null` cuando
- * no hay nada real que mostrar — acá, mientras `QUOTES` siga vacío).
- * "La IA nunca enseña. La IA recuerda": esto nunca redacta nada, solo
- * repite texto que el usuario ya escribió/eligió de antemano.
+ * Sprint 010 — Auditoría UX v1, punto 4: Biblioteca de Sabiduría deja
+ * de leer la lista estática QUOTES (desconectada de lo que el usuario
+ * realmente guarda) y pasa a leer la Biblioteca real
+ * (ideas con destino 'biblioteca', la misma fuente que FrasesScreen).
+ * `null` cuando la Biblioteca está vacía — mismo contrato que Memoria
+ * Viva. Rotación estable por día (no por tramo de horas como
+ * quoteEngine.ts): la frase elegida no cambia hasta el primer Hoy del
+ * día siguiente, nunca al azar en cada apertura. "La IA nunca enseña.
+ * La IA recuerda": esto nunca redacta nada, solo repite una frase que
+ * el usuario ya escribió/guardó.
  */
-function getSabiduria(now: Date): VoiceEntry | null {
-  const quote = getCurrentQuote(now)
-  if (!quote) return null
-  return { source: 'sabiduria', text: quote.author ? `${quote.text} — ${quote.author}` : quote.text }
+function getSabiduria(ideas: readonly Idea[], now: Date): VoiceEntry | null {
+  const frases = ideas.filter((idea) => idea.destino === 'biblioteca')
+  if (frases.length === 0) return null
+
+  const dayKey = now.toISOString().slice(0, 10)
+  const state = readJSON<FraseVivaState>('frase-viva.state', FRASE_VIVA_DEFAULT)
+  const ids = frases.map((idea) => idea.id)
+  const usedIds = state.dayKey === dayKey ? state.usedIds : []
+
+  if (state.dayKey === dayKey && state.lastId && ids.includes(state.lastId)) {
+    const cached = frases.find((idea) => idea.id === state.lastId)
+    if (cached) return { source: 'sabiduria', text: cached.texto }
+  }
+
+  const { id, nextUsed } = pickFraseId(ids, usedIds)
+  writeJSON<FraseVivaState>('frase-viva.state', { dayKey, usedIds: nextUsed, lastId: id })
+  const chosen = frases.find((idea) => idea.id === id)
+  return chosen ? { source: 'sabiduria', text: chosen.texto } : null
 }
 
 const DIAS_SIN_ESCRIBIR = 3

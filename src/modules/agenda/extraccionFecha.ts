@@ -93,5 +93,17 @@ export function extraerHora(texto: string): string | null {
     if (h <= 23) return `${String(h).padStart(2, '0')}:00`
   }
 
+  /**
+   * Rango horario sin "a las" (Sprint 010, punto 7 — un Bloque nace como
+   * texto libre tipo "Gimnasio 7 a 8"): toma el primer número como
+   * inicio. Solo dos números separados por "a" — nunca confunde una
+   * fecha ("3 a 4" no aparece junto a "/").
+   */
+  const rango = normalizado.match(/\b(\d{1,2})\s+a\s+(\d{1,2})\b/)
+  if (rango) {
+    const h = Number(rango[1])
+    if (h <= 23) return `${String(h).padStart(2, '0')}:00`
+  }
+
   return null
 }

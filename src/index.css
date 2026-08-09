@@ -1099,20 +1099,29 @@ html.light-boot *::after {
 }
 
 /*
-  Descartar (Umbral V1.3): la misma voz baja que .idea-destino — sin
-  borde, sin fondo, casi invisible hasta que se la busca. Se ve apenas
-  (opacity 0.5) para no competir con el texto de la hoja, y gana
-  presencia recién al pasar el mouse — nunca un ícono de papelera, que
-  sugeriría borrado permanente en vez de archivo silencioso.
+  Archivar / Eliminar (Sprint 010 — Auditoría UX v1): dos acciones
+  independientes en vez del "×" ambiguo original — ambas mueven la
+  Idea al Archivador (el borrado definitivo queda para un sprint
+  dedicado al Archivador), pero se etiquetan distinto para que el
+  usuario nunca dude qué está pasando. Misma voz baja que
+  .idea-destino — sin borde, sin fondo, casi invisibles hasta que se
+  las busca, ganan presencia recién al pasar el mouse.
 */
-.idea-hoja-descartar {
+.idea-hoja-acciones {
   position: absolute;
   top: 0.3rem;
   right: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.idea-hoja-descartar,
+.idea-hoja-eliminar {
   padding: 0;
   border: none;
   background: none;
-  font-size: 15px;
+  font-size: 12px;
   line-height: 1;
   color: var(--ink-faint);
   opacity: 0.5;
@@ -1121,7 +1130,9 @@ html.light-boot *::after {
 }
 
 .idea-hoja-descartar:hover,
-.idea-hoja-descartar:focus-visible {
+.idea-hoja-descartar:focus-visible,
+.idea-hoja-eliminar:hover,
+.idea-hoja-eliminar:focus-visible {
   opacity: 1;
   color: var(--ink);
 }
@@ -1600,12 +1611,15 @@ html.light-boot *::after {
 
 .material-paper .idea-hoja-time,
 .material-paper .idea-hoja-check,
-.material-paper .idea-hoja-descartar {
+.material-paper .idea-hoja-descartar,
+.material-paper .idea-hoja-eliminar {
   color: var(--paper-ink-faint);
 }
 
 .material-paper .idea-hoja-descartar:hover,
-.material-paper .idea-hoja-descartar:focus-visible {
+.material-paper .idea-hoja-descartar:focus-visible,
+.material-paper .idea-hoja-eliminar:hover,
+.material-paper .idea-hoja-eliminar:focus-visible {
   color: var(--paper-ink);
 }
 
@@ -2082,12 +2096,24 @@ html.light-boot *::after {
   flex-direction: column;
 }
 
+/*
+  Sprint 010 — Auditoría UX v1, punto 3: una frase guardada no es un
+  registro de lista, es una cita — más aire entre una y otra, un borde
+  apenas dorado en vez de la línea plana de --border, y el texto en un
+  tono tinta/dorado envejecido (color-mix con --accent, misma técnica
+  que .accion-primaria) en vez del --ink parejo del resto de la app.
+  Sin tarjetas, sin fondo: solo página.
+*/
 .frase-registro {
   display: flex;
   align-items: flex-start;
   gap: 0.5rem;
-  padding: 0.9rem 0;
-  border-bottom: 1px solid var(--border);
+  padding: 1.5rem 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 16%, var(--border));
+}
+
+.frase-registro:first-child {
+  padding-top: 0.3rem;
 }
 
 .frase-registro:last-child {
@@ -2098,10 +2124,19 @@ html.light-boot *::after {
   flex: 1;
   min-width: 0;
   margin: 0;
-  font-size: 16px;
-  line-height: 1.6;
-  color: var(--ink);
+  font-size: 16.5px;
+  font-style: italic;
+  line-height: 1.75;
+  color: color-mix(in srgb, var(--accent) 32%, var(--ink));
   white-space: pre-wrap;
+}
+
+.frase-texto::before {
+  content: '\201C';
+  margin-right: 0.15rem;
+  font-style: normal;
+  color: var(--accent);
+  opacity: 0.65;
 }
 
 .frase-archivar {
@@ -2119,6 +2154,47 @@ html.light-boot *::after {
 
 .frase-archivar:hover,
 .frase-archivar:focus-visible {
+  opacity: 1;
+  color: var(--ink);
+}
+
+/*
+  Bloque: ciclo de vida (Sprint 010 — Auditoría UX v1, punto 5): misma
+  voz baja que .frase-archivar / .idea-hoja-descartar — nunca un botón
+  con borde, casi invisible hasta que se lo busca.
+*/
+.agenda-bloque {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.agenda-bloque-texto {
+  min-width: 0;
+  flex: 1;
+}
+
+.agenda-bloque-acciones {
+  display: flex;
+  flex-shrink: 0;
+  gap: 0.5rem;
+}
+
+.agenda-bloque-accion {
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--ink-faint);
+  opacity: 0.5;
+  cursor: pointer;
+  transition: opacity 150ms ease, color 150ms ease;
+}
+
+.agenda-bloque-accion:hover,
+.agenda-bloque-accion:focus-visible {
   opacity: 1;
   color: var(--ink);
 }

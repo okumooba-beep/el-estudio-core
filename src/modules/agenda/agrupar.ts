@@ -6,13 +6,14 @@ import type { AgendaEvento, AgendaBloque } from '@/types/agenda'
  * completa o archiva a mano; agrupar nunca lo saca de la lista.
  *
  * Eventos y Bloques comparten las cuatro secciones (los dos responden
- * "qué pasa y cuándo"). Un Bloque no tiene hora propia — nace como
- * texto libre ubicado en un día, nunca en un horario— así que sin hora
- * que comparar se queda en "Hoy" mientras dure el día.
+ * "qué pasa y cuándo"). Sprint 010, punto 7: un Bloque ahora también
+ * trae su propia `hora` (extraída del texto libre, ver
+ * extraccionFecha.ts) — sin hora, se queda al final de "Hoy" mientras
+ * dure el día, igual que antes.
  */
 export type AgendaItem =
   | { tipo: 'evento'; id: string; texto: string; fecha: string; hora: string | null; completado: boolean; item: AgendaEvento }
-  | { tipo: 'bloque'; id: string; texto: string; fecha: string; hora: null; completado: boolean; item: AgendaBloque }
+  | { tipo: 'bloque'; id: string; texto: string; fecha: string; hora: string | null; completado: boolean; item: AgendaBloque }
 
 export function aItems(eventos: readonly AgendaEvento[], bloques: readonly AgendaBloque[]): AgendaItem[] {
   const deEventos: AgendaItem[] = eventos.map((evento) => ({
@@ -29,7 +30,7 @@ export function aItems(eventos: readonly AgendaEvento[], bloques: readonly Agend
     id: bloque.id,
     texto: bloque.texto,
     fecha: bloque.dia,
-    hora: null,
+    hora: bloque.hora,
     completado: bloque.completado,
     item: bloque,
   }))

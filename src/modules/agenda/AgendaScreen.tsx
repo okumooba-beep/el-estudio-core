@@ -20,6 +20,8 @@ export function AgendaScreen() {
   const [modo, setModo] = useState<Modo>('diaria')
   const [editandoDia, setEditandoDia] = useState<string | null>(null)
   const [textoBloque, setTextoBloque] = useState('')
+  const [editandoBloqueId, setEditandoBloqueId] = useState<string | null>(null)
+  const [textoEdicionBloque, setTextoEdicionBloque] = useState('')
 
   const convertidas = useMemo(() => new Set(eventos.map((evento) => evento.ideaId)), [eventos])
   const pendientes = ideas.filter((idea) => idea.destino === 'agenda' && !convertidas.has(idea.id))
@@ -40,9 +42,11 @@ export function AgendaScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, ideas, eventos])
 
+  const bloquesActivos = useMemo(() => bloques.filter((bloque) => !bloque.archivado), [bloques])
+
   const itemsPendientes = useMemo(
-    () => aItems(eventos, bloques).filter((item) => !item.completado),
-    [eventos, bloques],
+    () => aItems(eventos, bloquesActivos).filter((item) => !item.completado),
+    [eventos, bloquesActivos],
   )
   const buckets = useMemo(() => agruparPorCuando(itemsPendientes), [itemsPendientes])
   const semana = useMemo(() => semanaCalendario(), [])
@@ -57,12 +61,32 @@ export function AgendaScreen() {
     else void updateBloque(item.id, { alarma: !item.item.alarma })
   }
 
+  /**
+   * Sprint 010, punto 6: cargar varios Bloques seguidos era el problema
+   * real, no un límite de datos — por eso ya no cierra editandoDia acá,
+   * el input queda listo para el siguiente Bloque del mismo día.
+   */
   function agregarBloque(dia: string) {
     const texto = textoBloque.trim()
-    setEditandoDia(null)
     setTextoBloque('')
     if (!texto) return
-    void addBloque({ texto, dia, alarma: false })
+    void addBloque({ texto, dia, hora: extraerHora(texto), alarma: false })
+  }
+
+  function iniciarEdicionBloque(id: string, texto: string) {
+    setEditandoBloqueId(id)
+    setTextoEdicionBloque(texto)
+  }
+
+  function guardarEdicionBloque(id: string) {
+    const texto = textoEdicionBloque.trim()
+    setEditandoBloqueId(null)
+    if (!texto) return
+    void updateBloque(id, { texto, hora: extraerHora(texto) })
+  }
+
+  function archivarBloque(id: string) {
+    void updateBloque(id, { archivado: true })
   }
 
   if (!ready) return null
@@ -79,7 +103,9 @@ export function AgendaScreen() {
             const eventosDelDia = eventos
               .filter((evento) => evento.fecha === dia)
               .sort((a, b) => (a.hora ?? '').localeCompare(b.hora ?? ''))
-            const bloquesDelDia = bloques.filter((bloque) => bloque.dia === dia)
+            const bloquesDelDia = bloquesActivos
+              .filter((bloque) => bloque.dia === dia)
+              .sort((a, b) => (a.hora ?? '').localeCompare(b.hora ?? ''))
             return (
               <li key={dia} className="flex flex-col gap-2 border-b border-border/40 pb-4 last:border-b-0">
                 <p className="text-[13px] text-ink-dim">{nombreDia(dia)}</p>
@@ -89,11 +115,48 @@ export function AgendaScreen() {
                     {evento.texto}
                   </p>
                 ))}
-                {bloquesDelDia.map((bloque) => (
-                  <p key={bloque.id} className="text-[15px] text-ink">
-                    {bloque.texto}
-                  </p>
-                ))}
+                {bloquesDelDia.map((bloque) =>
+                  editandoBloqueId === bloque.id ? (
+                    <input
+                      key={bloque.id}
+                      autoFocus
+                      className="border-b border-border/60 bg-transparent text-[15px] text-ink outline-none"
+                      value={textoEdicionBloque}
+                      onChange={(evento) => setTextoEdicionBloque(evento.target.value)}
+                      onKeyDown={(evento) => {
+                        if (evento.key === 'Enter') {
+                          evento.preventDefault()
+                          guardarEdicionBloque(bloque.id)
+                        }
+                        if (evento.key === 'Escape') setEditandoBloqueId(null)
+                      }}
+                      onBlur={() => guardarEdicionBloque(bloque.id)}
+                    />
+                  ) : (
+                    <p key={bloque.id} className="agenda-bloque text-[15px] text-ink">
+                      <span className="agenda-bloque-texto">
+                        {bloque.hora ? `${bloque.hora} · ` : ''}
+                        {bloque.texto}
+                      </span>
+                      <span className="agenda-bloque-acciones">
+                        <button
+                          type="button"
+                          className="agenda-bloque-accion"
+                          onClick={() => iniciarEdicionBloque(bloque.id, bloque.texto)}
+                        >
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          className="agenda-bloque-accion"
+                          onClick={() => archivarBloque(bloque.id)}
+                        >
+                          Archivar
+                        </button>
+                      </span>
+                    </p>
+                  ),
+                )}
                 {editandoDia === dia ? (
                   <input
                     autoFocus

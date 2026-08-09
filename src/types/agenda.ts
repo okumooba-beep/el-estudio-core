@@ -37,8 +37,18 @@ export interface AgendaBloque {
   texto: string
   /** YYYY-MM-DD: el día del lienzo semanal donde el usuario lo ubicó. */
   dia: string
+  /** HH:MM extraída del texto libre (extraerHora), o null si no trae una — Sprint 010, punto 7. */
+  hora: string | null
   alarma: boolean
   completado: boolean
+  /**
+   * Sprint 010 — Auditoría UX v1, punto 5: un Bloque archivado deja de
+   * aparecer en la vista diaria y en Planificación semanal, pero el
+   * registro sigue existiendo — nunca un borrado real (ese queda fuera
+   * de este sprint). No usa el Archivador de Ideas: un Bloque nunca
+   * pasa por el Umbral, su ciclo de vida es propio de Agenda.
+   */
+  archivado: boolean
   createdAt: string
   updatedAt: string
   pendingSync: boolean

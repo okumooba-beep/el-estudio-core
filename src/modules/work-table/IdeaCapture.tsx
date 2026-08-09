@@ -332,7 +332,12 @@ export function IdeaCapture() {
     <div className="flex flex-col gap-3" data-mueble={MUEBLES.hoy}>
       {activa && (propuesta || abierta) ? (
         <DeskPaperStack ideas={hoyIdeas} activeId={activa.id} onOpen={setOpenedId}>
-          <IdeaSheet idea={activa} open={Boolean(propuesta)} onDescartar={() => handleDescartar(activa)} />
+          <IdeaSheet
+            idea={activa}
+            open={Boolean(propuesta)}
+            onDescartar={() => handleDescartar(activa)}
+            onEliminar={() => handleDescartar(activa)}
+          />
           {propuesta && proposal ? (
             <p className="idea-proposal">
               {proposal.nivel === 'alta'

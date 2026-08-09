@@ -18,9 +18,18 @@ interface IdeaSheetProps {
    * destino más, es sacar la hoja de la vista sin preguntar a dónde va.
    * Por el Contrato del Umbral §8 ("nada se borra: las cosas se cierran
    * o se archivan") esto nunca borra el registro — quien lo dispara
-   * decide a qué mueble en silencio.
+   * decide a qué mueble en silencio. Sprint 010: se etiqueta "Archivar".
    */
   onDescartar?: () => void
+  /**
+   * Sprint 010 — Auditoría UX v1, punto 1: una captura sin destino
+   * atrapada en el Umbral necesitaba una segunda salida clara,
+   * etiquetada "Eliminar". Por ahora mueve la Idea al mismo Archivador
+   * que onDescartar (el borrado definitivo real queda diferido a un
+   * sprint dedicado al Archivador) — dos acciones visibles, un solo
+   * destino de datos.
+   */
+  onEliminar?: () => void
 }
 
 /**
@@ -30,7 +39,7 @@ interface IdeaSheetProps {
  * cambiarle una línea. Lo que cambia es siempre lo que la rodea — una
  * pila, una chincheta — nunca la hoja en sí.
  */
-export function IdeaSheet({ idea, open, editable, onTextoChange, onEmptyBlur, completed, onDescartar }: IdeaSheetProps) {
+export function IdeaSheet({ idea, open, editable, onTextoChange, onEmptyBlur, completed, onDescartar, onEliminar }: IdeaSheetProps) {
   const spanRef = useRef<HTMLSpanElement>(null)
 
   useEffect(() => {
@@ -64,10 +73,19 @@ export function IdeaSheet({ idea, open, editable, onTextoChange, onEmptyBlur, co
           ✓
         </span>
       ) : null}
-      {onDescartar ? (
-        <button type="button" className="idea-hoja-descartar" aria-label="Descartar" onClick={onDescartar}>
-          ×
-        </button>
+      {onDescartar || onEliminar ? (
+        <span className="idea-hoja-acciones">
+          {onDescartar ? (
+            <button type="button" className="idea-hoja-descartar" onClick={onDescartar}>
+              Archivar
+            </button>
+          ) : null}
+          {onEliminar ? (
+            <button type="button" className="idea-hoja-eliminar" onClick={onEliminar}>
+              Eliminar
+            </button>
+          ) : null}
+        </span>
       ) : null}
       <span
         ref={spanRef}

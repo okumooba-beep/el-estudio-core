@@ -56,6 +56,7 @@ class DexieAgendaEventoRepository implements AgendaEventoRepository {
 export interface NuevoAgendaBloque {
   texto: string
   dia: string
+  hora: string | null
   alarma: boolean
 }
 
@@ -76,8 +77,10 @@ class DexieAgendaBloqueRepository implements AgendaBloqueRepository {
       id: generateId(),
       texto: input.texto.trim(),
       dia: input.dia,
+      hora: input.hora,
       alarma: input.alarma,
       completado: false,
+      archivado: false,
       createdAt: now,
       updatedAt: now,
       pendingSync: true,

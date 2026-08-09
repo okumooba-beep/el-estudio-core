@@ -117,6 +117,17 @@ export function BibliotecaIcon(props: IconProps) {
   )
 }
 
+/** Agenda — una hoja de calendario, con dos anillas arriba y la línea que separa el encabezado. */
+export function AgendaIcon(props: IconProps) {
+  return (
+    <svg {...BASE} {...props}>
+      <rect x="4.5" y="5.5" width="15" height="14" rx="1.5" />
+      <path d="M8.5 4v3M15.5 4v3" />
+      <path d="M4.5 9.5h15" />
+    </svg>
+  )
+}
+
 /**
  * Un solo mapa por `path` (misma llave que ya usan MODULES y SPACES):
  * AppShell y Spaces.tsx lo consultan en vez de repetir un switch cada
@@ -131,4 +142,5 @@ export const MODULE_ICONS: Record<string, ComponentType<IconProps>> = {
   '/trading': TradingIcon,
   '/finanzas': FinanzasIcon,
   '/frases': BibliotecaIcon,
+  '/agenda': AgendaIcon,
 }
