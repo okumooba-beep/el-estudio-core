@@ -18,6 +18,7 @@ export function AgendaScreen() {
   const { eventos, bloques, ready, addEvento, updateEvento, addBloque, updateBloque } = useAgenda()
   const { ideas } = useIdeas()
   const [modo, setModo] = useState<Modo>('diaria')
+  const [semanaOffset, setSemanaOffset] = useState(0)
   const [editandoDia, setEditandoDia] = useState<string | null>(null)
   const [textoBloque, setTextoBloque] = useState('')
   const [editandoBloqueId, setEditandoBloqueId] = useState<string | null>(null)
@@ -49,7 +50,7 @@ export function AgendaScreen() {
     [eventos, bloquesActivos],
   )
   const buckets = useMemo(() => agruparPorCuando(itemsPendientes), [itemsPendientes])
-  const semana = useMemo(() => semanaCalendario(), [])
+  const semana = useMemo(() => semanaCalendario(undefined, semanaOffset), [semanaOffset])
 
   function completar(item: AgendaItem) {
     if (item.tipo === 'evento') void updateEvento(item.id, { completado: true })
@@ -98,6 +99,17 @@ export function AgendaScreen() {
           ← Volver a la vista diaria
         </button>
         <h1 className="font-mono text-[11px] uppercase tracking-wide text-accent">Planificación semanal</h1>
+        <div className="flex items-center justify-between">
+          <button type="button" className="idea-destino" onClick={() => setSemanaOffset((o) => o - 1)}>
+            ← Semana anterior
+          </button>
+          <button type="button" className="idea-destino" onClick={() => setSemanaOffset(0)}>
+            Semana actual
+          </button>
+          <button type="button" className="idea-destino" onClick={() => setSemanaOffset((o) => o + 1)}>
+            Semana siguiente →
+          </button>
+        </div>
         <ul className="flex flex-col gap-5">
           {semana.map((dia) => {
             const eventosDelDia = eventos

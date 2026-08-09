@@ -82,12 +82,21 @@ function sumarDias(fechaISO: string, dias: number): string {
  * La semana calendario (lunes a domingo) que contiene `hoy` — el lienzo
  * de Planificación semanal. Es la semana real, no "los próximos 7
  * días": un domingo mira hacia atrás a su lunes, no hacia adelante.
+ *
+ * Sprint 011, punto 1: `desplazamientoSemanas` mueve el lienzo entera
+ * semanas hacia atrás/adelante (un domingo puede planificar la semana
+ * que arranca mañana) — sigue siendo la semana real que contiene esa
+ * fecha desplazada, nunca "los próximos 7 días" desde ahí.
  */
-export function semanaCalendario(hoyISO: string = new Date().toISOString().slice(0, 10)): string[] {
-  const hoy = new Date(`${hoyISO}T00:00:00.000Z`)
+export function semanaCalendario(
+  hoyISO: string = new Date().toISOString().slice(0, 10),
+  desplazamientoSemanas = 0,
+): string[] {
+  const base = desplazamientoSemanas === 0 ? hoyISO : sumarDias(hoyISO, desplazamientoSemanas * 7)
+  const hoy = new Date(`${base}T00:00:00.000Z`)
   // getUTCDay(): domingo=0 … sábado=6. Distancia hasta el lunes de esta semana.
   const diaSemana = hoy.getUTCDay()
   const distanciaALunes = diaSemana === 0 ? 6 : diaSemana - 1
-  const lunesISO = sumarDias(hoyISO, -distanciaALunes)
+  const lunesISO = sumarDias(base, -distanciaALunes)
   return Array.from({ length: 7 }, (_, i) => sumarDias(lunesISO, i))
 }
