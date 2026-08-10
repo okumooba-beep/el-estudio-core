@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useIdeas } from '@modules/work-table/public'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useAgenda } from './useAgenda'
-import { extraerFecha, extraerHora, extraerRangoHora } from './extraccionFecha'
+import { extraerFecha, extraerHora, extraerRangoHora, interpretarEvento } from './extraccionFecha'
 import { aItems, agruparPorCuando, semanaCalendario, type AgendaItem } from './agrupar'
 import type { AgendaEvento, AgendaBloque, AgendaPrioridad } from '@/types/agenda'
 
@@ -80,10 +80,12 @@ export function AgendaScreen() {
   useEffect(() => {
     if (!ready) return
     for (const idea of pendientes) {
+      const { fecha, hora, prioridad, textoLimpio } = interpretarEvento(idea.texto)
       void addEvento({
-        texto: idea.texto,
-        fecha: extraerFecha(idea.texto),
-        hora: extraerHora(idea.texto),
+        texto: textoLimpio || idea.texto,
+        fecha,
+        hora,
+        prioridad: prioridad ?? 'normal',
         alarma: false,
         ideaId: idea.id,
       })

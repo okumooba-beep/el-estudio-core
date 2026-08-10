@@ -1416,6 +1416,13 @@ html.light-boot *::after {
   color: var(--ink-faint);
 }
 
+/* Sprint 014, punto 3: confirmación silenciosa mientras se escribe — nunca un diálogo. */
+.mision-previa {
+  font-size: 0.7rem;
+  color: var(--ink-faint);
+  padding-left: 2px;
+}
+
 .idea-destino {
   padding: 0.15rem 0;
   border: none;

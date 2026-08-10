@@ -4,6 +4,7 @@ import { useIdeas } from './useIdeas'
 import { DeskPaperStack } from './DeskPaperStack'
 import { IdeaSheet } from './IdeaSheet'
 import { comprehensionEngine } from '@/app/shell/comprehensionEngine'
+import { interpretar, etiquetaFecha, type Prioridad } from '@shared-kernel/text/interpretarTexto'
 import { normalizeTexto } from '@cognitive-engine/providers/rule-based/RuleBasedClassifier'
 import { learnCorrection } from '@cognitive-engine/providers/rule-based/memory'
 import { recordClassification } from '@cognitive-engine/providers/rule-based/log'
@@ -85,6 +86,47 @@ const DESTINO_LABEL: Record<IdeaDestino, string> = {
   archivo: 'Archivo',
 }
 
+function rotuloPrioridad(prioridad: Prioridad): string {
+  return prioridad === 'urgente' ? 'Urgente' : 'Importante'
+}
+
+/**
+ * Sprint 014, punto 3. Agenda por convención siempre tiene una fecha (si
+ * el texto no trae una, el mismo default a "hoy" que ya aplica
+ * modules/agenda/extraccionFecha.ts al crear el Evento) — Misiones nunca
+ * inventa una, así que sin señal de fecha no hay línea estructurada para
+ * mostrar y se cae al mensaje genérico de una línea.
+ */
+function vistaPreviaEstructurada(destino: 'agenda' | 'misiones', texto: string): string | null {
+  const hoyISO = new Date().toISOString().slice(0, 10)
+  const { fecha, hora, prioridad } = interpretar(texto, hoyISO)
+
+  if (destino === 'misiones') {
+    if (!fecha) return null
+    const partes = [etiquetaFecha(fecha, hoyISO)]
+    if (hora) partes.push(hora)
+    return `Misión / ${partes.join(' / ')}`
+  }
+
+  const partes = [etiquetaFecha(fecha ?? hoyISO, hoyISO)]
+  if (hora) partes[0] += ` · ${hora}`
+  if (prioridad) partes.push(rotuloPrioridad(prioridad))
+  return `Agenda / ${partes.join(' / ')}`
+}
+
+/** Sprint 014, punto 5: el aviso de confianza alta, enriquecido con lo que el parser reconoció. */
+function mensajeAsignado(destino: IdeaDestino, texto: string): string {
+  const base = DESTINO_ASIGNADO_MESSAGE[destino]
+  if (destino !== 'agenda' && destino !== 'misiones') return `✓ ${base}`
+
+  const { fecha, hora, prioridad } = interpretar(texto)
+  const partes: string[] = []
+  if (fecha) partes.push(etiquetaFecha(fecha))
+  if (hora) partes.push(hora)
+  if (prioridad && destino === 'agenda') partes.push(rotuloPrioridad(prioridad))
+  return partes.length > 0 ? `✓ ${base} · ${partes.join(' · ')}` : `✓ ${base}`
+}
+
 interface Proposal {
   ideaId: string
   texto: string
@@ -137,8 +179,11 @@ interface Proposal {
  * onBlur es el regreso; el destino usa WORLD_PLACES.escritorio.id, nunca
  * el literal 'escritorio' suelto.
  */
+/** Cuánto queda a la vista el aviso de confianza alta antes de desvanecerse solo (Sprint 014, punto 5). */
+const AVISO_ALTA_MS = 4000
+
 export function IdeaCapture() {
-  const { ideas, add, moveSheet } = useIdeas()
+  const { ideas, add, moveSheet, update } = useIdeas()
   const [value, setValue] = useState(() => readJSON(DRAFT_KEY, ''))
   const [proposal, setProposal] = useState<Proposal | null>(null)
   const [openedId, setOpenedId] = useState<string | null>(null)
@@ -155,15 +200,29 @@ export function IdeaCapture() {
   const [avisoDescartados, setAvisoDescartados] = useState<Set<string>>(new Set())
   const proposalTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const altaDismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  /**
+   * Sprint 014, punto 3: confirmación silenciosa mientras se escribe. Para
+   * Agenda/Misiones, en vez del mensaje genérico de una línea, arma
+   * "Agenda / Viernes · 09:00 / Urgente" o "Misión / Mañana / 09:00" con
+   * lo que el parser compartido ya reconoce — punto 4: sin fecha, no
+   * inventa ninguna ("Banco" solo dice "Parece una misión.").
+   */
   const preclasificacion = useMemo(() => {
     const texto = value.trim()
     if (!texto) return null
     const { destino, nivel } = comprehensionEngine.classify(texto)
     // Contrato §7: con confianza baja el Estudio no dice nada. Tampoco
     // mientras escribís.
-    return nivel === 'baja' ? null : destino
+    if (nivel === 'baja') return null
+
+    if (destino === 'agenda' || destino === 'misiones') {
+      const estructurada = vistaPreviaEstructurada(destino, texto)
+      if (estructurada) return estructurada
+    }
+    return DESTINO_PREVIEW_MESSAGE[destino]
   }, [value])
 
   const hoyIdeas = ideas.filter((idea) => idea.destino === 'hoy')
@@ -175,12 +234,34 @@ export function IdeaCapture() {
     return () => {
       if (proposalTimer.current) clearTimeout(proposalTimer.current)
       if (savedTimer.current) clearTimeout(savedTimer.current)
+      if (altaDismissTimer.current) clearTimeout(altaDismissTimer.current)
     }
   }, [])
 
   function clearProposalState() {
     setProposal(null)
     if (proposalTimer.current) clearTimeout(proposalTimer.current)
+    if (altaDismissTimer.current) clearTimeout(altaDismissTimer.current)
+  }
+
+  /**
+   * Sprint 014, punto 1/2/6: una Misión es una Idea (destino='misiones'),
+   * así que "escribí en cualquier lado, el Estudio decide" solo se
+   * cumple si el Umbral también le pone `programadaFecha` — hasta ahora
+   * solo lo hacía el "+ Nueva misión" propio de MisionesScreen. Agenda no
+   * necesita esto: su Evento es una entidad aparte (ver
+   * modules/agenda/AgendaScreen.tsx), que ya limpia su propio texto.
+   */
+  async function aplicarProgramacionSiMision(idea: Idea, destino: IdeaDestino, textoOriginal: string) {
+    if (destino !== 'misiones') return
+    const { fecha, hora, textoLimpio } = interpretar(textoOriginal)
+    const patch: Partial<Omit<Idea, 'id' | 'createdAt'>> = {}
+    if (textoLimpio && textoLimpio !== idea.texto) patch.texto = textoLimpio
+    if (fecha) {
+      patch.programadaFecha = fecha
+      patch.programadaHora = hora
+    }
+    if (Object.keys(patch).length > 0) await update(idea.id, patch)
   }
 
   function handleChange(text: string) {
@@ -241,9 +322,11 @@ export function IdeaCapture() {
       // que el usuario confirme.
       if (nivel !== 'alta') return
 
-      moveSheet(created, DESTINO_TO_FURNITURE[destino]).catch((error) => {
-        console.error('No se pudo mover la hoja al mueble propuesto', error)
-      })
+      moveSheet(created, DESTINO_TO_FURNITURE[destino])
+        .then(() => aplicarProgramacionSiMision(created, destino, texto))
+        .catch((error) => {
+          console.error('No se pudo mover la hoja al mueble propuesto', error)
+        })
       recordClassification({
         texto,
         destinoPropuesto: destino,
@@ -251,6 +334,13 @@ export function IdeaCapture() {
         reason,
         fecha: new Date().toISOString(),
       })
+
+      // Sprint 014, punto 5: confianza alta se desvanece sola — a
+      // diferencia de media, que espera indefinidamente (Contrato §7 no
+      // cambia), acá ya es un hecho consumado, no una pregunta pendiente.
+      altaDismissTimer.current = setTimeout(() => {
+        setProposal((current) => (current?.ideaId === created.id ? null : current))
+      }, AVISO_ALTA_MS)
     }, PROPOSAL_DELAY_MS)
   }
 
@@ -265,6 +355,7 @@ export function IdeaCapture() {
     if (!idea) return
 
     await moveSheet(idea, DESTINO_TO_FURNITURE[destino])
+    await aplicarProgramacionSiMision(idea, destino, proposal.texto)
     if (destino !== proposal.destinoPropuesto) {
       learnCorrection(normalizeTexto(proposal.texto), destino)
     }
@@ -304,7 +395,9 @@ export function IdeaCapture() {
   async function handleMoverAbierta(furniture: FurnitureId) {
     const idea = ideas.find((i) => i.id === openedId)
     if (!idea) return
+    const destino = FURNITURE_TO_DESTINO[furniture] ?? idea.destino
     await moveSheet(idea, furniture)
+    await aplicarProgramacionSiMision(idea, destino, idea.texto)
     setOpenedId(null)
   }
 
@@ -315,6 +408,7 @@ export function IdeaCapture() {
 
     const destino = FURNITURE_TO_DESTINO[furniture] ?? idea.destino
     await moveSheet(idea, furniture)
+    await aplicarProgramacionSiMision(idea, destino, proposal.texto)
     if (destino !== proposal.destinoPropuesto) {
       learnCorrection(normalizeTexto(proposal.texto), destino)
     }
@@ -341,7 +435,7 @@ export function IdeaCapture() {
           {propuesta && proposal ? (
             <p className="idea-proposal">
               {proposal.nivel === 'alta'
-                ? DESTINO_ASIGNADO_MESSAGE[proposal.destinoPropuesto]
+                ? mensajeAsignado(proposal.destinoPropuesto, proposal.texto)
                 : DESTINO_PREVIEW_MESSAGE[proposal.destinoPropuesto]}{' '}
               {proposal.nivel === 'media' ? (
                 <>
@@ -451,7 +545,7 @@ export function IdeaCapture() {
         </p>
       ) : preclasificacion ? (
         <p className="px-1 text-[12.5px] text-ink-faint" aria-live="polite">
-          {DESTINO_PREVIEW_MESSAGE[preclasificacion]}
+          {preclasificacion}
         </p>
       ) : null}
     </div>

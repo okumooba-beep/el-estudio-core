@@ -1,7 +1,7 @@
 import { db } from '@/lib/db/db'
 import { generateId } from '@shared-kernel/id'
 import type { Repository } from '@shared-kernel/persistence/Repository'
-import type { AgendaEvento, AgendaBloque } from '@/types/agenda'
+import type { AgendaEvento, AgendaBloque, AgendaPrioridad } from '@/types/agenda'
 
 /**
  * Mismo patrón que financeRepository.ts: una tabla Dexie por entidad,
@@ -14,6 +14,8 @@ export interface NuevoAgendaEvento {
   hora: string | null
   alarma: boolean
   ideaId: string
+  /** Sprint 014: detectada del texto libre ("urgente"/"importante"); sin señal, 'normal'. */
+  prioridad?: AgendaPrioridad
 }
 
 export interface AgendaEventoRepository extends Repository<AgendaEvento> {
@@ -36,7 +38,7 @@ class DexieAgendaEventoRepository implements AgendaEventoRepository {
       hora: input.hora,
       alarma: input.alarma,
       completado: false,
-      prioridad: 'normal',
+      prioridad: input.prioridad ?? 'normal',
       aviso: '1hora',
       ideaId: input.ideaId,
       createdAt: now,

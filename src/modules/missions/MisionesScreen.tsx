@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useIdeas } from '@modules/work-table/public'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { MUEBLES } from '@world/studio/muebles'
-import { extraerFecha, extraerHora } from './extraccionFecha'
+import { interpretarMision } from './extraccionFecha'
+import { etiquetaFecha } from '@shared-kernel/text/interpretarTexto'
 import type { Idea } from '@/types/idea'
 
 /** Sprint 006: nunca configurable, nunca un contador — el número vive únicamente acá. */
@@ -55,6 +56,14 @@ export function MisionesScreen() {
   const { ideas, ready, add, update, moveSheet } = useIdeas()
   const [draftTexto, setDraftTexto] = useState<string | null>(null)
 
+  /** Sprint 014, punto 3: vista previa silenciosa mientras se escribe — nunca abre diálogos. */
+  const previaDraft = useMemo(() => {
+    if (!draftTexto?.trim()) return null
+    const { fecha, hora } = interpretarMision(draftTexto)
+    if (!fecha) return null
+    return hora ? `${etiquetaFecha(fecha)} · ${hora}` : etiquetaFecha(fecha)
+  }, [draftTexto])
+
   const misiones = ideas.filter((idea) => idea.destino === 'misiones')
   const pendientes = misiones.filter((m) => m.estado !== 'terminada' && m.estado !== 'completada')
   const activas = [...pendientes].sort((a, b) => a.createdAt.localeCompare(b.createdAt)).slice(0, MAX_ACTIVAS)
@@ -94,9 +103,9 @@ export function MisionesScreen() {
     const texto = (draftTexto ?? '').trim()
     setDraftTexto(null)
     if (!texto) return
-    const creada = await add(texto, { destino: 'misiones', origen: 'misiones' })
-    const programadaFecha = extraerFecha(texto)
-    if (programadaFecha) await update(creada.id, { programadaFecha, programadaHora: extraerHora(texto) })
+    const { fecha, hora, textoLimpio } = interpretarMision(texto)
+    const creada = await add(textoLimpio || texto, { destino: 'misiones', origen: 'misiones' })
+    if (fecha) await update(creada.id, { programadaFecha: fecha, programadaHora: hora })
   }
 
   function handleDraftKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
@@ -146,16 +155,19 @@ export function MisionesScreen() {
       )}
 
       {draftTexto !== null ? (
-        <input
-          type="text"
-          autoFocus
-          value={draftTexto}
-          onChange={(event) => setDraftTexto(event.target.value)}
-          onBlur={handleDraftBlur}
-          onKeyDown={handleDraftKeyDown}
-          placeholder="¿Qué tenés que hacer?"
-          className="mision-nuevo-input"
-        />
+        <div className="flex flex-col gap-1">
+          <input
+            type="text"
+            autoFocus
+            value={draftTexto}
+            onChange={(event) => setDraftTexto(event.target.value)}
+            onBlur={handleDraftBlur}
+            onKeyDown={handleDraftKeyDown}
+            placeholder="¿Qué tenés que hacer?"
+            className="mision-nuevo-input"
+          />
+          {previaDraft && <span className="mision-previa">{previaDraft}</span>}
+        </div>
       ) : (
         <button type="button" className="mision-nuevo-boton" onClick={handleNuevaMision}>
           + Nueva misión
