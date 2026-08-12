@@ -6,3 +6,11 @@
  * la declara directamente.
  */
 export const MODULE = { path: '/', label: 'Hoy' }
+
+/**
+ * Sprint 015.4 ("Navegación global de El Estudio Core"): identidad de
+ * `EspaciosScreen`, la segunda pantalla que expone Today — mismo patrón
+ * F14 que `MODULE`, nombre distinto porque un módulo ya usa `MODULE` para
+ * su ruta principal (Hoy).
+ */
+export const ESPACIOS_MODULE = { path: '/espacios', label: 'Espacios' }

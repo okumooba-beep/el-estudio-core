@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router-dom'
 import { AppShell } from '@/components/layout/AppShell'
 import { RoomBackground } from '@/components/room/RoomBackground'
 import { HoyScreen } from '@modules/today/HoyScreen'
+import { EspaciosScreen } from '@modules/today/EspaciosScreen'
 import { AsuntosScreen } from '@modules/asuntos/public'
 import { MisionesScreen } from '@modules/missions/MisionesScreen'
 import { HabitosScreen } from '@modules/habits/HabitosScreen'
@@ -31,6 +32,7 @@ function App() {
           <Route path="frases" element={<FrasesScreen />} />
           <Route path="finanzas" element={<FinanceScreen />} />
           <Route path="agenda" element={<AgendaScreen />} />
+          <Route path="espacios" element={<EspaciosScreen />} />
         </Route>
         {/* Material Inspector (Sprint 2.4, punto 07): fuera de AppShell a propósito — no es un lugar del Estudio, es una herramienta de desarrollo. Nunca existe en producción. */}
         {import.meta.env.DEV ? <Route path="dev/materiales" element={<MaterialInspector />} /> : null}

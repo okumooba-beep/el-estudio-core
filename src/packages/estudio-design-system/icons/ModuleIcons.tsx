@@ -129,6 +129,21 @@ export function AgendaIcon(props: IconProps) {
 }
 
 /**
+ * Espacios (Sprint 015.4 — "Navegación global de El Estudio Core"): la
+ * planta del Estudio, mismo lenguaje arquitectónico que el vano de
+ * `HoyIcon` — un plano dividido en varios cuartos, nunca la grilla de
+ * apps que el brief pidió explícitamente no asumir.
+ */
+export function EspaciosIcon(props: IconProps) {
+  return (
+    <svg {...BASE} {...props}>
+      <rect x="4" y="5" width="16" height="14" rx="1.5" />
+      <path d="M10.5 5v14M10.5 12H20" />
+    </svg>
+  )
+}
+
+/**
  * Un solo mapa por `path` (misma llave que ya usan MODULES y SPACES):
  * AppShell y Spaces.tsx lo consultan en vez de repetir un switch cada
  * uno.
@@ -143,4 +158,5 @@ export const MODULE_ICONS: Record<string, ComponentType<IconProps>> = {
   '/finanzas': FinanzasIcon,
   '/frases': BibliotecaIcon,
   '/agenda': AgendaIcon,
+  '/espacios': EspaciosIcon,
 }
