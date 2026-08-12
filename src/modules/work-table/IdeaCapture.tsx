@@ -4,7 +4,7 @@ import { useIdeas } from './useIdeas'
 import { DeskPaperStack } from './DeskPaperStack'
 import { IdeaSheet } from './IdeaSheet'
 import { comprehensionEngine } from '@/app/shell/comprehensionEngine'
-import { interpretar, etiquetaFecha, type Prioridad } from '@shared-kernel/text/interpretarTexto'
+import { interpretar, etiquetaFecha, formatearHora12, type Prioridad } from '@shared-kernel/text/interpretarTexto'
 import { normalizeTexto } from '@cognitive-engine/providers/rule-based/RuleBasedClassifier'
 import { learnCorrection } from '@cognitive-engine/providers/rule-based/memory'
 import { recordClassification } from '@cognitive-engine/providers/rule-based/log'
@@ -104,12 +104,12 @@ function vistaPreviaEstructurada(destino: 'agenda' | 'misiones', texto: string):
   if (destino === 'misiones') {
     if (!fecha) return null
     const partes = [etiquetaFecha(fecha, hoyISO)]
-    if (hora) partes.push(hora)
+    if (hora) partes.push(formatearHora12(hora))
     return `Misión / ${partes.join(' / ')}`
   }
 
   const partes = [etiquetaFecha(fecha ?? hoyISO, hoyISO)]
-  if (hora) partes[0] += ` · ${hora}`
+  if (hora) partes[0] += ` · ${formatearHora12(hora)}`
   if (prioridad) partes.push(rotuloPrioridad(prioridad))
   return `Agenda / ${partes.join(' / ')}`
 }
@@ -122,7 +122,7 @@ function mensajeAsignado(destino: IdeaDestino, texto: string): string {
   const { fecha, hora, prioridad } = interpretar(texto)
   const partes: string[] = []
   if (fecha) partes.push(etiquetaFecha(fecha))
-  if (hora) partes.push(hora)
+  if (hora) partes.push(formatearHora12(hora))
   if (prioridad && destino === 'agenda') partes.push(rotuloPrioridad(prioridad))
   return partes.length > 0 ? `✓ ${base} · ${partes.join(' · ')}` : `✓ ${base}`
 }

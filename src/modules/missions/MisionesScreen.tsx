@@ -4,7 +4,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { MUEBLES } from '@world/studio/muebles'
 import { interpretarMision } from './extraccionFecha'
 import { seleccionarActivas, seleccionarPrincipales, seleccionarSecundarias } from './seleccionarPrincipales'
-import { etiquetaFecha } from '@shared-kernel/text/interpretarTexto'
+import { etiquetaFecha, formatearHora12 } from '@shared-kernel/text/interpretarTexto'
 import type { Idea } from '@/types/idea'
 
 function hoyISO(): string {
@@ -59,7 +59,7 @@ export function MisionesScreen() {
     if (!draftTexto?.trim()) return null
     const { fecha, hora } = interpretarMision(draftTexto)
     if (!fecha) return null
-    return hora ? `${etiquetaFecha(fecha)} · ${hora}` : etiquetaFecha(fecha)
+    return hora ? `${etiquetaFecha(fecha)} · ${formatearHora12(hora)}` : etiquetaFecha(fecha)
   }, [draftTexto])
 
   const activas = seleccionarActivas(ideas)

@@ -11,7 +11,7 @@
  * default a "hoy" cuando no hay fecha.
  */
 
-import { interpretar, normalizar, type Prioridad } from '@shared-kernel/text/interpretarTexto'
+import { interpretar, normalizar, aHora24, type Prioridad } from '@shared-kernel/text/interpretarTexto'
 
 function aISO(fecha: Date): string {
   return fecha.toISOString().slice(0, 10)
@@ -56,13 +56,23 @@ export function interpretarEvento(
   }
 }
 
-/** "7" o "07:30" → "HH:MM"; null si no es una hora válida (0-23, 0-59). */
-function normalizarHora(token: string | undefined): string | null {
+/**
+ * "7", "07:30" → "HH:MM"; null si no es una hora válida (0-23, 0-59).
+ * Sprint 015.3, punto 7: `meridiano` opcional ("am"/"pm", detectado por
+ * `extraerRangoHora` junto al número) convierte de 12h a 24h — sin él,
+ * se mantiene la convención existente (número tal cual).
+ */
+function normalizarHora(token: string | undefined, meridiano?: 'am' | 'pm'): string | null {
   const match = token?.match(/^(\d{1,2})(?::(\d{2}))?$/)
   if (!match) return null
   const horas = Number(match[1])
   const minutos = match[2] ? Number(match[2]) : 0
-  if (horas > 23 || minutos > 59) return null
+  if (minutos > 59) return null
+  if (meridiano) {
+    if (horas < 1 || horas > 12) return null
+    return `${String(aHora24(horas, meridiano)).padStart(2, '0')}:${String(minutos).padStart(2, '0')}`
+  }
+  if (horas > 23) return null
   return `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}`
 }
 
@@ -77,14 +87,20 @@ function normalizarHora(token: string | undefined): string | null {
  * el regex bare-hour no reconocía el minuto y el rango caía a "punto" en
  * el inicio, haciendo que un Bloque con hora de fin real pareciera
  * terminado apenas empezaba. Mismo mecanismo, no un motor temporal nuevo.
+ *
+ * Sprint 015.3, punto 7: cada lado del rango también acepta un AM/PM
+ * propio ("10 AM a 1 PM", "7:30 AM a 8 AM") — cada número se convierte a
+ * 24h con el suyo, nunca se infiere el del otro lado.
  */
 export function extraerRangoHora(texto: string): { inicio: string; fin: string } | null {
   const normalizado = normalizar(texto)
 
-  const rango = normalizado.match(/\b(\d{1,2}(?::\d{2})?)\s+a\s+(\d{1,2}(?::\d{2})?)\b/)
+  const rango = normalizado.match(
+    /\b(\d{1,2}(?::\d{2})?)\s?(am|pm)?\s+a\s+(\d{1,2}(?::\d{2})?)\s?(am|pm)?\b/,
+  )
   if (rango) {
-    const inicio = normalizarHora(rango[1])
-    const fin = normalizarHora(rango[2])
+    const inicio = normalizarHora(rango[1], rango[2] as 'am' | 'pm' | undefined)
+    const fin = normalizarHora(rango[3], rango[4] as 'am' | 'pm' | undefined)
     if (inicio && fin) return { inicio, fin }
   }
 

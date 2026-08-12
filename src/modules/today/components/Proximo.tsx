@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import type { ProximoAgenda } from '@modules/agenda/public'
+import { formatearHora12 } from '@shared-kernel/text/interpretarTexto'
 
 interface ProximoProps {
   ahora: ProximoAgenda | null
@@ -43,7 +44,7 @@ function ItemAgenda({ titulo, item, onClick }: { titulo: string; item: ProximoAg
       >
         <p className="line-clamp-2 text-[15px] text-ink-dim transition-colors duration-150 group-hover:text-ink group-active:text-ink">
           {item.texto}
-          {item.hora ? ` · ${item.hora}${item.horaFin ? `–${item.horaFin}` : ''}` : ''}
+          {item.hora ? ` · ${formatearHora12(item.hora)}${item.horaFin ? `–${formatearHora12(item.horaFin)}` : ''}` : ''}
         </p>
         {item.conflictoTexto && (
           <p className="mt-1 text-[13.5px] text-ink-faint">⚠ Conflicto con {item.conflictoTexto}</p>

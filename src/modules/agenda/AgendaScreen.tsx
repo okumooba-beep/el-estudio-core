@@ -5,6 +5,7 @@ import { useAgenda } from './useAgenda'
 import { extraerFecha, extraerHora, interpretarEvento } from './extraccionFecha'
 import { aItems, agruparPorCuando, proximoItem, semanaCalendario, type AgendaItem } from './agrupar'
 import { calcularConflictosDia } from './conflictos'
+import { formatearHora12 } from '@shared-kernel/text/interpretarTexto'
 import type { AgendaEvento, AgendaBloque, AgendaPrioridad } from '@/types/agenda'
 
 type Modo = 'diaria' | 'planificacion'
@@ -293,7 +294,7 @@ export function AgendaScreen() {
                     }
                     return (
                       <p key={item.id} className="text-[14px] text-ink-faint">
-                        {item.hora ? `${item.hora} · ` : ''}
+                        {item.hora ? `${formatearHora12(item.hora)} · ` : ''}
                         {item.texto}
                       </p>
                     )
@@ -302,7 +303,7 @@ export function AgendaScreen() {
                   if (item.tipo === 'mision') {
                     return (
                       <p key={item.id} className="text-[14px] text-ink-faint">
-                        □ {item.hora ? `${item.hora} · ` : ''}
+                        □ {item.hora ? `${formatearHora12(item.hora)} · ` : ''}
                         {item.texto}
                       </p>
                     )
@@ -328,7 +329,7 @@ export function AgendaScreen() {
                   ) : (
                     <p key={bloque.id} className="agenda-bloque text-[15px] text-ink">
                       <span className="agenda-bloque-texto">
-                        {bloque.hora ? `${bloque.hora} · ` : ''}
+                        {bloque.hora ? `${formatearHora12(bloque.hora)} · ` : ''}
                         {bloque.texto}
                       </span>
                       <span className="agenda-bloque-acciones">
@@ -454,7 +455,7 @@ function Seccion({
                   </span>
                 ) : null}
               </p>
-              {item.hora ? <p className="text-[12.5px] text-ink-faint">{item.hora}</p> : null}
+              {item.hora ? <p className="text-[12.5px] text-ink-faint">{formatearHora12(item.hora)}</p> : null}
             </div>
             {item.tipo === 'evento' ? (
               <button
@@ -513,12 +514,12 @@ function ConflictoIndicador({
       >
         <span className="text-[14px] text-ink">⚠ Conflicto detectado</span>
         <span className="text-[12.5px] text-ink-faint">
-          {evento.hora ? `${evento.hora} · ` : ''}
+          {evento.hora ? `${formatearHora12(evento.hora)} · ` : ''}
           {evento.texto}
         </span>
         {bloques.map((bloque) => (
           <span key={bloque.id} className="text-[12.5px] text-ink-faint">
-            {bloque.hora ? `${bloque.hora} · ` : ''}
+            {bloque.hora ? `${formatearHora12(bloque.hora)} · ` : ''}
             {bloque.texto}
           </span>
         ))}

@@ -89,6 +89,26 @@ function aHHMM(h: number, m = 0): string {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }
 
+/** Hora 12h (1-12) + meridiano → hora 24h (0-23). Único punto de conversión AM/PM, compartido por el parser y por `extraerRangoHora` (Bloques). */
+export function aHora24(h12: number, meridiano: 'am' | 'pm'): number {
+  const h = h12 % 12
+  return meridiano === 'pm' ? h + 12 : h
+}
+
+/**
+ * Sprint 015.3, punto 1: única fuente de presentación AM/PM — "HH:MM" (el
+ * formato interno, sin cambios) → "H:MM AM/PM" para mostrar. No es un
+ * nuevo almacenamiento, solo la vista de uno ya existente.
+ */
+export function formatearHora12(horaHHMM: string): string {
+  const [hStr, mStr] = horaHHMM.split(':')
+  const h24 = Number(hStr)
+  const m = Number(mStr)
+  const periodo = h24 < 12 ? 'AM' : 'PM'
+  const h12 = h24 % 12 === 0 ? 12 : h24 % 12
+  return `${h12}:${String(m).padStart(2, '0')} ${periodo}`
+}
+
 /**
  * Orden de especificidad: "pasado mañana" antes que "mañana" — si no,
  * "mañana" matchearía la segunda mitad y "pasado" quedaría suelto en
@@ -138,18 +158,53 @@ function extraerFechaSpan(normalizado: string, hoyISO: string): { fecha: string;
 }
 
 function extraerHoraSpan(normalizado: string, fechaSpan: Span | null): { hora: string; span: Span } | null {
-  const conMinutos = normalizado.match(/\b(\d{1,2})[:.](\d{2})\s?(?:hs?)?\b/)
+  /**
+   * Sprint 015.3, punto 3: "10:30 de la mañana"/"10:30 de la noche" —
+   * equivalente en lenguaje natural a AM/PM. Se revisa antes que
+   * `conMinutos` porque ese regex también matchea el "10:30" suelto y,
+   * sin esto antes, se quedaría con el punto y dejaría "de la noche"
+   * sin interpretar (perdiendo el PM).
+   */
+  const conMinutosPeriodo = normalizado.match(/\b(\d{1,2})[:.](\d{2})\s*de\s+la\s+(manana|tarde|noche)\b/)
+  if (conMinutosPeriodo) {
+    const h = Number(conMinutosPeriodo[1])
+    const m = Number(conMinutosPeriodo[2])
+    const periodo = conMinutosPeriodo[3]
+    if (h >= 1 && h <= 12 && m <= 59) {
+      const meridiano = periodo === 'manana' ? 'am' : 'pm'
+      return {
+        hora: aHHMM(aHora24(h, meridiano), m),
+        span: { start: conMinutosPeriodo.index!, end: conMinutosPeriodo.index! + conMinutosPeriodo[0].length },
+      }
+    }
+  }
+
+  /**
+   * Sprint 015.3, punto 3: "10:30 AM"/"10:30 PM" explícito. Antes este
+   * regex ignoraba un "am"/"pm" final (solo reconocía el número), así
+   * que "10:30 PM" se guardaba como "10:30" — perdía la tarde/noche por
+   * completo. Ahora el sufijo, si está, decide la conversión a 24h; sin
+   * sufijo, se mantiene la convención existente (número tal cual, 0-23).
+   */
+  const conMinutos = normalizado.match(/\b(\d{1,2})[:.](\d{2})\s?(am|pm|hs?)?\b/)
   if (conMinutos) {
     const h = Number(conMinutos[1])
     const m = Number(conMinutos[2])
-    if (h <= 23 && m <= 59) return { hora: aHHMM(h, m), span: { start: conMinutos.index!, end: conMinutos.index! + conMinutos[0].length } }
+    const sufijo = conMinutos[3]
+    const span = { start: conMinutos.index!, end: conMinutos.index! + conMinutos[0].length }
+    if (m <= 59) {
+      if (sufijo === 'am' || sufijo === 'pm') {
+        if (h >= 1 && h <= 12) return { hora: aHHMM(aHora24(h, sufijo), m), span }
+      } else if (h <= 23) {
+        return { hora: aHHMM(h, m), span }
+      }
+    }
   }
 
   const ampm = normalizado.match(/\b(\d{1,2})\s?(am|pm)\b/)
   if (ampm) {
-    let h = Number(ampm[1]) % 12
-    if (ampm[2] === 'pm') h += 12
-    return { hora: aHHMM(h), span: { start: ampm.index!, end: ampm.index! + ampm[0].length } }
+    const h = Number(ampm[1])
+    return { hora: aHHMM(aHora24(h, ampm[2] as 'am' | 'pm')), span: { start: ampm.index!, end: ampm.index! + ampm[0].length } }
   }
 
   const aLas = normalizado.match(/\ba las?\s?(\d{1,2})\b/)
