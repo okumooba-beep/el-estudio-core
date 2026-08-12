@@ -3,11 +3,9 @@ import { useIdeas } from '@modules/work-table/public'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { MUEBLES } from '@world/studio/muebles'
 import { interpretarMision } from './extraccionFecha'
+import { seleccionarActivas, seleccionarPrincipales, seleccionarSecundarias } from './seleccionarPrincipales'
 import { etiquetaFecha } from '@shared-kernel/text/interpretarTexto'
 import type { Idea } from '@/types/idea'
-
-/** Sprint 006: nunca configurable, nunca un contador — el número vive únicamente acá. */
-const MAX_ACTIVAS = 5
 
 function hoyISO(): string {
   return new Date().toISOString().slice(0, 10)
@@ -64,9 +62,7 @@ export function MisionesScreen() {
     return hora ? `${etiquetaFecha(fecha)} · ${hora}` : etiquetaFecha(fecha)
   }, [draftTexto])
 
-  const misiones = ideas.filter((idea) => idea.destino === 'misiones')
-  const pendientes = misiones.filter((m) => m.estado !== 'terminada' && m.estado !== 'completada')
-  const activas = [...pendientes].sort((a, b) => a.createdAt.localeCompare(b.createdAt)).slice(0, MAX_ACTIVAS)
+  const activas = seleccionarActivas(ideas)
 
   /**
    * Sprint 013, punto 6: dos grupos automáticos, sin prioridad (eso
@@ -75,8 +71,8 @@ export function MisionesScreen() {
    */
   const hoy = hoyISO()
   const manana = mananaISO()
-  const principales = activas.filter((m) => m.programadaFecha === hoy || m.programadaFecha === manana)
-  const secundarias = activas.filter((m) => m.programadaFecha !== hoy && m.programadaFecha !== manana)
+  const principales = seleccionarPrincipales(activas, hoy, manana)
+  const secundarias = seleccionarSecundarias(activas, hoy, manana)
 
   function handleCompletar(mision: Idea) {
     void moveSheet(mision, 'archivador')

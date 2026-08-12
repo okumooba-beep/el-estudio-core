@@ -101,6 +101,16 @@ function sumarDias(fechaISO: string, dias: number): string {
 }
 
 /**
+ * Sprint 015 ("Home como eje del día"): el primer ítem relevante, mismo
+ * orden que ya usan las secciones de la vista diaria (Ahora → Hoy →
+ * Mañana → Esta semana) — Home lo reusa para "PRÓXIMO" sin inventar un
+ * criterio de orden propio.
+ */
+export function proximoItem(buckets: Buckets): AgendaItem | null {
+  return buckets.ahora[0] ?? buckets.hoy[0] ?? buckets.manana[0] ?? buckets.estaSemana[0] ?? null
+}
+
+/**
  * La semana calendario (lunes a domingo) que contiene `hoy` — el lienzo
  * de Planificación semanal. Es la semana real, no "los próximos 7
  * días": un domingo mira hacia atrás a su lunes, no hacia adelante.

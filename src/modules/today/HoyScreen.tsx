@@ -1,8 +1,12 @@
 import { HoyHeader } from './components/HoyHeader'
-import { PhraseSlot } from './components/PhraseSlot'
+import { FraseHoy } from './components/FraseHoy'
+import { Proximo } from './components/Proximo'
+import { MisionesPrincipales } from './components/MisionesPrincipales'
 import { IdeaCapture } from '@modules/work-table/IdeaCapture'
 import { AttentionSummary } from './components/AttentionSummary'
 import { Spaces } from './components/Spaces'
+import { useAgendaHoy } from '@modules/agenda/public'
+import { useMisionesPrincipales } from '@modules/missions/public'
 
 /**
  * EL ESTUDIO CORE (Build Core V1): esta pantalla deja de llamarse "Hoy"
@@ -59,18 +63,37 @@ import { Spaces } from './components/Spaces'
  * (`selectContinueWorking`) porque `useIdeas()` ya comparte una sola
  * carga y un solo estado reactivo entre instancias (ver useIdeas.ts,
  * Core V3), así que calcularla acá y pasarla por prop es gratis.
+ *
+ * Sprint 015 ("Home como eje del día"): jerarquía nueva HOY → PRÓXIMO →
+ * MISIÓN PRINCIPAL → ATENCIÓN, todas leyendo el mismo estado real de
+ * Agenda/Misiones (nunca datos nuevos, nunca una copia). `useAgendaHoy()`
+ * se llama una única vez acá (useAgenda no es un singleton compartido —
+ * ver agenda/useAgenda.ts) y baja como props a FraseHoy/Proximo/
+ * AttentionSummary para no repetir la carga de IndexedDB. FraseHoy
+ * reemplaza a `PhraseSlot` en este flujo — esa frase (voz ambiental de
+ * Ideas, `voiceEngine`) es un mecanismo distinto y mostrar las dos a la
+ * vez competiría por atención (punto 1); `PhraseSlot.tsx` sigue
+ * existiendo sin importar de acá, mismo criterio que MisionPrincipal/
+ * HabitsGlance/RecentActivity/ContinueWorking. Cada sección se oculta
+ * sola cuando no hay nada relevante (punto 2, punto 10) — Home nunca
+ * fuerza un bloque vacío.
  */
 export function HoyScreen() {
+  const { proximo, atencion, resumen, ready } = useAgendaHoy()
+  const misionesPrincipales = useMisionesPrincipales()
+
   return (
-    <div className="mx-auto flex max-w-xl flex-col gap-12 pb-10">
+    <div className="mx-auto flex max-w-xl flex-col gap-10 pb-10">
       <div className="flex flex-col gap-6">
         <div>
           <HoyHeader />
-          <PhraseSlot />
+          <FraseHoy atencion={atencion} resumen={resumen} ready={ready} />
         </div>
         <IdeaCapture />
       </div>
-      <AttentionSummary />
+      <Proximo proximo={proximo} ready={ready} />
+      <MisionesPrincipales misiones={misionesPrincipales} />
+      <AttentionSummary atencion={atencion} />
       <Spaces />
     </div>
   )
