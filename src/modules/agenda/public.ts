@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAgenda } from './useAgenda'
 import { useIdeas } from '@modules/work-table/public'
 import { aItems, agruparPorCuando, proximoItem, type AgendaItem } from './agrupar'
@@ -77,7 +77,19 @@ export function useAgendaHoy(): {
     () => aItems(eventos, bloquesActivos, misionesProgramadas).filter((item) => !item.completado),
     [eventos, bloquesActivos, misionesProgramadas],
   )
-  const buckets = useMemo(() => agruparPorCuando(itemsPendientes), [itemsPendientes])
+  /**
+   * Sprint 015.2.1, punto 1: mismo fix que AgendaScreen.tsx — sin `ahora`
+   * en las dependencias del memo, PRÓXIMO se congelaba en la hora en que
+   * se montó Home y dejaba de reflejar el paso real del tiempo. Reloj
+   * compartido, no un cálculo temporal nuevo (la clasificación sigue
+   * siendo 100% de agrupar.ts).
+   */
+  const [momentoActual, setMomentoActual] = useState(() => new Date())
+  useEffect(() => {
+    const id = setInterval(() => setMomentoActual(new Date()), 30_000)
+    return () => clearInterval(id)
+  }, [])
+  const buckets = useMemo(() => agruparPorCuando(itemsPendientes, momentoActual), [itemsPendientes, momentoActual])
 
   const hoy = hoyISO()
   const eventosHoy = useMemo(() => eventos.filter((evento) => evento.fecha === hoy && !evento.completado), [eventos, hoy])

@@ -79,7 +79,21 @@ export function AgendaScreen() {
     () => aItems(eventos, bloquesActivos, misionesProgramadas).filter((item) => !item.completado),
     [eventos, bloquesActivos, misionesProgramadas],
   )
-  const buckets = useMemo(() => agruparPorCuando(itemsPendientes), [itemsPendientes])
+  /**
+   * Sprint 015.2.1, punto 1: `agruparPorCuando` recibía `ahora` solo por
+   * su default (`= new Date()`), evaluado una única vez dentro del
+   * `useMemo` — sin esta hora en las dependencias, un Bloque que
+   * arrancaba PRÓXIMO a las 10:00 seguía apareciendo como PRÓXIMO a las
+   * 14:33 aunque ya hubiera terminado, porque los buckets nunca se
+   * recalculaban solo por el paso del tiempo. Mismo patrón de reloj que
+   * ya usa HoyHeader.tsx (setInterval 30s).
+   */
+  const [ahora, setAhora] = useState(() => new Date())
+  useEffect(() => {
+    const id = setInterval(() => setAhora(new Date()), 30_000)
+    return () => clearInterval(id)
+  }, [])
+  const buckets = useMemo(() => agruparPorCuando(itemsPendientes, ahora), [itemsPendientes, ahora])
   /**
    * Sprint 015.2, punto 6: la vista diaria vuelve a ser solo lo
    * operativo de hoy — Ahora / Próximo / Atrasado, mismo criterio y
@@ -202,15 +216,18 @@ export function AgendaScreen() {
           {semana.map((dia) => {
             const esPasado = dia < hoyISO
             const expandido = !esPasado || diasPasadosExpandidos.has(dia)
+            const alternarDiaPasado = () =>
+              setDiasPasadosExpandidos((current) => {
+                const siguiente = new Set(current)
+                if (siguiente.has(dia)) siguiente.delete(dia)
+                else siguiente.add(dia)
+                return siguiente
+              })
 
             if (esPasado && !expandido) {
               return (
                 <li key={dia} className="border-b border-border/40 pb-4 last:border-b-0">
-                  <button
-                    type="button"
-                    className="flex w-full items-center justify-between text-left"
-                    onClick={() => setDiasPasadosExpandidos((current) => new Set(current).add(dia))}
-                  >
+                  <button type="button" className="flex w-full items-center justify-between text-left" onClick={alternarDiaPasado}>
                     <span className="text-[13px] text-ink-dim">{nombreDia(dia)}</span>
                     <span className="text-[12.5px] text-ink-faint">Pasado</span>
                   </button>
@@ -227,10 +244,14 @@ export function AgendaScreen() {
             )
             return (
               <li key={dia} className="flex flex-col gap-2 border-b border-border/40 pb-4 last:border-b-0">
-                <p className="text-[13px] text-ink-dim">
-                  {nombreDia(dia)}
-                  {esPasado ? <span className="ml-1.5 text-ink-faint">· Pasado</span> : null}
-                </p>
+                {esPasado ? (
+                  <button type="button" className="flex w-full items-center justify-between text-left" onClick={alternarDiaPasado}>
+                    <span className="text-[13px] text-ink-dim">{nombreDia(dia)}</span>
+                    <span className="text-[12.5px] text-ink-faint">Pasado</span>
+                  </button>
+                ) : (
+                  <p className="text-[13px] text-ink-dim">{nombreDia(dia)}</p>
+                )}
                 {itemsDelDia.map((item) => {
                   if (item.tipo === 'bloque' && bloqueIdsEnConflicto.has(item.id)) return null
 
