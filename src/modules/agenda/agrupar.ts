@@ -1,9 +1,10 @@
+import { extraerRangoHora } from './extraccionFecha'
 import type { AgendaEvento, AgendaBloque } from '@/types/agenda'
 import type { Idea } from '@/types/idea'
 
 /**
  * Vista diaria (spec): "Ahora, Hoy, Mañana, Esta semana", sin archivado
- * automático — un ítem vencido sigue en "Ahora" hasta que el usuario lo
+ * automático — un ítem vencido nunca desaparece hasta que el usuario lo
  * completa o archiva a mano; agrupar nunca lo saca de la lista.
  *
  * Eventos y Bloques comparten las cuatro secciones (los dos responden
@@ -11,6 +12,20 @@ import type { Idea } from '@/types/idea'
  * trae su propia `hora` (extraída del texto libre, ver
  * extraccionFecha.ts) — sin hora, se queda al final de "Hoy" mientras
  * dure el día, igual que antes.
+ *
+ * Sprint 015.1, punto 7: "Ahora" pasa a significar literalmente eso —
+ * un Bloque o Evento cuyo rango [inicio, fin] contiene la hora actual
+ * (`ocurreAhora`, reutilizando `extraerRangoHora` que ya usa
+ * conflictos.ts, nunca un motor temporal nuevo). Antes, cualquier ítem
+ * de hoy con `hora <= horaActual` caía en "Ahora" sin mirar si ya había
+ * terminado, y cualquier ítem vencido de un día anterior caía ahí
+ * también sin condición — de ahí el bug de auditoría (11:52 mostrando
+ * Meditación 07:30, Gimnasio 08:30, etc. como si estuvieran pasando).
+ * Lo vencido (fecha pasada, o de hoy pero ya terminado) ahora cae en el
+ * bucket separado `atrasado`: sigue visible y accionable, pero deja de
+ * mentir diciendo que está "ocurriendo ahora". Una Misión nunca tiene
+ * duración, así que nunca es "Ahora" — a lo sumo está en `hoy` o
+ * `atrasado`.
  */
 export type AgendaItem =
   | { tipo: 'evento'; id: string; texto: string; fecha: string; hora: string | null; completado: boolean; item: AgendaEvento }
@@ -61,9 +76,18 @@ export function aItems(
 
 export interface Buckets {
   ahora: AgendaItem[]
+  /** Sprint 015.1: fecha pasada, o de hoy con la hora ya pasada y sin estar ocurriendo — nunca "Ahora". */
+  atrasado: AgendaItem[]
   hoy: AgendaItem[]
   manana: AgendaItem[]
   estaSemana: AgendaItem[]
+}
+
+/** Un Bloque/Evento está pasando en este instante si `horaActual` cae dentro de su [inicio, fin]. Una Misión no tiene duración: nunca "ocurre". */
+function ocurreAhora(item: AgendaItem, horaActual: string): boolean {
+  if (item.tipo === 'mision') return false
+  const rango = extraerRangoHora(item.texto)
+  return rango !== null && rango.inicio <= horaActual && horaActual <= rango.fin
 }
 
 export function agruparPorCuando(items: readonly AgendaItem[], ahora: Date = new Date()): Buckets {
@@ -71,12 +95,15 @@ export function agruparPorCuando(items: readonly AgendaItem[], ahora: Date = new
   const mananaISO = sumarDias(hoyISO, 1)
   const horaActual = `${String(ahora.getHours()).padStart(2, '0')}:${String(ahora.getMinutes()).padStart(2, '0')}`
 
-  const buckets: Buckets = { ahora: [], hoy: [], manana: [], estaSemana: [] }
+  const buckets: Buckets = { ahora: [], atrasado: [], hoy: [], manana: [], estaSemana: [] }
 
   for (const item of items) {
-    if (item.fecha < hoyISO || (item.fecha === hoyISO && item.hora !== null && item.hora <= horaActual)) {
+    const esHoy = item.fecha === hoyISO
+    if (esHoy && ocurreAhora(item, horaActual)) {
       buckets.ahora.push(item)
-    } else if (item.fecha === hoyISO) {
+    } else if (item.fecha < hoyISO || (esHoy && item.hora !== null && item.hora <= horaActual)) {
+      buckets.atrasado.push(item)
+    } else if (esHoy) {
       buckets.hoy.push(item)
     } else if (item.fecha === mananaISO) {
       buckets.manana.push(item)
@@ -88,6 +115,7 @@ export function agruparPorCuando(items: readonly AgendaItem[], ahora: Date = new
   const porCuando = (a: AgendaItem, b: AgendaItem) =>
     a.fecha === b.fecha ? (a.hora ?? '').localeCompare(b.hora ?? '') : a.fecha.localeCompare(b.fecha)
   buckets.ahora.sort(porCuando)
+  buckets.atrasado.sort(porCuando)
   buckets.hoy.sort(porCuando)
   buckets.estaSemana.sort(porCuando)
 
@@ -101,13 +129,18 @@ function sumarDias(fechaISO: string, dias: number): string {
 }
 
 /**
- * Sprint 015 ("Home como eje del día"): el primer ítem relevante, mismo
- * orden que ya usan las secciones de la vista diaria (Ahora → Hoy →
+ * Sprint 015 ("Home como eje del día"): el primer ítem que todavía no
+ * pasó, mismo orden que ya usan las secciones de la vista diaria (Hoy →
  * Mañana → Esta semana) — Home lo reusa para "PRÓXIMO" sin inventar un
  * criterio de orden propio.
+ *
+ * Sprint 015.1, punto 6: deja de incluir `buckets.ahora` — lo que está
+ * ocurriendo ahora mismo ya no es "lo próximo", es "lo presente". Home
+ * pide los dos por separado (`buckets.ahora[0]` y este) para poder
+ * mostrar "AHORA" y "PRÓXIMO" a la vez cuando corresponde.
  */
 export function proximoItem(buckets: Buckets): AgendaItem | null {
-  return buckets.ahora[0] ?? buckets.hoy[0] ?? buckets.manana[0] ?? buckets.estaSemana[0] ?? null
+  return buckets.hoy[0] ?? buckets.manana[0] ?? buckets.estaSemana[0] ?? null
 }
 
 /**

@@ -351,6 +351,7 @@ export function AgendaScreen() {
 
   const sinNada =
     buckets.ahora.length === 0 &&
+    buckets.atrasado.length === 0 &&
     buckets.hoy.length === 0 &&
     buckets.manana.length === 0 &&
     proximoImportante.length === 0
@@ -371,6 +372,7 @@ export function AgendaScreen() {
       ) : (
         <>
           <Seccion titulo="Ahora" items={buckets.ahora} onCompletar={completar} onAlarma={alternarAlarma} onPrioridad={ciclarPrioridad} />
+          <Seccion titulo="Atrasado" items={buckets.atrasado} onCompletar={completar} onAlarma={alternarAlarma} onPrioridad={ciclarPrioridad} />
           <Seccion titulo="Hoy" items={buckets.hoy} onCompletar={completar} onAlarma={alternarAlarma} onPrioridad={ciclarPrioridad} />
           <Seccion titulo="Mañana" items={buckets.manana} onCompletar={completar} onAlarma={alternarAlarma} onPrioridad={ciclarPrioridad} />
           <Seccion titulo="Próximo importante" items={proximoImportante} onCompletar={completar} onAlarma={alternarAlarma} onPrioridad={ciclarPrioridad} />

@@ -1,10 +1,10 @@
 import { HoyHeader } from './components/HoyHeader'
+import { PhraseSlot } from './components/PhraseSlot'
 import { FraseHoy } from './components/FraseHoy'
 import { Proximo } from './components/Proximo'
 import { MisionesPrincipales } from './components/MisionesPrincipales'
 import { IdeaCapture } from '@modules/work-table/IdeaCapture'
 import { AttentionSummary } from './components/AttentionSummary'
-import { Spaces } from './components/Spaces'
 import { useAgendaHoy } from '@modules/agenda/public'
 import { useMisionesPrincipales } from '@modules/missions/public'
 
@@ -69,17 +69,26 @@ import { useMisionesPrincipales } from '@modules/missions/public'
  * Agenda/Misiones (nunca datos nuevos, nunca una copia). `useAgendaHoy()`
  * se llama una única vez acá (useAgenda no es un singleton compartido —
  * ver agenda/useAgenda.ts) y baja como props a FraseHoy/Proximo/
- * AttentionSummary para no repetir la carga de IndexedDB. FraseHoy
- * reemplaza a `PhraseSlot` en este flujo — esa frase (voz ambiental de
- * Ideas, `voiceEngine`) es un mecanismo distinto y mostrar las dos a la
- * vez competiría por atención (punto 1); `PhraseSlot.tsx` sigue
- * existiendo sin importar de acá, mismo criterio que MisionPrincipal/
- * HabitsGlance/RecentActivity/ContinueWorking. Cada sección se oculta
- * sola cuando no hay nada relevante (punto 2, punto 10) — Home nunca
- * fuerza un bloque vacío.
+ * AttentionSummary para no repetir la carga de IndexedDB.
+ *
+ * Sprint 015.1 ("Recuperar el alma de Home"): Sprint 015 acertó en la
+ * información pero la presentación se sentía como un dashboard.
+ * `PhraseSlot` (voz ambiental de Ideas, `voiceEngine`) vuelve a esta
+ * pantalla en una posición secundaria, debajo del saludo — es identidad
+ * del lugar, no información funcional, y por eso nunca reemplaza a
+ * `FraseHoy` (que sigue siendo la lectura determinista del día): las dos
+ * conviven porque responden preguntas distintas ("¿qué es este lugar?"
+ * vs. "¿cómo está mi día?"), punto 1/2. La lista de "Espacios" (todos
+ * los módulos con ícono y navegación) se deja de mostrar acá — ya están
+ * a un toque de distancia por la navegación existente y repetirlos
+ * convertía a Home en un menú (punto 10); `Spaces.tsx` sigue existiendo
+ * sin importar de acá, mismo criterio que MisionPrincipal/HabitsGlance/
+ * RecentActivity/ContinueWorking. Cada sección se oculta sola cuando no
+ * hay nada relevante (punto 2, punto 10) — Home nunca fuerza un bloque
+ * vacío.
  */
 export function HoyScreen() {
-  const { proximo, atencion, resumen, ready } = useAgendaHoy()
+  const { ahora, proximo, atencion, resumen, ready } = useAgendaHoy()
   const misionesPrincipales = useMisionesPrincipales()
 
   return (
@@ -87,14 +96,16 @@ export function HoyScreen() {
       <div className="flex flex-col gap-6">
         <div>
           <HoyHeader />
+          <div className="mt-4">
+            <PhraseSlot />
+          </div>
           <FraseHoy atencion={atencion} resumen={resumen} ready={ready} />
         </div>
         <IdeaCapture />
       </div>
-      <Proximo proximo={proximo} ready={ready} />
+      <Proximo ahora={ahora} proximo={proximo} ready={ready} />
       <MisionesPrincipales misiones={misionesPrincipales} />
       <AttentionSummary atencion={atencion} />
-      <Spaces />
     </div>
   )
 }

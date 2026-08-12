@@ -1,8 +1,9 @@
 import { useMemo } from 'react'
 import { useAgenda } from './useAgenda'
 import { useIdeas } from '@modules/work-table/public'
-import { aItems, agruparPorCuando, proximoItem } from './agrupar'
+import { aItems, agruparPorCuando, proximoItem, type AgendaItem } from './agrupar'
 import { calcularConflictosDia } from './conflictos'
+import { extraerRangoHora } from './extraccionFecha'
 
 /**
  * Superficie pública del módulo Agenda. `agenda` ya existía reservado
@@ -22,6 +23,8 @@ export interface ProximoAgenda {
   tipo: 'evento' | 'bloque' | 'mision'
   texto: string
   hora: string | null
+  /** Sprint 015.1: solo se completa cuando el ítem está ocurriendo ahora mismo (ver `ahora` en useAgendaHoy) — "10:30–13:15" en vez de solo "10:30". */
+  horaFin: string | null
   conflictoTexto: string | null
   path: string
 }
@@ -48,8 +51,15 @@ const RESUMEN_VACIO: ResumenHoy = { totalActividades: 0, hayCompromisoImportante
  * es un singleton compartido — ver useAgenda.ts) y sus resultados bajan
  * como props a FraseHoy/Proximo/AttentionSummary, para no repetir la
  * carga de IndexedDB.
+ *
+ * Sprint 015.1, punto 6: `ahora` y `proximo` se resuelven por separado
+ * (antes un único `proximo` mezclaba los dos) — `ahora` es lo que está
+ * pasando en este instante (`buckets.ahora[0]`), `proximo` es lo
+ * siguiente que todavía no arrancó (`proximoItem`, que ya no mira
+ * `buckets.ahora`). Home los muestra juntos solo cuando ambos existen.
  */
 export function useAgendaHoy(): {
+  ahora: ProximoAgenda | null
   proximo: ProximoAgenda | null
   atencion: AtencionAgenda
   resumen: ResumenHoy
@@ -76,25 +86,37 @@ export function useAgendaHoy(): {
   const conflictosHoy = useMemo(() => calcularConflictosDia(eventosHoy, bloquesHoy), [eventosHoy, bloquesHoy])
 
   return useMemo(() => {
-    if (!ready) return { proximo: null, atencion: { conflictoTexto: null, hayEventoUrgente: false }, resumen: RESUMEN_VACIO, ready: false }
+    if (!ready) {
+      return {
+        ahora: null,
+        proximo: null,
+        atencion: { conflictoTexto: null, hayEventoUrgente: false },
+        resumen: RESUMEN_VACIO,
+        ready: false,
+      }
+    }
 
-    const item = proximoItem(buckets)
-    const conflictoDelProximo =
-      item?.tipo === 'evento' ? (conflictosHoy.conflictosPorEvento.get(item.id) ?? null) : null
-    const proximo: ProximoAgenda | null = item
-      ? {
-          id: item.id,
-          tipo: item.tipo,
-          texto: item.texto,
-          hora: item.hora,
-          conflictoTexto: conflictoDelProximo?.[0]?.texto ?? null,
-          path: item.tipo === 'mision' ? '/misiones' : '/agenda',
-        }
-      : null
+    const aProximoAgenda = (item: AgendaItem | null): ProximoAgenda | null => {
+      if (!item) return null
+      const conflicto = item.tipo === 'evento' ? (conflictosHoy.conflictosPorEvento.get(item.id) ?? null) : null
+      const rango = item.tipo === 'mision' ? null : extraerRangoHora(item.texto)
+      return {
+        id: item.id,
+        tipo: item.tipo,
+        texto: item.texto,
+        hora: item.hora,
+        horaFin: rango && rango.fin !== rango.inicio ? rango.fin : null,
+        conflictoTexto: conflicto?.[0]?.texto ?? null,
+        path: item.tipo === 'mision' ? '/misiones' : '/agenda',
+      }
+    }
+
+    const ahora = aProximoAgenda(buckets.ahora[0] ?? null)
+    const proximo = aProximoAgenda(proximoItem(buckets))
 
     const primerConflicto = [...conflictosHoy.conflictosPorEvento.values()][0]
     const conflictoTexto = primerConflicto?.[0]?.texto ?? null
-    const hayEventoUrgente = [...buckets.ahora, ...buckets.hoy, ...buckets.manana].some(
+    const hayEventoUrgente = [...buckets.ahora, ...buckets.atrasado, ...buckets.hoy, ...buckets.manana].some(
       (candidato) => candidato.tipo === 'evento' && candidato.item.prioridad === 'urgente',
     )
 
@@ -103,6 +125,6 @@ export function useAgendaHoy(): {
       hayCompromisoImportante: eventosHoy.some((evento) => evento.prioridad === 'importante'),
     }
 
-    return { proximo, atencion: { conflictoTexto, hayEventoUrgente }, resumen, ready: true }
+    return { ahora, proximo, atencion: { conflictoTexto, hayEventoUrgente }, resumen, ready: true }
   }, [ready, buckets, conflictosHoy, eventosHoy, bloquesHoy, misionesHoy])
 }
