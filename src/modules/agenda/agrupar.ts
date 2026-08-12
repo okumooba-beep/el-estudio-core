@@ -16,16 +16,24 @@ import type { Idea } from '@/types/idea'
  * Sprint 015.1, punto 7: "Ahora" pasa a significar literalmente eso —
  * un Bloque o Evento cuyo rango [inicio, fin] contiene la hora actual
  * (`ocurreAhora`, reutilizando `extraerRangoHora` que ya usa
- * conflictos.ts, nunca un motor temporal nuevo). Antes, cualquier ítem
- * de hoy con `hora <= horaActual` caía en "Ahora" sin mirar si ya había
- * terminado, y cualquier ítem vencido de un día anterior caía ahí
- * también sin condición — de ahí el bug de auditoría (11:52 mostrando
- * Meditación 07:30, Gimnasio 08:30, etc. como si estuvieran pasando).
- * Lo vencido (fecha pasada, o de hoy pero ya terminado) ahora cae en el
- * bucket separado `atrasado`: sigue visible y accionable, pero deja de
- * mentir diciendo que está "ocurriendo ahora". Una Misión nunca tiene
- * duración, así que nunca es "Ahora" — a lo sumo está en `hoy` o
- * `atrasado`.
+ * conflictos.ts, nunca un motor temporal nuevo). Una Misión nunca tiene
+ * duración, así que nunca es "Ahora".
+ *
+ * Sprint 015.2, punto 4: "Atrasado" deja de significar "cualquier cosa
+ * vencida" y pasa a significar "vencido y que todavía requiere acción".
+ * Un Bloque terminado (pasó su hora de fin) es historial, no pendiente:
+ * sale de la agenda operativa sin pasar por `atrasado` (los datos siguen
+ * en el store, `agrupar` solo deja de listarlo). Una Misión sin hora
+ * tampoco — sigue perteneciendo únicamente a Misiones. Un Evento, o una
+ * Misión que sí tiene hora, siguen cayendo en `atrasado` mientras estén
+ * pendientes: a diferencia de un Bloque, todavía necesitan que alguien
+ * haga algo con ellos. Antes, un Bloque de una semana pasada (p. ej.
+ * copiado con "copiar al resto de la semana") se acumulaba en `atrasado`
+ * para siempre, y como esa lista se mostraba completa en la vista
+ * diaria, el mismo trío de Bloques (uno por cada día ya pasado)
+ * aparecía repetido — de ahí el bug visible de "Meditación/Gimnasio/
+ * Trading" duplicado varias veces. Dejar de listar Bloques terminados
+ * en `atrasado` es la causa raíz, no una capa nueva de deduplicación.
  */
 export type AgendaItem =
   | { tipo: 'evento'; id: string; texto: string; fecha: string; hora: string | null; completado: boolean; item: AgendaEvento }
@@ -76,18 +84,47 @@ export function aItems(
 
 export interface Buckets {
   ahora: AgendaItem[]
-  /** Sprint 015.1: fecha pasada, o de hoy con la hora ya pasada y sin estar ocurriendo — nunca "Ahora". */
+  /** Sprint 015.2: vencido y que TODAVÍA requiere acción — nunca un Bloque terminado ni una Misión sin hora (ver comentario de arriba). */
   atrasado: AgendaItem[]
   hoy: AgendaItem[]
   manana: AgendaItem[]
   estaSemana: AgendaItem[]
 }
 
-/** Un Bloque/Evento está pasando en este instante si `horaActual` cae dentro de su [inicio, fin]. Una Misión no tiene duración: nunca "ocurre". */
+/**
+ * El rango [inicio, fin] de un ítem. Solo Bloque conserva texto libre
+ * crudo (nunca pasa por el Umbral) donde `extraerRangoHora` puede
+ * encontrar un rango real ("Gimnasio 7 a 8"). Evento guarda en
+ * `item.texto` el `textoLimpio` (Sprint 012: AgendaScreen.tsx ya le
+ * saca la frase de hora al crearlo) — reparsear ese texto para un
+ * rango es indetectable o directamente engañoso, así que un Evento es
+ * siempre un punto desde su propio `item.hora`, igual que una Misión
+ * (que tampoco tiene hora embebida en su texto: vive en
+ * `programadaHora`). Ninguno de los dos tiene duración real en el
+ * modelo de datos. Sin hora: sin rango.
+ */
+function rangoDe(item: AgendaItem): { inicio: string; fin: string } | null {
+  if (item.tipo === 'bloque') return extraerRangoHora(item.texto)
+  return item.hora !== null ? { inicio: item.hora, fin: item.hora } : null
+}
+
+/**
+ * Sprint 015.2, punto 2: `<` estricto en el fin — a la hora exacta de
+ * cierre el ítem ya terminó, no sigue "ocurriendo". Un punto (Evento u
+ * Misión sin rango real, inicio === fin) nunca satisface `horaActual <
+ * fin`, así que nunca es "Ahora" — pasa directo de futuro a terminado.
+ * Una Misión nunca tiene duración: nunca "ocurre".
+ */
 function ocurreAhora(item: AgendaItem, horaActual: string): boolean {
   if (item.tipo === 'mision') return false
-  const rango = extraerRangoHora(item.texto)
-  return rango !== null && rango.inicio <= horaActual && horaActual <= rango.fin
+  const rango = rangoDe(item)
+  return rango !== null && rango.inicio <= horaActual && horaActual < rango.fin
+}
+
+/** Ya pasó su hora de fin (o su único punto, para Eventos/Misiones sin rango real). Sin hora: nunca "terminado" por tiempo. */
+function yaTermino(item: AgendaItem, horaActual: string): boolean {
+  const rango = rangoDe(item)
+  return rango !== null && horaActual >= rango.fin
 }
 
 export function agruparPorCuando(items: readonly AgendaItem[], ahora: Date = new Date()): Buckets {
@@ -99,11 +136,25 @@ export function agruparPorCuando(items: readonly AgendaItem[], ahora: Date = new
 
   for (const item of items) {
     const esHoy = item.fecha === hoyISO
+
     if (esHoy && ocurreAhora(item, horaActual)) {
       buckets.ahora.push(item)
-    } else if (item.fecha < hoyISO || (esHoy && item.hora !== null && item.hora <= horaActual)) {
+      continue
+    }
+
+    const vencido = item.fecha < hoyISO || (esHoy && yaTermino(item, horaActual))
+    if (vencido) {
+      // Bloque terminado: historial, no pendiente — deja de listarse acá
+      // (sigue existiendo en el store). Misión sin hora: nunca "vencida",
+      // sigue perteneciendo solo a Misiones. Evento, o Misión con hora:
+      // siguen necesitando acción → Atrasado.
+      if (item.tipo === 'bloque') continue
+      if (item.tipo === 'mision' && item.hora === null) continue
       buckets.atrasado.push(item)
-    } else if (esHoy) {
+      continue
+    }
+
+    if (esHoy) {
       buckets.hoy.push(item)
     } else if (item.fecha === mananaISO) {
       buckets.manana.push(item)
@@ -138,9 +189,15 @@ function sumarDias(fechaISO: string, dias: number): string {
  * ocurriendo ahora mismo ya no es "lo próximo", es "lo presente". Home
  * pide los dos por separado (`buckets.ahora[0]` y este) para poder
  * mostrar "AHORA" y "PRÓXIMO" a la vez cuando corresponde.
+ *
+ * Sprint 015.2, punto 3: descarta ítems sin hora — no se pueden ordenar
+ * temporalmente, así que nunca pueden ser "lo siguiente" (p. ej. una
+ * Misión programada para hoy sin hora: sigue en `hoy`, pero jamás debe
+ * salir elegida como Próximo).
  */
 export function proximoItem(buckets: Buckets): AgendaItem | null {
-  return buckets.hoy[0] ?? buckets.manana[0] ?? buckets.estaSemana[0] ?? null
+  const conHora = (item: AgendaItem) => item.hora !== null
+  return buckets.hoy.find(conHora) ?? buckets.manana.find(conHora) ?? buckets.estaSemana.find(conHora) ?? null
 }
 
 /**

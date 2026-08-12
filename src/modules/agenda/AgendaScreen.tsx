@@ -3,7 +3,7 @@ import { useIdeas } from '@modules/work-table/public'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useAgenda } from './useAgenda'
 import { extraerFecha, extraerHora, interpretarEvento } from './extraccionFecha'
-import { aItems, agruparPorCuando, semanaCalendario, type AgendaItem } from './agrupar'
+import { aItems, agruparPorCuando, proximoItem, semanaCalendario, type AgendaItem } from './agrupar'
 import { calcularConflictosDia } from './conflictos'
 import type { AgendaEvento, AgendaBloque, AgendaPrioridad } from '@/types/agenda'
 
@@ -37,6 +37,8 @@ export function AgendaScreen() {
   const [editandoBloqueId, setEditandoBloqueId] = useState<string | null>(null)
   const [textoEdicionBloque, setTextoEdicionBloque] = useState('')
   const [conflictoAbierto, setConflictoAbierto] = useState<string | null>(null)
+  /** Sprint 015.2, punto 7: días pasados de la semana actual arrancan colapsados; tocar uno lo expande para consultarlo. */
+  const [diasPasadosExpandidos, setDiasPasadosExpandidos] = useState<Set<string>>(new Set())
   const [editandoEventoId, setEditandoEventoId] = useState<string | null>(null)
   const [textoEdicionEvento, setTextoEdicionEvento] = useState('')
 
@@ -79,19 +81,18 @@ export function AgendaScreen() {
   )
   const buckets = useMemo(() => agruparPorCuando(itemsPendientes), [itemsPendientes])
   /**
-   * Sprint 012, punto 6: solo Eventos importantes/urgentes que todavía
-   * no aparecen en Ahora/Hoy/Mañana — evita mostrar el mismo Evento dos
-   * veces (spec: "nunca... dos listas distintas").
+   * Sprint 015.2, punto 6: la vista diaria vuelve a ser solo lo
+   * operativo de hoy — Ahora / Próximo / Atrasado, mismo criterio y
+   * misma función que usa Home (`proximoItem`, nunca un cálculo
+   * paralelo). "Hoy" (el resto de items de hoy todavía sin empezar),
+   * "Mañana" y "Próximo importante" (el resto de la semana) dejaban de
+   * ser información operativa del día — eso es planificación, y ya vive
+   * en "Planificación semanal".
    */
-  const proximoImportante = useMemo(
-    () =>
-      buckets.estaSemana.filter(
-        (item): item is AgendaItem & { tipo: 'evento' } =>
-          item.tipo === 'evento' && (item.item.prioridad === 'importante' || item.item.prioridad === 'urgente'),
-      ),
-    [buckets],
-  )
-  const semana = useMemo(() => semanaCalendario(undefined, semanaOffset), [semanaOffset])
+  const proximo = useMemo(() => proximoItem(buckets), [buckets])
+  /** Sprint 015.2, punto 1: única referencia de "hoy" — fecha real del dispositivo, nunca la semana/día seleccionado. */
+  const hoyISO = new Date().toISOString().slice(0, 10)
+  const semana = useMemo(() => semanaCalendario(hoyISO, semanaOffset), [hoyISO, semanaOffset])
 
   /**
    * Sprint 013, punto 3: completar una Misión desde Agenda usa el mismo
@@ -199,6 +200,24 @@ export function AgendaScreen() {
         </div>
         <ul className="flex flex-col gap-5">
           {semana.map((dia) => {
+            const esPasado = dia < hoyISO
+            const expandido = !esPasado || diasPasadosExpandidos.has(dia)
+
+            if (esPasado && !expandido) {
+              return (
+                <li key={dia} className="border-b border-border/40 pb-4 last:border-b-0">
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between text-left"
+                    onClick={() => setDiasPasadosExpandidos((current) => new Set(current).add(dia))}
+                  >
+                    <span className="text-[13px] text-ink-dim">{nombreDia(dia)}</span>
+                    <span className="text-[12.5px] text-ink-faint">Pasado</span>
+                  </button>
+                </li>
+              )
+            }
+
             const eventosDelDia = eventos.filter((evento) => evento.fecha === dia)
             const bloquesDelDia = bloquesActivos.filter((bloque) => bloque.dia === dia)
             const misionesDelDia = misionesProgramadas.filter((mision) => mision.programadaFecha === dia)
@@ -208,7 +227,10 @@ export function AgendaScreen() {
             )
             return (
               <li key={dia} className="flex flex-col gap-2 border-b border-border/40 pb-4 last:border-b-0">
-                <p className="text-[13px] text-ink-dim">{nombreDia(dia)}</p>
+                <p className="text-[13px] text-ink-dim">
+                  {nombreDia(dia)}
+                  {esPasado ? <span className="ml-1.5 text-ink-faint">· Pasado</span> : null}
+                </p>
                 {itemsDelDia.map((item) => {
                   if (item.tipo === 'bloque' && bloqueIdsEnConflicto.has(item.id)) return null
 
@@ -349,12 +371,7 @@ export function AgendaScreen() {
     )
   }
 
-  const sinNada =
-    buckets.ahora.length === 0 &&
-    buckets.atrasado.length === 0 &&
-    buckets.hoy.length === 0 &&
-    buckets.manana.length === 0 &&
-    proximoImportante.length === 0
+  const sinNada = buckets.ahora.length === 0 && buckets.atrasado.length === 0 && !proximo
 
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10">
@@ -372,10 +389,8 @@ export function AgendaScreen() {
       ) : (
         <>
           <Seccion titulo="Ahora" items={buckets.ahora} onCompletar={completar} onAlarma={alternarAlarma} onPrioridad={ciclarPrioridad} />
+          <Seccion titulo="Próximo" items={proximo ? [proximo] : []} onCompletar={completar} onAlarma={alternarAlarma} onPrioridad={ciclarPrioridad} />
           <Seccion titulo="Atrasado" items={buckets.atrasado} onCompletar={completar} onAlarma={alternarAlarma} onPrioridad={ciclarPrioridad} />
-          <Seccion titulo="Hoy" items={buckets.hoy} onCompletar={completar} onAlarma={alternarAlarma} onPrioridad={ciclarPrioridad} />
-          <Seccion titulo="Mañana" items={buckets.manana} onCompletar={completar} onAlarma={alternarAlarma} onPrioridad={ciclarPrioridad} />
-          <Seccion titulo="Próximo importante" items={proximoImportante} onCompletar={completar} onAlarma={alternarAlarma} onPrioridad={ciclarPrioridad} />
         </>
       )}
     </div>

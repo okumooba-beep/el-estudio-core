@@ -56,25 +56,36 @@ export function interpretarEvento(
   }
 }
 
+/** "7" o "07:30" → "HH:MM"; null si no es una hora válida (0-23, 0-59). */
+function normalizarHora(token: string | undefined): string | null {
+  const match = token?.match(/^(\d{1,2})(?::(\d{2}))?$/)
+  if (!match) return null
+  const horas = Number(match[1])
+  const minutos = match[2] ? Number(match[2]) : 0
+  if (horas > 23 || minutos > 59) return null
+  return `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}`
+}
+
 /**
  * Sprint 012, punto 3: rango [inicio, fin) para detectar solapamiento
  * Evento/Bloque. No es un campo nuevo del modelo — se recalcula al vuelo
  * desde el mismo texto libre, nunca se persiste. Sin un segundo número
  * ("a las 5", sin rango), el ítem es un punto: fin === inicio.
+ *
+ * Sprint 015.2, punto 3: el rango suelto también acepta minutos en
+ * cualquiera de los dos lados ("10:30 a 13:15", no solo "10 a 13") — antes
+ * el regex bare-hour no reconocía el minuto y el rango caía a "punto" en
+ * el inicio, haciendo que un Bloque con hora de fin real pareciera
+ * terminado apenas empezaba. Mismo mecanismo, no un motor temporal nuevo.
  */
 export function extraerRangoHora(texto: string): { inicio: string; fin: string } | null {
   const normalizado = normalizar(texto)
 
-  const rango = normalizado.match(/\b(\d{1,2})\s+a\s+(\d{1,2})\b/)
+  const rango = normalizado.match(/\b(\d{1,2}(?::\d{2})?)\s+a\s+(\d{1,2}(?::\d{2})?)\b/)
   if (rango) {
-    const h1 = Number(rango[1])
-    const h2 = Number(rango[2])
-    if (h1 <= 23 && h2 <= 23) {
-      return {
-        inicio: `${String(h1).padStart(2, '0')}:00`,
-        fin: `${String(h2).padStart(2, '0')}:00`,
-      }
-    }
+    const inicio = normalizarHora(rango[1])
+    const fin = normalizarHora(rango[2])
+    if (inicio && fin) return { inicio, fin }
   }
 
   const punto = extraerHora(texto)
