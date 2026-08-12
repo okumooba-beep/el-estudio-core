@@ -3,12 +3,24 @@ import { useIdeas } from '@modules/work-table/public'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useFinance } from './useFinance'
 import { AnilloCategorias } from './AnilloCategorias'
+import { EntroDetalle } from './EntroDetalle'
+import { SeFueDetalle } from './SeFueDetalle'
 import { CATEGORIAS, CATEGORIA_COLOR, CATEGORIA_LABEL, type FinanceCategoria } from './categorias'
 import { extraerMovimiento, type Moneda } from './extraccion'
-import { formatearMonto, mesDe, monedaDe, resumirMes, resumirSemana, semanaDelMes } from './mes'
+import {
+  estaEnCurso,
+  etiquetaMesEnCurso,
+  formatearMonto,
+  mesDe,
+  monedaDe,
+  resumirMes,
+  resumirSemana,
+  semanaDelMes,
+} from './mes'
 import type { FinanceMovimiento } from '@/types/finance'
 
 type Vista = 'semana' | 'mes'
+type Detalle = 'entro' | 'sefue' | null
 
 /**
  * Finanzas (Sprint 007 — "Comprender el movimiento del dinero"),
@@ -41,6 +53,8 @@ export function FinanceScreen() {
   const [moneda, setMoneda] = useState<Moneda>('ars')
   const [vista, setVista] = useState<Vista>('semana')
   const [corrigiendo, setCorrigiendo] = useState<string | null>(null)
+  const [detalle, setDetalle] = useState<Detalle>(null)
+  const [categoriaDetalle, setCategoriaDetalle] = useState<FinanceCategoria | null>(null)
 
   const convertidas = useMemo(
     () => new Set(movimientos.map((movimiento) => movimiento.ideaId).filter(Boolean)),
@@ -110,6 +124,37 @@ export function FinanceScreen() {
   const entro = vista === 'semana' ? semanal.entro : resumen.ingresado
   const seFue = vista === 'semana' ? semanal.seFue : resumen.gastado
   const teQuedo = vista === 'semana' ? semanal.teQuedo : resumen.balance
+  const movimientosDelPeriodo = vista === 'semana' ? semanal.movimientos : resumen.movimientos
+  const gruposDelPeriodo = vista === 'semana' ? semanal.grupos : resumen.grupos
+  const registradoHastaHoy = estaEnCurso(mes)
+
+  function cerrarDetalle() {
+    setDetalle(null)
+    setCategoriaDetalle(null)
+  }
+
+  if (detalle === 'entro') {
+    return (
+      <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10">
+        <EntroDetalle vista={vista} mes={mes} moneda={moneda} total={entro} movimientos={movimientosDelPeriodo} onCerrar={cerrarDetalle} />
+      </div>
+    )
+  }
+
+  if (detalle === 'sefue') {
+    return (
+      <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10">
+        <SeFueDetalle
+          moneda={moneda}
+          total={seFue}
+          grupos={gruposDelPeriodo}
+          movimientos={movimientosDelPeriodo}
+          categoriaInicial={categoriaDetalle}
+          onCerrar={cerrarDetalle}
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10">
@@ -117,6 +162,9 @@ export function FinanceScreen() {
         <p className="font-mono text-[11px] uppercase tracking-wide text-accent">
           {vista === 'semana' ? `Semana ${semanaActual} · ${nombreMes}` : nombreMes}
         </p>
+        {vista === 'mes' && registradoHastaHoy ? (
+          <p className="font-mono text-[11px] text-ink-faint">{etiquetaMesEnCurso(mes)} · en curso</p>
+        ) : null}
         <div className="idea-destinos" role="group" aria-label="Vista">
           {(['semana', 'mes'] as const).map((opcion) => (
             <button
@@ -150,20 +198,29 @@ export function FinanceScreen() {
       </section>
 
       <section className="flex flex-col gap-1.5">
-        <div className="flex items-baseline justify-between gap-3">
+        <button
+          type="button"
+          className="flex w-full appearance-none items-baseline justify-between gap-3 border-0 bg-transparent p-0 text-left"
+          onClick={() => setDetalle('entro')}
+        >
           <span className="text-[15px] text-ink-dim">Entró</span>
           <span className="font-mono text-[16px] text-good">{formatearMonto(entro, moneda)}</span>
-        </div>
-        <div className="flex items-baseline justify-between gap-3">
+        </button>
+        <button
+          type="button"
+          className="flex w-full appearance-none items-baseline justify-between gap-3 border-0 bg-transparent p-0 text-left"
+          onClick={() => setDetalle('sefue')}
+        >
           <span className="text-[15px] text-ink-dim">Se fue</span>
           <span className="font-mono text-[16px] text-critical">{formatearMonto(seFue, moneda)}</span>
-        </div>
+        </button>
         <div className="mt-1 flex items-baseline justify-between gap-3 border-t border-border/40 pt-2">
           <span className="text-[15px] text-ink">Te quedó</span>
           <span className={`font-mono text-[17px] ${teQuedo >= 0 ? 'text-good' : 'text-critical'}`}>
             {formatearMonto(teQuedo, moneda)}
           </span>
         </div>
+        {registradoHastaHoy ? <p className="text-right text-[12px] text-ink-faint">Registrado hasta hoy</p> : null}
       </section>
 
       {resumen.porRevisar.length > 0 ? (
@@ -237,24 +294,33 @@ export function FinanceScreen() {
           <AnilloCategorias grupos={resumen.grupos} total={formatearMonto(resumen.gastado, moneda)} />
           <ul className="flex w-full flex-col gap-3">
             {resumen.grupos.map((grupo) => (
-              <li key={grupo.categoria} className="flex flex-col gap-1.5">
-                <div className="flex items-baseline justify-between gap-3">
-                  <span className="flex items-center gap-2 text-[15px] text-ink">
-                    <span
-                      className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
-                      style={{ backgroundColor: CATEGORIA_COLOR[grupo.categoria] }}
-                      aria-hidden="true"
+              <li key={grupo.categoria}>
+                <button
+                  type="button"
+                  className="flex w-full appearance-none flex-col gap-1.5 border-0 bg-transparent p-0 text-left"
+                  onClick={() => {
+                    setCategoriaDetalle(grupo.categoria)
+                    setDetalle('sefue')
+                  }}
+                >
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="flex items-center gap-2 text-[15px] text-ink">
+                      <span
+                        className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: CATEGORIA_COLOR[grupo.categoria] }}
+                        aria-hidden="true"
+                      />
+                      {CATEGORIA_LABEL[grupo.categoria]}
+                    </span>
+                    <span className="font-mono text-[14px] text-ink-dim">{formatearMonto(grupo.total, moneda)}</span>
+                  </div>
+                  <div className="h-[3px] w-full overflow-hidden rounded-full bg-border/60">
+                    <div
+                      className="h-full rounded-full"
+                      style={{ width: `${grupo.parte * 100}%`, backgroundColor: CATEGORIA_COLOR[grupo.categoria] }}
                     />
-                    {CATEGORIA_LABEL[grupo.categoria]}
-                  </span>
-                  <span className="font-mono text-[14px] text-ink-dim">{formatearMonto(grupo.total, moneda)}</span>
-                </div>
-                <div className="h-[3px] w-full overflow-hidden rounded-full bg-border/60">
-                  <div
-                    className="h-full rounded-full"
-                    style={{ width: `${grupo.parte * 100}%`, backgroundColor: CATEGORIA_COLOR[grupo.categoria] }}
-                  />
-                </div>
+                  </div>
+                </button>
               </li>
             ))}
           </ul>
