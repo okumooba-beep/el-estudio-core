@@ -7,6 +7,8 @@ import type { Moneda } from './extraccion'
 
 interface SeFueDetalleProps {
   moneda: Moneda
+  /** Sprint 016.1, punto 15: mismo texto que ya muestra el header de FinanceScreen — nunca se recalcula acá. */
+  periodoLabel: string
   total: number
   /** Ya filtrados a categorías con al menos un movimiento (punto 3: "no mostrar categorías vacías"). */
   grupos: readonly GrupoCategoria[]
@@ -25,7 +27,7 @@ interface SeFueDetalleProps {
  * quien abre este detalle (FinanceScreen), y volver a la lista de
  * categorías no cierra el detalle ni cambia el período.
  */
-export function SeFueDetalle({ moneda, total, grupos, movimientos, categoriaInicial, onCerrar }: SeFueDetalleProps) {
+export function SeFueDetalle({ moneda, periodoLabel, total, grupos, movimientos, categoriaInicial, onCerrar }: SeFueDetalleProps) {
   const [categoria, setCategoria] = useState<FinanceCategoria | null>(categoriaInicial)
 
   if (categoria) {
@@ -40,6 +42,7 @@ export function SeFueDetalle({ moneda, total, grupos, movimientos, categoriaInic
           ‹ Categorías
         </button>
         <section className="flex flex-col items-center gap-1">
+          <p className="font-mono text-[11px] text-ink-faint">{periodoLabel}</p>
           <p className="font-mono text-[11px] uppercase tracking-wide text-accent">{CATEGORIA_LABEL[categoria]}</p>
           <p className="font-mono text-[28px] text-critical">{formatearMonto(totalCategoria, moneda)}</p>
         </section>
@@ -58,6 +61,7 @@ export function SeFueDetalle({ moneda, total, grupos, movimientos, categoriaInic
         ‹ Finanzas
       </button>
       <section className="flex flex-col items-center gap-1">
+        <p className="font-mono text-[11px] text-ink-faint">{periodoLabel}</p>
         <p className="font-mono text-[11px] uppercase tracking-wide text-accent">Total gastado</p>
         <p className="font-mono text-[28px] text-critical">{formatearMonto(total, moneda)}</p>
       </section>

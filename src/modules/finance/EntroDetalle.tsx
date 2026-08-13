@@ -7,6 +7,8 @@ interface EntroDetalleProps {
   vista: 'semana' | 'mes'
   mes: string
   moneda: Moneda
+  /** Sprint 016.1, punto 15: mismo texto que ya muestra el header de FinanceScreen — nunca se recalcula acá. */
+  periodoLabel: string
   total: number
   /** Movimientos ya recortados al período (semana o mes) — se filtra acá solo por tipo. */
   movimientos: readonly FinanceMovimiento[]
@@ -21,7 +23,7 @@ interface EntroDetalleProps {
  * semana, así que alcanza con la lista cronológica de movimientos
  * (punto 8: "¿Qué entró esta semana?").
  */
-export function EntroDetalle({ vista, mes, moneda, total, movimientos, onCerrar }: EntroDetalleProps) {
+export function EntroDetalle({ vista, mes, moneda, periodoLabel, total, movimientos, onCerrar }: EntroDetalleProps) {
   const ingresos = movimientos.filter((m) => m.tipo === 'ingreso').sort((a, b) => a.fecha.localeCompare(b.fecha))
 
   const semanas =
@@ -41,6 +43,7 @@ export function EntroDetalle({ vista, mes, moneda, total, movimientos, onCerrar 
       </button>
 
       <section className="flex flex-col items-center gap-1">
+        <p className="font-mono text-[11px] text-ink-faint">{periodoLabel}</p>
         <p className="font-mono text-[11px] uppercase tracking-wide text-accent">Total entrado</p>
         <p className="font-mono text-[28px] text-good">{formatearMonto(total, moneda)}</p>
       </section>

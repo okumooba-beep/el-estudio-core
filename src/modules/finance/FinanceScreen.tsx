@@ -10,6 +10,7 @@ import { extraerMovimiento, type Moneda } from './extraccion'
 import {
   estaEnCurso,
   etiquetaMesEnCurso,
+  etiquetaSemana,
   formatearMonto,
   mesDe,
   monedaDe,
@@ -110,6 +111,8 @@ export function FinanceScreen() {
   if (!ready) return null
 
   const nombreMes = new Date(`${mes}-02`).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
+  /** Sprint 016.1, punto 15: mismo texto que ya arma el header acá abajo, para que Entró/Se fue nunca pierdan de vista qué período están mostrando al entrar en un detalle. */
+  const periodoLabel = vista === 'semana' ? `Semana ${semanaActual} · ${etiquetaSemana(mes, semanaActual)}` : nombreMes
   const sinNada = resumen.movimientos.length === 0 && sinMonto.length === 0
 
   if (sinNada) {
@@ -136,7 +139,15 @@ export function FinanceScreen() {
   if (detalle === 'entro') {
     return (
       <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10">
-        <EntroDetalle vista={vista} mes={mes} moneda={moneda} total={entro} movimientos={movimientosDelPeriodo} onCerrar={cerrarDetalle} />
+        <EntroDetalle
+          vista={vista}
+          mes={mes}
+          moneda={moneda}
+          periodoLabel={periodoLabel}
+          total={entro}
+          movimientos={movimientosDelPeriodo}
+          onCerrar={cerrarDetalle}
+        />
       </div>
     )
   }
@@ -146,6 +157,7 @@ export function FinanceScreen() {
       <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10">
         <SeFueDetalle
           moneda={moneda}
+          periodoLabel={periodoLabel}
           total={seFue}
           grupos={gruposDelPeriodo}
           movimientos={movimientosDelPeriodo}
@@ -159,9 +171,7 @@ export function FinanceScreen() {
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10">
       <section className="flex flex-col items-center gap-3">
-        <p className="font-mono text-[11px] uppercase tracking-wide text-accent">
-          {vista === 'semana' ? `Semana ${semanaActual} · ${nombreMes}` : nombreMes}
-        </p>
+        <p className="font-mono text-[11px] uppercase tracking-wide text-accent">{periodoLabel}</p>
         {vista === 'mes' && registradoHastaHoy ? (
           <p className="font-mono text-[11px] text-ink-faint">{etiquetaMesEnCurso(mes)} · en curso</p>
         ) : null}
