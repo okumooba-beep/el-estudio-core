@@ -3,19 +3,9 @@ import { useIdeas } from '@modules/work-table/public'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { MUEBLES } from '@world/studio/muebles'
 import { interpretarMision } from './extraccionFecha'
-import { seleccionarActivas, seleccionarPrincipales, seleccionarSecundarias } from './seleccionarPrincipales'
+import { MAX_PRINCIPALES, seleccionarActivas, seleccionarPrincipales, seleccionarSecundarias } from './seleccionarPrincipales'
 import { etiquetaFecha, formatearHora12 } from '@shared-kernel/text/interpretarTexto'
 import type { Idea } from '@/types/idea'
-
-function hoyISO(): string {
-  return new Date().toISOString().slice(0, 10)
-}
-
-function mananaISO(): string {
-  const fecha = new Date()
-  fecha.setDate(fecha.getDate() + 1)
-  return fecha.toISOString().slice(0, 10)
-}
 
 /**
  * Misiones (Sprint 006 — "Sistema de ejecución"), reemplaza el Tablero
@@ -26,33 +16,41 @@ function mananaISO(): string {
  * opuesto a un corcho con hojas rotadas y chinchetas (Sprint 2.3), así
  * que esa metáfora se retira de acá (`material-cork`/`tablero-hoja`/
  * `IdeaSheet` siguen existiendo para quien los use — Desk, Trading — no
- * se tocan). Una misión ahora es una línea de texto y un círculo: nada
- * más, porque el brief solo autoriza mostrar "qué hay que hacer" y
- * "estado".
+ * se tocan). Se ordenan por más antigua primero (a diferencia del
+ * Tablero, que ponía lo de hoy arriba) porque acá el punto es consumir
+ * en cola.
  *
- * El límite de cinco activas es real, no visual: `activas` ya viene
- * recortada antes de tocar el DOM, así que no existe ningún "hay 8,
- * mostrando 5" en ningún lado — el resto directamente no se renderiza,
- * ni siquiera oculto. Se ordenan por más antigua primero (a diferencia
- * del Tablero, que ponía lo de hoy arriba) porque acá el punto es
- * consumir en cola: al completar una, la que sigue en el tiempo ocupa
- * el lugar sola.
+ * Sprint 016.2 ("Misiones: principales y secundarias") corrige dos
+ * cosas que el diseño anterior hacía mal:
  *
- * Completar no dejar tachado ni gris (brief, "Experiencia"): la
- * consecuencia es que no hay nada que "des-completar" después, así que
- * completar es directamente archivar (moveSheet → archivador, Contrato
- * del Umbral §8 — nada se borra) en el mismo gesto. Nunca se persiste
- * un estado 'completada' de forma duradera: no hace falta un valor que
- * viva más que el instante en que deja de estar a la vista.
+ * 1. `seleccionarActivas` recortaba TODA la lista de pendientes a las
+ *    cinco más antiguas antes de tocar el DOM — cualquier misión más
+ *    allá de la quinta directamente no se renderizaba, ni siquiera
+ *    oculta. Una misión pendiente nunca debe desaparecer solo porque
+ *    existen más de cinco: el límite de cinco vive únicamente dentro
+ *    de Principales (`MAX_PRINCIPALES`, ver seleccionarPrincipales.ts).
+ * 2. "Principal" era "programada para hoy o mañana" — la fecha decidía
+ *    sola. Ahora es una elección explícita del usuario
+ *    (`Idea.misionPrincipal`), con su propio control en la fila
+ *    ("Marcar como principal" / "Quitar de principales").
+ *
+ * Completar sigue sin dejar tachado ni gris (brief original,
+ * "Experiencia"): la consecuencia es que no hay nada que
+ * "des-completar" después, así que completar es directamente archivar
+ * (moveSheet → archivador, Contrato del Umbral §8 — nada se borra) en
+ * el mismo gesto. Completar una Principal libera su lugar sin
+ * auto-reemplazo (punto 11 del Sprint 016.2): el usuario decide después
+ * si promueve otra.
  *
  * El filtro `!== 'terminada'` es la única concesión al diseño anterior:
  * una misión ya marcada terminada bajo ese modelo (nunca archivada,
- * porque ese paso era opcional) no debe ocupar uno de los cinco lugares
- * activos como si fuera pendiente.
+ * porque ese paso era opcional) no debe aparecer como pendiente.
  */
 export function MisionesScreen() {
   const { ideas, ready, add, update, moveSheet } = useIdeas()
   const [draftTexto, setDraftTexto] = useState<string | null>(null)
+  /** Sprint 016.2, punto 6: misión que el usuario intenta hacer Principal habiendo ya cinco — nunca se auto-decide. */
+  const [intentoPrincipal, setIntentoPrincipal] = useState<Idea | null>(null)
 
   /** Sprint 014, punto 3: vista previa silenciosa mientras se escribe — nunca abre diálogos. */
   const previaDraft = useMemo(() => {
@@ -63,19 +61,31 @@ export function MisionesScreen() {
   }, [draftTexto])
 
   const activas = seleccionarActivas(ideas)
-
-  /**
-   * Sprint 013, punto 6: dos grupos automáticos, sin prioridad (eso
-   * sigue siendo exclusivo de Eventos) — "principal" acá es solo
-   * "programada para hoy o mañana", nada más.
-   */
-  const hoy = hoyISO()
-  const manana = mananaISO()
-  const principales = seleccionarPrincipales(activas, hoy, manana)
-  const secundarias = seleccionarSecundarias(activas, hoy, manana)
+  const principales = seleccionarPrincipales(activas)
+  const secundarias = seleccionarSecundarias(activas)
 
   function handleCompletar(mision: Idea) {
+    if (intentoPrincipal?.id === mision.id) setIntentoPrincipal(null)
     void moveSheet(mision, 'archivador')
+  }
+
+  function handleTogglePrincipal(mision: Idea) {
+    if (mision.misionPrincipal) {
+      void update(mision.id, { misionPrincipal: false })
+      return
+    }
+    if (principales.length >= MAX_PRINCIPALES) {
+      setIntentoPrincipal(mision)
+      return
+    }
+    void update(mision.id, { misionPrincipal: true })
+  }
+
+  function handleElegirReemplazo(actual: Idea) {
+    if (!intentoPrincipal) return
+    void update(actual.id, { misionPrincipal: false })
+    void update(intentoPrincipal.id, { misionPrincipal: true })
+    setIntentoPrincipal(null)
   }
 
   function handleTextoBlur(mision: Idea, event: React.FocusEvent<HTMLSpanElement>) {
@@ -109,20 +119,38 @@ export function MisionesScreen() {
   }
 
   function renderFila(mision: Idea) {
+    const esPrincipal = mision.misionPrincipal === true
     return (
       <li key={mision.id} className="mision-fila">
         <button type="button" className="mision-check" aria-label="Completar" onClick={() => handleCompletar(mision)}>
           <span className="mision-check-circulo" aria-hidden="true" />
         </button>
-        <span
-          className="mision-texto"
-          contentEditable
-          suppressContentEditableWarning
-          onBlur={(event) => handleTextoBlur(mision, event)}
-          onKeyDown={handleTextoKeyDown}
-        >
-          {mision.texto}
+        <span className="mision-contenido">
+          <span
+            className="mision-texto"
+            contentEditable
+            suppressContentEditableWarning
+            onBlur={(event) => handleTextoBlur(mision, event)}
+            onKeyDown={handleTextoKeyDown}
+          >
+            {mision.texto}
+          </span>
+          {mision.programadaFecha && (
+            <span className="mision-fecha">
+              {etiquetaFecha(mision.programadaFecha)}
+              {mision.programadaHora ? ` · ${formatearHora12(mision.programadaHora)}` : ''}
+            </span>
+          )}
         </span>
+        <button
+          type="button"
+          className="mision-principal-toggle"
+          aria-pressed={esPrincipal}
+          aria-label={esPrincipal ? 'Quitar de principales' : 'Marcar como principal'}
+          onClick={() => handleTogglePrincipal(mision)}
+        >
+          {esPrincipal ? '★' : '☆'}
+        </button>
       </li>
     )
   }
@@ -139,6 +167,23 @@ export function MisionesScreen() {
             <div className="flex flex-col gap-2">
               <h2 className="mision-grupo-titulo">Misiones principales</h2>
               <ul className="mision-lista">{principales.map(renderFila)}</ul>
+              {intentoPrincipal && (
+                <div className="flex flex-col gap-1">
+                  <p className="mision-previa">
+                    Ya tenés {MAX_PRINCIPALES} misiones principales. Elegí cuál sacar para que “{intentoPrincipal.texto}” ocupe su lugar.
+                  </p>
+                  <div className="idea-destinos" role="group" aria-label="Elegir cuál misión principal reemplazar">
+                    {principales.map((p) => (
+                      <button key={p.id} type="button" className="idea-destino" onClick={() => handleElegirReemplazo(p)}>
+                        Sacar “{p.texto}”
+                      </button>
+                    ))}
+                    <button type="button" className="idea-destino" onClick={() => setIntentoPrincipal(null)}>
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
           {secundarias.length > 0 && (

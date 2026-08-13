@@ -12,23 +12,16 @@ import type { Idea } from '@/types/idea'
 export const MODULE = { path: '/misiones', label: 'Misiones' }
 export { MisionesScreen } from './MisionesScreen'
 
-function hoyISO(): string {
-  return new Date().toISOString().slice(0, 10)
-}
-
-function mananaISO(): string {
-  const fecha = new Date()
-  fecha.setDate(fecha.getDate() + 1)
-  return fecha.toISOString().slice(0, 10)
-}
-
 /**
- * Sprint 015 ("Home como eje del día"): las Misiones "programadas para
- * hoy o mañana" — mismo criterio que ya usa MisionesScreen (ver
+ * Sprint 015 ("Home como eje del día"): las Misiones que el usuario
+ * marcó como Principal — mismo criterio que ya usa MisionesScreen (ver
  * seleccionarPrincipales.ts), nunca un cálculo nuevo — para que Home
  * pueda mostrar "Misión principal" sin duplicar la lógica de Misiones.
+ *
+ * Sprint 016.2: ya no depende de hoy/mañana — Principal es una
+ * elección explícita del usuario, no una fecha.
  */
 export function useMisionesPrincipales(): Idea[] {
   const { ideas } = useIdeas()
-  return seleccionarPrincipales(seleccionarActivas(ideas), hoyISO(), mananaISO())
+  return seleccionarPrincipales(seleccionarActivas(ideas))
 }

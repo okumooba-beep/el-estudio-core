@@ -1423,6 +1423,54 @@ html.light-boot *::after {
   padding-left: 2px;
 }
 
+/* Sprint 016.2: envuelve texto + fecha para que el toggle de Principal quede afuera, alineado con el check. */
+.mision-contenido {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+/* Sprint 016.2, punto 8: la fecha de una misión programada nunca desaparece al pasar a Secundaria. */
+.mision-fecha {
+  font-size: 0.7rem;
+  color: var(--ink-faint);
+}
+
+/*
+  Sprint 016.2, punto 5: control chico y silencioso sobre la fila
+  existente — mismo lenguaje que .idea-destino (sin borde, sin fondo,
+  solo un glyph) en vez de un botón nuevo o un ícono importado. Estrella
+  llena + --accent cuando es Principal es la única señal de color, y ya
+  existe en la app como marca de "seleccionado" (mismo --accent que
+  .accion-primaria) — no es un color nuevo ni llamativo.
+*/
+.mision-principal-toggle {
+  flex-shrink: 0;
+  padding: 0.15rem 0.2rem;
+  border: none;
+  background: none;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--ink-faint);
+  cursor: pointer;
+  transition: color 150ms ease, transform 100ms ease;
+}
+
+.mision-principal-toggle:hover,
+.mision-principal-toggle:focus-visible {
+  color: var(--ink);
+}
+
+.mision-principal-toggle:active {
+  transform: scale(0.9);
+}
+
+.mision-principal-toggle[aria-pressed='true'] {
+  color: var(--accent);
+}
+
 .idea-destino {
   padding: 0.15rem 0;
   border: none;

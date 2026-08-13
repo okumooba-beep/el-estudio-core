@@ -69,6 +69,15 @@ export interface Idea {
   /** Reservado para Misiones (Sprint 013). Ausente/null si no se extrajo una hora del texto. */
   programadaHora?: string | null
   /**
+   * Reservado para Misiones (Sprint 016.2 — "Principales y secundarias"):
+   * `true` cuando el usuario eligió explícitamente esta misión como una
+   * de las cinco que quiere tener delante. Nunca se infiere de la fecha
+   * ni de ningún otro campo — es una decisión, no un cálculo. Ausente o
+   * `false` = secundaria (nunca invisible: sigue siendo una misión
+   * pendiente como cualquier otra).
+   */
+  misionPrincipal?: boolean
+  /**
    * Dónde vive físicamente esta hoja ahora (Sprint 3.6, ver
    * src/packages/world/studio/furniture.ts). No reemplaza a `destino`: destino es
    * la categoría, currentFurniture es el mueble real que la aloja.
