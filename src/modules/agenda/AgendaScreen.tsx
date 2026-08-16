@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useIdeas } from '@modules/work-table/public'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useAgenda } from './useAgenda'
@@ -44,11 +44,30 @@ export function AgendaScreen() {
   const [textoEdicionEvento, setTextoEdicionEvento] = useState('')
 
   const convertidas = useMemo(() => new Set(eventos.map((evento) => evento.ideaId)), [eventos])
-  const pendientes = ideas.filter((idea) => idea.destino === 'agenda' && !convertidas.has(idea.id))
+  /**
+   * Sprint 017.1: `convertidas` solo sabe de una Idea ya pasada a Evento
+   * una vez que `addEvento` (async: escribe en IndexedDB y recién
+   * después hace `setEventos`) termina y ese estado se re-renderiza. Si
+   * el efecto de abajo se dispara una segunda vez ANTES de que ese viaje
+   * de ida y vuelta termine (StrictMode remonta cada efecto una vez en
+   * desarrollo; lo mismo podría pasar en producción con dos renders
+   * seguidos por cambios independientes de `ideas`), `pendientes` seguía
+   * incluyendo la misma Idea y se creaba un segundo AgendaEvento real
+   * con el mismo `ideaId` — la duplicación visible en Planificación
+   * semanal no era de render, eran dos registros de verdad. Esta ref
+   * marca una Idea como "en conversión" en el mismo instante síncrono en
+   * que se decide convertirla, así una segunda pasada del efecto no la
+   * vuelve a tomar mientras la primera todavía está en vuelo.
+   */
+  const enConversion = useRef<Set<string>>(new Set())
+  const pendientes = ideas.filter(
+    (idea) => idea.destino === 'agenda' && !convertidas.has(idea.id) && !enConversion.current.has(idea.id),
+  )
 
   useEffect(() => {
     if (!ready) return
     for (const idea of pendientes) {
+      enConversion.current.add(idea.id)
       const { fecha, hora, prioridad, textoLimpio } = interpretarEvento(idea.texto)
       void addEvento({
         texto: textoLimpio || idea.texto,
