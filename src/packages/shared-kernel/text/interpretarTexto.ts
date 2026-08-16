@@ -141,8 +141,15 @@ function extraerFechaSpan(normalizado: string, hoyISO: string): { fecha: string;
     return { fecha, span: { start: explicita.index!, end: explicita.index! + explicita[0].length } }
   }
 
+  /**
+   * Sprint 017: "de" es opcional — "24 agosto" es tan natural en
+   * español como "24 de agosto" y el brief lo pide explícito (Caso 5).
+   * Sin esto, `fecha` volvía `null` y el default a "hoy" de Agenda
+   * (extraccionFecha.ts) convertía una fecha futura no reconocida en un
+   * evento de hoy — la causa raíz real del bug, no la agrupación.
+   */
   const deMes = normalizado.match(
-    /\b(\d{1,2})\s+de\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)\b/,
+    /\b(\d{1,2})\s+(?:de\s+)?(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)\b/,
   )
   if (deMes) {
     const dia = Number(deMes[1])

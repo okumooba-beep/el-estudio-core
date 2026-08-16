@@ -194,10 +194,17 @@ function sumarDias(fechaISO: string, dias: number): string {
  * temporalmente, así que nunca pueden ser "lo siguiente" (p. ej. una
  * Misión programada para hoy sin hora: sigue en `hoy`, pero jamás debe
  * salir elegida como Próximo).
+ *
+ * Sprint 017: ya no cae en `estaSemana`. Ese bucket es un catch-all sin
+ * límite real de semana (ver `semanaCalendario` más abajo, que sí lo
+ * calcula pero no se usa para acotarlo), así que dejarlo en la cadena
+ * podía convertir un ítem de dentro de varios días en el "Próximo" de
+ * hoy — justo lo que el brief prohíbe. Si no hay nada con hora hoy ni
+ * mañana, no hay Próximo: null.
  */
 export function proximoItem(buckets: Buckets): AgendaItem | null {
   const conHora = (item: AgendaItem) => item.hora !== null
-  return buckets.hoy.find(conHora) ?? buckets.manana.find(conHora) ?? buckets.estaSemana.find(conHora) ?? null
+  return buckets.hoy.find(conHora) ?? buckets.manana.find(conHora) ?? null
 }
 
 /**
