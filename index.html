@@ -27,8 +27,15 @@
       antes del primer paint) cuando la información recién empieza a
       montarse dentro de #root — la habitación aparece primero, nunca al
       revés (Sprint "Arrival").
+
+      Sprint 020 (World Visual Foundation): room-layer-photo es la base —
+      la foto North Star (public/room/estudio-hero.png) que hasta ahora
+      solo existía como asset sin usar. Ventana y lámpara siguen encima,
+      ahora como el acento de luz que respira sobre la foto real, no como
+      la habitación entera.
     -->
     <div aria-hidden class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+      <div class="room-layer-photo absolute inset-0"></div>
       <div class="room-layer room-layer-window absolute inset-0"></div>
       <div class="room-layer room-layer-lamp absolute inset-0"></div>
       <div class="room-layer-grain absolute inset-0"></div>

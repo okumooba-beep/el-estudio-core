@@ -248,6 +248,39 @@ html.light-boot *::after {
 }
 
 /*
+  Sprint 020 (World Visual Foundation): la foto North Star ya vivía en
+  public/room/estudio-hero.png (Fase 2 "El Estudio", ver stations.ts) pero
+  ningún componente real la montaba nunca — el motor de cámara que la
+  usaba (SceneStage/useCameraRig) no llegó a construirse, solo quedó su
+  CSS. En vez de resucitar ese motor (navegación nueva, arquitectura
+  nueva, fuera de alcance), la foto pasa a ser la base del .room-layer-*
+  que sí está vivo en cada ruta: un div más, mismo mecanismo, cero
+  duplicación. El degradado va DENTRO del mismo background-image (dos
+  capas en un solo elemento) para que la foto nunca compita con el texto
+  que flota encima en /,/misiones,/habitos,/finanzas,/agenda — ninguna de
+  esas pantallas tiene tarjeta opaca propia (AppShell.tsx <main> es
+  transparente), así que la habitación ES el fondo real del texto, no un
+  wallpaper detrás de una tarjeta.
+*/
+.room-layer-photo {
+  background-image:
+    linear-gradient(180deg, rgba(12, 9, 7, 0.4) 0%, rgba(12, 9, 7, 0.5) 45%, rgba(12, 9, 7, 0.68) 100%),
+    url('/room/estudio-hero.png');
+  background-repeat: no-repeat, no-repeat;
+  /*
+    La foto es 3:2 (1536x1024). En mobile (retrato) `cover` encuadra por
+    alto y recorta el ancho a una tira ~31% central — 40% deja ese recorte
+    sobre escritorio + monitores + un borde de ventana/bosque, en vez de
+    caer sobre la estantería (80–100%, fuera de la tira) o el sofá
+    (0–25%, también fuera). En desktop (ancho ≥ alto*1.5) `cover` recorta
+    por ancho y se ve casi toda la foto entera, así que la misma posición
+    sigue funcionando sin una regla aparte.
+  */
+  background-position: 40% center, 40% center;
+  background-size: cover, cover;
+}
+
+/*
   Sprint "Framing the Studio": la ventana deja de ser un resplandor sin
   forma y pasa a ser arquitectura — un vano real con marco y parteluces,
   no solo luz ambiente. Sigue viviendo en el mismo div de siempre
@@ -287,8 +320,18 @@ html.light-boot *::after {
     Nunca se toca --window-opacity ni light/lightEngine.ts (la curva de
     luz real del día): esto solo ajusta cuánto de esa luz llega a
     pintarse encima del contenido, el mismo lever ya usado arriba.
+
+    Sprint 020 (World Visual Foundation): baja otra vez (0.45 → 0.2).
+    Antes esta franja fría ERA la única ventana que existía — ahora hay
+    una foto real de bosque debajo (.room-layer-photo) en la misma
+    posición (worldMap.ventana x:17 y:15, la coordenada que ya la
+    alineaba con la foto desde antes de que la foto se usara). Al 0.45
+    de antes, este resplandor celeste lavaba el verde del bosque real
+    hacia gris-azulado — exactamente el problema que este sprint corrige.
+    Ahora es solo el acento que respira con la hora del día sobre una
+    ventana que ya es de verdad.
   */
-  opacity: calc(var(--window-opacity, 0.3) * 0.45);
+  opacity: calc(var(--window-opacity, 0.3) * 0.2);
   animation: light-breathe-window 71s ease-in-out infinite;
 }
 
@@ -341,6 +384,29 @@ html.light-boot *::after {
 @media (min-width: 768px) {
   .room-layer-window {
     clip-path: inset(0 0 0 calc(max(0px, (100vw - 72rem) / 2) + 15rem));
+  }
+}
+
+/*
+  Sprint 020 (World Visual Foundation): el clip de arriba solo protegía
+  el nav de escritorio (aside, ≥768px) — en mobile este resplandor nunca
+  tuvo un límite. Invisible cuando atrás solo había --canvas casi negro;
+  ahora que .room-layer-photo trae una foto real, el mismo problema que
+  "Framing the Studio" ya resolvió para el nav y Sprint 018 para el
+  saludo de Hoy aparece en el resto de las pantallas: en mobile no hay
+  aside que empuje el contenido, así que el título de cada pantalla
+  arranca en la misma esquina superior izquierda donde vive esta
+  ventana por defecto. Un clip-path deja un borde recto y duro — se lee
+  como panel, justo lo que este sprint corrige. La solución ya probada
+  es la de Hoy: mover la ventana a la esquina donde no hay texto, no
+  recortarla. Acá se generaliza esa misma idea (misma técnica, sin
+  tocar el override de Hoy) a cualquier pantalla que no sea Hoy.
+*/
+@media (max-width: 767px) {
+  .room-layer-window {
+    background-position:
+      94% 4%,
+      85% 13%;
   }
 }
 
