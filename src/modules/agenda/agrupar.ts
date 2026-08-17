@@ -208,6 +208,20 @@ export function proximoItem(buckets: Buckets): AgendaItem | null {
 }
 
 /**
+ * Sprint 023 ("Agenda: separar Hoy de compromisos futuros"): el
+ * siguiente compromiso más allá de hoy/mañana — mismo bucket que ya
+ * arma `agruparPorCuando` (`estaSemana`, ya ordenado por fecha/hora),
+ * nunca un cálculo temporal nuevo. Nunca reemplaza a `proximoItem()`:
+ * esa sigue siendo la única fuente de "Próximo" (hoy/mañana); esto es
+ * información adicional sobre lo que viene después, para que un
+ * compromiso lejano (p. ej. "24 de agosto" visto un 17) tenga una
+ * forma clara de asomar sin mezclarse con la agenda de hoy.
+ */
+export function proximoCompromisoFuturo(buckets: Buckets): AgendaItem | null {
+  return buckets.estaSemana[0] ?? null
+}
+
+/**
  * La semana calendario (lunes a domingo) que contiene `hoy` — el lienzo
  * de Planificación semanal. Es la semana real, no "los próximos 7
  * días": un domingo mira hacia atrás a su lunes, no hacia adelante.

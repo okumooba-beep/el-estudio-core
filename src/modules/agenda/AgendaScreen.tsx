@@ -3,7 +3,7 @@ import { useIdeas } from '@modules/work-table/public'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useAgenda } from './useAgenda'
 import { extraerFecha, extraerHora, interpretarEvento } from './extraccionFecha'
-import { aItems, agruparPorCuando, proximoItem, semanaCalendario, type AgendaItem } from './agrupar'
+import { aItems, agruparPorCuando, proximoItem, proximoCompromisoFuturo, semanaCalendario, type AgendaItem } from './agrupar'
 import { calcularConflictosDia } from './conflictos'
 import { formatearHora12 } from '@shared-kernel/text/interpretarTexto'
 import type { AgendaEvento, AgendaBloque, AgendaPrioridad } from '@/types/agenda'
@@ -124,6 +124,7 @@ export function AgendaScreen() {
    * en "Planificación semanal".
    */
   const proximo = useMemo(() => proximoItem(buckets), [buckets])
+  const proximamente = useMemo(() => proximoCompromisoFuturo(buckets), [buckets])
   /** Sprint 015.2, punto 1: única referencia de "hoy" — fecha real del dispositivo, nunca la semana/día seleccionado. */
   const hoyISO = new Date().toISOString().slice(0, 10)
   const semana = useMemo(() => semanaCalendario(hoyISO, semanaOffset), [hoyISO, semanaOffset])
@@ -412,7 +413,7 @@ export function AgendaScreen() {
     )
   }
 
-  const sinNada = buckets.ahora.length === 0 && buckets.atrasado.length === 0 && !proximo
+  const sinNada = buckets.ahora.length === 0 && buckets.atrasado.length === 0 && !proximo && !proximamente
 
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10">
@@ -432,6 +433,19 @@ export function AgendaScreen() {
           <Seccion titulo="Ahora" items={buckets.ahora} onCompletar={completar} onAlarma={alternarAlarma} onPrioridad={ciclarPrioridad} />
           <Seccion titulo="Próximo" items={proximo ? [proximo] : []} onCompletar={completar} onAlarma={alternarAlarma} onPrioridad={ciclarPrioridad} />
           <Seccion titulo="Atrasado" items={buckets.atrasado} onCompletar={completar} onAlarma={alternarAlarma} onPrioridad={ciclarPrioridad} />
+          {proximamente ? (
+            <section>
+              <h2 className="mb-1 font-mono text-[11px] uppercase tracking-wide text-accent">Próximamente</h2>
+              <p className="text-[15px] leading-snug text-ink">
+                {proximamente.tipo === 'mision' ? '□ ' : ''}
+                {proximamente.texto}
+              </p>
+              <p className="text-[12.5px] text-ink-faint">
+                {nombreDia(proximamente.fecha)}
+                {proximamente.hora ? ` · ${formatearHora12(proximamente.hora)}` : ''}
+              </p>
+            </section>
+          ) : null}
         </>
       )}
     </div>
