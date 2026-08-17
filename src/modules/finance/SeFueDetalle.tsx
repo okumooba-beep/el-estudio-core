@@ -16,6 +16,8 @@ interface SeFueDetalleProps {
   movimientos: readonly FinanceMovimiento[]
   /** Al llegar desde el anillo/lista de categorías del resumen, abre directo en esa categoría. */
   categoriaInicial: FinanceCategoria | null
+  /** Sprint 026: corrige la categoría de un movimiento ya existente, sin borrarlo y recrearlo. */
+  onCambiarCategoria: (movimiento: FinanceMovimiento, categoria: FinanceCategoria) => void
   onCerrar: () => void
 }
 
@@ -27,7 +29,16 @@ interface SeFueDetalleProps {
  * quien abre este detalle (FinanceScreen), y volver a la lista de
  * categorías no cierra el detalle ni cambia el período.
  */
-export function SeFueDetalle({ moneda, periodoLabel, total, grupos, movimientos, categoriaInicial, onCerrar }: SeFueDetalleProps) {
+export function SeFueDetalle({
+  moneda,
+  periodoLabel,
+  total,
+  grupos,
+  movimientos,
+  categoriaInicial,
+  onCambiarCategoria,
+  onCerrar,
+}: SeFueDetalleProps) {
   const [categoria, setCategoria] = useState<FinanceCategoria | null>(categoriaInicial)
 
   if (categoria) {
@@ -48,7 +59,12 @@ export function SeFueDetalle({ moneda, periodoLabel, total, grupos, movimientos,
         </section>
         <ul className="flex flex-col">
           {deLaCategoria.map((movimiento) => (
-            <MovimientoRow key={movimiento.id} movimiento={movimiento} moneda={moneda} />
+            <MovimientoRow
+              key={movimiento.id}
+              movimiento={movimiento}
+              moneda={moneda}
+              onCambiarCategoria={(nuevaCategoria) => onCambiarCategoria(movimiento, nuevaCategoria)}
+            />
           ))}
         </ul>
       </div>

@@ -217,6 +217,7 @@ export function FinanceScreen() {
           grupos={gruposDelPeriodo}
           movimientos={movimientosDelPeriodo}
           categoriaInicial={categoriaDetalle}
+          onCambiarCategoria={corregirCategoria}
           onCerrar={cerrarDetalle}
         />
       </div>
