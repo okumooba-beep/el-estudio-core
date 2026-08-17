@@ -345,6 +345,55 @@ html.light-boot *::after {
 }
 
 /*
+  Sprint 018 ("Home: recuperar el lugar"): en Home el vano/parteluz de
+  .room-layer-window (que en el resto de la app queda detrás de
+  contenido más angosto o corrido, ver el clip-path de arriba) caía
+  directo sobre el saludo, la voz ambiental y la lectura del día —
+  literalmente una línea de parteluz atravesando texto real, el mismo
+  problema de legibilidad que "Framing the Studio" ya resolvió para el
+  nav, ahora en el flujo vertical propio de Home. Nunca se toca la
+  forma ni la posición del gradiente (siguen fijas, worldMap.ventana
+  x:17 y:15): solo se recorta qué porción de esa ventana ya existente
+  llega a pintarse sobre Home, para que la luz quede como presencia de
+  esquina superior derecha en vez de un haz sobre el bloque de texto.
+  html[data-route="hoy"] es del mismo tamaño que .room-layer-window en
+  todas las demás pantallas — cero cambio fuera de Home.
+*/
+html[data-route='hoy'] .room-layer-window {
+  background-position:
+    92% 0%,
+    88% 0%;
+  clip-path: inset(0 0 55% 0);
+}
+
+html[data-route='hoy'] .room-layer-window::before {
+  left: 89.6%;
+}
+
+html[data-route='hoy'] .room-layer-window::after {
+  left: 78%;
+  top: 0%;
+}
+
+@media (min-width: 768px) {
+  html[data-route='hoy'] .room-layer-window {
+    clip-path: inset(0 0 0 calc(max(0px, (100vw - 72rem) / 2) + 15rem));
+    background-position:
+      6% 5%,
+      17% 15%;
+  }
+
+  html[data-route='hoy'] .room-layer-window::before {
+    left: 17.6%;
+  }
+
+  html[data-route='hoy'] .room-layer-window::after {
+    left: 6%;
+    top: 26%;
+  }
+}
+
+/*
   El piso: sin esta capa el escritorio flotaba en un fondo sin
   profundidad. Un solo degradado vertical, fijo, que oscurece el tercio
   inferior de la escena — el mismo truco de "viñeta como profundidad"

@@ -1,4 +1,5 @@
-import { Route, Routes } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Route, Routes, useLocation } from 'react-router-dom'
 import { AppShell } from '@/components/layout/AppShell'
 import { RoomBackground } from '@/components/room/RoomBackground'
 import { HoyScreen } from '@modules/today/HoyScreen'
@@ -15,8 +16,35 @@ import { MaterialInspector } from '@/dev-tools/material-inspector/MaterialInspec
 import { DesignSystemGallery } from '@/features/dev/DesignSystemGallery'
 import { useAmbientLight } from '@world/light/useAmbientLight'
 
+/**
+ * Sprint 018 ("Home: recuperar el lugar"): RoomBackground se monta una
+ * sola vez fuera de las rutas (ver abajo), así que la ventana/lámpara
+ * son un único mecanismo global sin forma de reaccionar por pantalla.
+ * En vez de tocar ese motor compartido (afectaría a Misiones, Agenda,
+ * etc.) o reescribirlo, se refleja la ruta activa en el DOM — mismo
+ * mecanismo ya usado por setGaze() (html[data-gaze], ver
+ * packages/world/world/gaze.ts) — para que src/index.css pueda acotar
+ * un ajuste solo a Home (html[data-route="hoy"]) sin cambiar nada del
+ * resto de la app.
+ */
+function useRouteAttribute() {
+  const location = useLocation()
+  useEffect(() => {
+    const route = location.pathname === '/' ? 'hoy' : null
+    if (route) {
+      document.documentElement.dataset.route = route
+    } else {
+      delete document.documentElement.dataset.route
+    }
+    return () => {
+      delete document.documentElement.dataset.route
+    }
+  }, [location.pathname])
+}
+
 function App() {
   useAmbientLight()
+  useRouteAttribute()
 
   return (
     <>
