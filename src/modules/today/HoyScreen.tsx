@@ -74,18 +74,29 @@ import { useMisionesPrincipales } from '@modules/missions/public'
  * Sprint 015.1 ("Recuperar el alma de Home"): Sprint 015 acertó en la
  * información pero la presentación se sentía como un dashboard.
  * `PhraseSlot` (voz ambiental de Ideas, `voiceEngine`) vuelve a esta
- * pantalla en una posición secundaria, debajo del saludo — es identidad
- * del lugar, no información funcional, y por eso nunca reemplaza a
- * `FraseHoy` (que sigue siendo la lectura determinista del día): las dos
- * conviven porque responden preguntas distintas ("¿qué es este lugar?"
- * vs. "¿cómo está mi día?"), punto 1/2. La lista de "Espacios" (todos
- * los módulos con ícono y navegación) se deja de mostrar acá — ya están
- * a un toque de distancia por la navegación existente y repetirlos
- * convertía a Home en un menú (punto 10); `Spaces.tsx` sigue existiendo
- * sin importar de acá, mismo criterio que MisionPrincipal/HabitsGlance/
- * RecentActivity/ContinueWorking. Cada sección se oculta sola cuando no
- * hay nada relevante (punto 2, punto 10) — Home nunca fuerza un bloque
- * vacío.
+ * pantalla — es identidad del lugar, no información funcional, y por eso
+ * nunca reemplaza a `FraseHoy` (que sigue siendo la lectura determinista
+ * del día): las dos conviven porque responden preguntas distintas ("¿qué
+ * es este lugar?" vs. "¿cómo está mi día?"), punto 1/2. La lista de
+ * "Espacios" (todos los módulos con ícono y navegación) se deja de
+ * mostrar acá — ya están a un toque de distancia por la navegación
+ * existente y repetirlos convertía a Home en un menú (punto 10);
+ * `Spaces.tsx` sigue existiendo sin importar de acá, mismo criterio que
+ * MisionPrincipal/HabitsGlance/RecentActivity/ContinueWorking. Cada
+ * sección se oculta sola cuando no hay nada relevante (punto 2, punto
+ * 10) — Home nunca fuerza un bloque vacío.
+ *
+ * Sprint 021 ("Frase ambiental — sacarla del flujo funcional"): PhraseSlot
+ * vivía pegado al saludo, dentro del mismo bloque que fecha + estado del
+ * día — visualmente se leía como un dato más de esa jerarquía funcional,
+ * justo lo que Sprint 015.1 quería evitar. Baja al cierre del flujo, después
+ * de Atención, fuera de cualquier bloque con gap fijo entre título y
+ * contenido: ahí no compite con saludo/fecha/estado/captura/AHORA-PRÓXIMO/
+ * atención — es lo último que aparece, como una nota que queda en el
+ * escritorio después de que ya se leyó todo lo funcional, no una línea más
+ * de esa lista. Sigue devolviendo `null` sin renderizar nada cuando no hay
+ * frase (ver PhraseSlot.tsx), así que el `gap-10` del contenedor no reserva
+ * espacio para ella cuando falta.
  */
 export function HoyScreen() {
   const { ahora, proximo, atencion, resumen, ready } = useAgendaHoy()
@@ -96,9 +107,6 @@ export function HoyScreen() {
       <div className="flex flex-col gap-6">
         <div>
           <HoyHeader />
-          <div className="mt-4">
-            <PhraseSlot />
-          </div>
           <FraseHoy atencion={atencion} resumen={resumen} ready={ready} />
         </div>
         <IdeaCapture />
@@ -106,6 +114,7 @@ export function HoyScreen() {
       <Proximo ahora={ahora} proximo={proximo} ready={ready} />
       <MisionesPrincipales misiones={misionesPrincipales} />
       <AttentionSummary atencion={atencion} />
+      <PhraseSlot />
     </div>
   )
 }
