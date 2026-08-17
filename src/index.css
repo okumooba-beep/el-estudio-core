@@ -2381,6 +2381,7 @@ html[data-route='hoy'] .room-layer-window::after {
 .habito-nombre {
   min-width: 0;
   font-size: 15px;
+  line-height: 1.35;
   color: var(--ink);
   cursor: text;
   outline: none;
@@ -2504,6 +2505,48 @@ html[data-route='hoy'] .room-layer-window::after {
 
 .habito-nuevo-input::placeholder {
   color: var(--ink-faint);
+}
+
+/*
+  Sprint 024 ("Hábitos: recuperar legibilidad, jerarquía y sentido de
+  la pantalla"): en mobile, 7 columnas de día a 2rem + la columna de
+  acciones ya consumían el ancho de contenido completo (~350px en un
+  viewport de 390px), sin dejar nada para la columna de nombre — un
+  nombre de una sola letra por línea ("G / i / m / n / a / s / i / o"),
+  no un bug de alineación sino de presupuesto de ancho. Encoger los
+  días/gap/acciones acá (nunca tocando el grid de escritorio, que
+  sobra de espacio) es lo mínimo para que el nombre —la prioridad
+  visual #1 del brief— tenga una columna real donde vivir.
+*/
+@media (max-width: 767px) {
+  .habito-tabla {
+    grid-template-columns: minmax(0, 1fr) repeat(7, 1.4rem) auto;
+    column-gap: 0.3rem;
+  }
+
+  .habito-tabla-dia-cabecera {
+    font-size: 9.5px;
+  }
+
+  .habito-dia {
+    width: 1.4rem;
+    height: 1.4rem;
+    font-size: 15px;
+  }
+
+  .habito-acciones {
+    gap: 0.1rem;
+  }
+
+  .habito-mover {
+    padding: 0.1rem 0.2rem;
+    font-size: 10px;
+  }
+
+  .habito-archivar {
+    padding: 0.15rem 0.25rem;
+    font-size: 13px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

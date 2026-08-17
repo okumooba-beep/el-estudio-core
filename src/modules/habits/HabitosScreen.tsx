@@ -191,6 +191,16 @@ export function HabitosScreen() {
               {letra}
             </span>
           ))}
+          {/*
+            Sprint 024: el grid tiene 9 columnas (nombre + 7 días +
+            acciones), pero el encabezado solo listaba 8 celdas (vacío +
+            7 días) — sin esta novena celda, el auto-placement de CSS
+            Grid metía el primer nombre de hábito (ej. "Gimnasio") en el
+            hueco sobrante de la fila 1, y corría cada fila siguiente una
+            columna entera. Esta celda vacía es la causa raíz, no un
+            ajuste visual.
+          */}
+          <span className="habito-tabla-vacio" aria-hidden="true" />
 
           {habitos.map((habito, indice) => (
             <Fragment key={habito.id}>
