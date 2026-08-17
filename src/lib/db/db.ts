@@ -236,6 +236,30 @@ class LifeosDB extends Dexie {
       agendaEventos: 'id, createdAt, fecha, ideaId',
       agendaBloques: 'id, createdAt, dia',
     })
+
+    /**
+     * Sprint 022 — "Misiones: principales, secundarias y futuro": ninguna
+     * misión creada antes de Sprint 016.2 tiene `misionPrincipal` en su
+     * fila (el campo no existía). Esto ya se lee correctamente hoy —
+     * `seleccionarSecundarias` trata `misionPrincipal !== true`, así que
+     * `undefined` ya cae en Secundaria, igual que `false` — así que esta
+     * migración no cambia ningún resultado visible; solo hace explícito
+     * en el dato lo que el código ya asumía. No toca `programadaFecha`,
+     * `texto` ni ninguna otra columna, y solo escribe filas de `destino
+     * === 'misiones'` que todavía tienen el campo sin definir — correr
+     * esto una segunda vez no encuentra ninguna fila que cumpla el filtro,
+     * así que no vuelve a escribir nada (idempotente).
+     */
+    this.version(12)
+      .stores({})
+      .upgrade(async (tx) => {
+        await tx
+          .table<Idea, string>('ideas')
+          .where('destino')
+          .equals('misiones')
+          .filter((idea) => idea.misionPrincipal === undefined)
+          .modify({ misionPrincipal: false })
+      })
   }
 }
 
