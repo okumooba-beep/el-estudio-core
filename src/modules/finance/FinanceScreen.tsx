@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useIdeas } from '@modules/work-table/public'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useFinance } from './useFinance'
@@ -71,8 +71,28 @@ export function FinanceScreen() {
     () => new Set(movimientos.map((movimiento) => movimiento.ideaId).filter(Boolean)),
     [movimientos],
   )
+  /**
+   * Sprint 025: `convertidas` solo sabe de una Idea ya pasada a
+   * Movimiento una vez que `addMovimiento` (async: escribe en IndexedDB
+   * y recién después hace `setMovimientos`) termina y ese estado se
+   * re-renderiza. Si el efecto de abajo se dispara una segunda vez ANTES
+   * de que ese viaje de ida y vuelta termine (StrictMode remonta cada
+   * efecto una vez en desarrollo; lo mismo puede pasar en producción con
+   * dos renders seguidos por cambios independientes de `ideas`, que es
+   * un store compartido a nivel de módulo), `pendientes` seguía
+   * incluyendo la misma Idea y se creaba un segundo FinanceMovimiento
+   * real con el mismo `ideaId` — la duplicación visible ("Gasté 87k en
+   * Ropa" x2) no era de render, eran dos registros de verdad. Mismo
+   * patrón ya probado en AgendaScreen.tsx (Sprint 017.1): esta ref marca
+   * una Idea como "en conversión" en el mismo instante síncrono en que
+   * se decide convertirla, así una segunda pasada del efecto no la
+   * vuelve a tomar mientras la primera todavía está en vuelo.
+   */
+  const enConversion = useRef<Set<string>>(new Set())
   /** Capturas que el Umbral mandó acá y todavía no encontraron un monto. */
-  const pendientes = ideas.filter((idea) => idea.destino === 'finanzas' && !convertidas.has(idea.id))
+  const pendientes = ideas.filter(
+    (idea) => idea.destino === 'finanzas' && !convertidas.has(idea.id) && !enConversion.current.has(idea.id),
+  )
   const sinMonto = pendientes.filter((idea) => extraerMovimiento(idea.texto).montos.length === 0)
 
   useEffect(() => {
@@ -80,6 +100,7 @@ export function FinanceScreen() {
     for (const idea of pendientes) {
       const extraido = extraerMovimiento(idea.texto)
       if (extraido.montos.length === 0) continue
+      enConversion.current.add(idea.id)
       for (const montoExtraido of extraido.montos) {
         void addMovimiento({
           tipo: extraido.tipo,

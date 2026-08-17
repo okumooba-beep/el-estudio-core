@@ -53,6 +53,30 @@ describe('extraerCategoria', () => {
     expect(resultado.categoria).toBeNull()
     expect(resultado.segura).toBe(false)
   })
+
+  /**
+   * Sprint 025: "gasté"/"gasto" contienen la substring 'gas' (palabra
+   * clave de servicios) — antes de la coincidencia por borde de palabra
+   * esto ganaba de mano a la categoría real en cualquier frase que
+   * empezara con ese verbo, sin importar de qué se tratara el gasto.
+   */
+  it.each([
+    ['Gasté 30k en arreglo de focos delanteros del auto', 'auto'],
+    ['Gasté 87k en ropa', 'ropa'],
+    ['Gasto de zapatillas nuevas', 'ropa'],
+    ['Gasté 15k en el cine', 'ocio'],
+    ['Gasté 20k en el gimnasio', 'ocio'],
+  ])('%s → %s (no cae en servicios por "gas")', (texto, esperado) => {
+    expect(extraerCategoria(texto).categoria).toBe(esperado)
+  })
+
+  it('"gas" como palabra real sigue siendo servicios', () => {
+    expect(extraerCategoria('Pagué el gas').categoria).toBe('servicios')
+  })
+
+  it('café no se rompe por el borde de palabra con tilde', () => {
+    expect(extraerCategoria('Un café con amigos').categoria).toBe('comida')
+  })
 })
 
 describe('extraerMovimiento', () => {

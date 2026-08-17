@@ -130,10 +130,25 @@ export function extraerMedio(texto: string): Medio {
   return 'transferencia'
 }
 
+/**
+ * Sprint 025: coincidencia de palabra completa, no substring suelto.
+ * Antes `normalizado.includes('gas')` (servicios) matcheaba adentro de
+ * "gasté"/"gasto" — cualquier egreso escrito con ese verbo caía en
+ * Servicios sin importar de qué se tratara en realidad ("Gasté 30k
+ * arreglando el auto" nunca llegaba a probar la palabra "auto"). Los
+ * lookaround de borde usan `\p{L}\p{N}` (no `\b`) porque `\b` de JS no
+ * trata letras acentuadas como parte de la palabra y rompe con "café",
+ * "óptica", etc.
+ */
+function contienePalabra(texto: string, palabra: string): boolean {
+  const escapada = palabra.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const patron = new RegExp(`(?<![\\p{L}\\p{N}])${escapada}(?![\\p{L}\\p{N}])`, 'iu')
+  return patron.test(texto)
+}
+
 export function extraerCategoria(texto: string): { categoria: FinanceCategoria | null; segura: boolean } {
-  const normalizado = texto.toLowerCase()
   for (const [categoria, palabras] of Object.entries(CATEGORIA_LEXICO)) {
-    if (palabras.some((palabra) => normalizado.includes(palabra))) {
+    if (palabras.some((palabra) => contienePalabra(texto, palabra))) {
       return { categoria: categoria as FinanceCategoria, segura: true }
     }
   }

@@ -16,13 +16,14 @@ export type FinanceCategoria =
   | 'servicios'
   | 'suscripciones'
   | 'alquiler'
+  | 'ropa'
   | 'ocio'
   | 'inversion'
   | 'ahorro'
 
 export const CATEGORIAS: readonly FinanceCategoria[] = [
   'comida', 'auto', 'salud', 'servicios', 'suscripciones',
-  'alquiler', 'ocio', 'inversion', 'ahorro',
+  'alquiler', 'ropa', 'ocio', 'inversion', 'ahorro',
 ]
 
 export const CATEGORIA_LABEL: Record<FinanceCategoria, string> = {
@@ -32,6 +33,7 @@ export const CATEGORIA_LABEL: Record<FinanceCategoria, string> = {
   servicios: 'Servicios',
   suscripciones: 'Suscripciones',
   alquiler: 'Alquiler',
+  ropa: 'Ropa',
   ocio: 'Ocio',
   inversion: 'Inversión',
   ahorro: 'Ahorro',
@@ -51,6 +53,7 @@ export const CATEGORIA_COLOR: Record<FinanceCategoria, string> = {
   servicios: '#8A7F70',
   suscripciones: '#7E6A8F',
   alquiler: '#8C5F4A',
+  ropa: '#6F8299',
   ocio: '#C99A55',
   inversion: '#6FAE85',
   ahorro: '#5C8C7A',
@@ -60,12 +63,20 @@ export const CATEGORIA_COLOR: Record<FinanceCategoria, string> = {
  * Palabras que delatan la categoría. No pretende ser exhaustivo: lo que
  * no matchea pasa a "Por revisar" y se corrige de un toque, que es más
  * barato que un léxico enorme lleno de falsos positivos.
+ *
+ * Sprint 025: cada palabra se compara con borde de palabra completa
+ * (ver `contienePalabra` en extraccion.ts), nunca como substring suelto
+ * — antes 'gas' (servicios) matcheaba dentro de "gasté"/"gasto"/"gasté"
+ * y le ganaba de mano a la categoría real (auto, ropa, ocio) en
+ * cualquier frase que empezara con ese verbo, sin importar el orden de
+ * este objeto. Ver comentario de `contienePalabra`.
  */
 export const CATEGORIA_LEXICO: Record<FinanceCategoria, readonly string[]> = {
   comida: ['super', 'súper', 'supermercado', 'almuerzo', 'cena', 'desayuno', 'comida', 'café', 'cafe',
     'restaurante', 'delivery', 'verduler', 'carnicer', 'panader', 'kiosco', 'mercado', 'pedido'],
-  auto: ['nafta', 'gasolina', 'combustible', 'aceite', 'peaje', 'cochera', 'estacionamiento', 'neumático',
-    'neumatico', 'cubierta', 'taller', 'mecánico', 'mecanico', 'patente', 'seguro del auto', 'lavado', 'vtv'],
+  auto: ['auto', 'autos', 'nafta', 'gasolina', 'combustible', 'aceite', 'peaje', 'cochera', 'estacionamiento',
+    'neumático', 'neumatico', 'cubierta', 'taller', 'mecánico', 'mecanico', 'patente', 'seguro del auto',
+    'lavado', 'vtv', 'foco delantero', 'focos delanteros'],
   salud: ['farmacia', 'remedio', 'medicamento', 'obra social', 'prepaga', 'dentista', 'odontólog',
     'odontolog', 'consulta', 'análisis', 'analisis', 'kinesi', 'óptica', 'optica'],
   servicios: ['luz', 'gas', 'agua', 'internet', 'wifi', 'teléfono', 'telefono', 'celular', 'expensas',
@@ -73,8 +84,11 @@ export const CATEGORIA_LEXICO: Record<FinanceCategoria, readonly string[]> = {
   suscripciones: ['suscripción', 'suscripcion', 'netflix', 'spotify', 'youtube', 'membresía', 'membresia',
     'plan mensual', 'chatgpt', 'claude', 'icloud', 'drive'],
   alquiler: ['alquiler', 'renta', 'depósito del depto', 'deposito del depto'],
+  ropa: ['ropa', 'remera', 'remeras', 'pantalón', 'pantalon', 'pantalones', 'campera', 'zapatilla',
+    'zapatillas', 'zapato', 'zapatos', 'calzado', 'indumentaria', 'buzo', 'camisa', 'vestido', 'pollera',
+    'jean', 'jeans'],
   ocio: ['cine', 'salida', 'bar', 'boliche', 'birra', 'cerveza', 'juego', 'concierto', 'recital',
-    'viaje', 'hotel', 'regalo', 'ropa', 'gimnasio'],
+    'viaje', 'hotel', 'regalo', 'gimnasio'],
   inversion: ['inversión', 'inversion', 'invertí', 'inverti', 'acciones', 'bono', 'cedear', 'cripto',
     'bitcoin', 'broker', 'plazo fijo'],
   ahorro: ['ahorro', 'ahorré', 'ahorre', 'guardé', 'guarde', 'reserva'],
