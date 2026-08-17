@@ -5,6 +5,8 @@ import { useFinance } from './useFinance'
 import { AnilloCategorias } from './AnilloCategorias'
 import { EntroDetalle } from './EntroDetalle'
 import { SeFueDetalle } from './SeFueDetalle'
+import { MovimientoRow } from './MovimientoRow'
+import { NuevoMovimiento } from './NuevoMovimiento'
 import { CATEGORIAS, CATEGORIA_COLOR, CATEGORIA_LABEL, type FinanceCategoria } from './categorias'
 import { extraerMovimiento, type Moneda } from './extraccion'
 import {
@@ -19,9 +21,10 @@ import {
   semanaDelMes,
 } from './mes'
 import type { FinanceMovimiento } from '@/types/finance'
+import type { NuevaFinanceMovimiento } from './financeRepository'
 
 type Vista = 'semana' | 'mes'
-type Detalle = 'entro' | 'sefue' | null
+type Detalle = 'entro' | 'sefue' | 'nuevo' | null
 
 /**
  * Finanzas (Sprint 007 — "Comprender el movimiento del dinero"),
@@ -37,10 +40,17 @@ type Detalle = 'entro' | 'sefue' | null
  * quedó) pero con `categoria: null` — "Por revisar", nunca "Otros" — y
  * se corrige con un toque, no con un formulario.
  *
- * Nunca hay botón de crear movimiento acá (Principio fundamental): todo
- * nace en El Umbral. Lo único que sigue esperando es lo que no trae
- * número — ahí no hay nada que registrar todavía, solo pedir que se
- * reescriba con la cifra.
+ * Sprint 019 ("Finanzas como herramienta de control real"): el Umbral
+ * sigue siendo la única puerta para capturar una idea o intención suelta
+ * ("Tengo que comprar un destapacañerías"), y el efecto de arriba sigue
+ * siendo el único camino automático — acá no se corrige nada a mano. Lo
+ * que cambia es que cuando el usuario ya sabe que está registrando una
+ * operación financiera ("Gasté 18.000 en supermercado"), "+ Movimiento"
+ * (ver NuevoMovimiento.tsx) le permite anotarla directo, sin pasar por
+ * el Umbral — mismo financeMovimientoRepository.add() que ya usa el
+ * efecto de abajo, ninguna escritura paralela. Lo único que sigue
+ * esperando en "Sin monto" es lo que no trae número: ahí no hay nada que
+ * registrar todavía, solo pedir que se reescriba con la cifra.
  *
  * La pantalla responde primero Entró/Se fue/Te quedó (Experiencia) y
  * solo la vista mensual agrega desglose por categoría y % de ahorro —
@@ -110,6 +120,30 @@ export function FinanceScreen() {
 
   if (!ready) return null
 
+  function cerrarDetalle() {
+    setDetalle(null)
+    setCategoriaDetalle(null)
+  }
+
+  /**
+   * Sprint 019: registrar un movimiento no depende de que ya exista
+   * algo en Finanzas — tiene que poder abrirse incluso desde el estado
+   * vacío (ver más abajo, botón "+ Movimiento" junto al EmptyState), así
+   * que este chequeo va antes de `sinNada`, no después.
+   */
+  async function guardarMovimiento(input: NuevaFinanceMovimiento) {
+    await addMovimiento(input)
+    cerrarDetalle()
+  }
+
+  if (detalle === 'nuevo') {
+    return (
+      <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10">
+        <NuevoMovimiento monedaDefault={moneda} onGuardar={guardarMovimiento} onCerrar={cerrarDetalle} />
+      </div>
+    )
+  }
+
   const nombreMes = new Date(`${mes}-02`).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
   /** Sprint 016.1, punto 15: mismo texto que ya arma el header acá abajo, para que Entró/Se fue nunca pierdan de vista qué período están mostrando al entrar en un detalle. */
   const periodoLabel = vista === 'semana' ? `Semana ${semanaActual} · ${etiquetaSemana(mes, semanaActual)}` : nombreMes
@@ -117,10 +151,15 @@ export function FinanceScreen() {
 
   if (sinNada) {
     return (
-      <EmptyState
-        title="Todavía no se movió un peso."
-        description="Escribí un gasto en el Umbral — “Gasté 80k en gasolina” — y el Estudio lo trae acá con su categoría."
-      />
+      <div className="mx-auto flex max-w-xl flex-col items-center gap-4 pb-10">
+        <EmptyState
+          title="Todavía no se movió un peso."
+          description="Escribí un gasto en el Umbral — “Gasté 80k en gasolina” — y el Estudio lo trae acá con su categoría."
+        />
+        <button type="button" className="idea-destino" onClick={() => setDetalle('nuevo')}>
+          + Movimiento
+        </button>
+      </div>
     )
   }
 
@@ -130,11 +169,6 @@ export function FinanceScreen() {
   const movimientosDelPeriodo = vista === 'semana' ? semanal.movimientos : resumen.movimientos
   const gruposDelPeriodo = vista === 'semana' ? semanal.grupos : resumen.grupos
   const registradoHastaHoy = estaEnCurso(mes)
-
-  function cerrarDetalle() {
-    setDetalle(null)
-    setCategoriaDetalle(null)
-  }
 
   if (detalle === 'entro') {
     return (
@@ -339,6 +373,28 @@ export function FinanceScreen() {
           ) : null}
         </section>
       ) : null}
+
+      {movimientosDelPeriodo.length > 0 ? (
+        <section className="flex flex-col gap-1.5">
+          <h2 className="mb-1 font-mono text-[11px] uppercase tracking-wide text-accent">Movimientos recientes</h2>
+          <ul className="flex flex-col">
+            {movimientosDelPeriodo.slice(0, 5).map((movimiento) => (
+              <MovimientoRow
+                key={movimiento.id}
+                movimiento={movimiento}
+                moneda={moneda}
+                signo={movimiento.tipo === 'ingreso' ? '+' : ''}
+              />
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      <section className="flex justify-center pt-1">
+        <button type="button" className="idea-destino" onClick={() => setDetalle('nuevo')}>
+          + Movimiento
+        </button>
+      </section>
     </div>
   )
 }

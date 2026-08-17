@@ -1,0 +1,148 @@
+import { useState } from 'react'
+import { CATEGORIAS, CATEGORIA_LABEL, type FinanceCategoria } from './categorias'
+import type { Moneda } from './extraccion'
+import type { NuevaFinanceMovimiento } from './financeRepository'
+import type { FinanceMovimientoTipo } from '@/types/finance'
+
+interface NuevoMovimientoProps {
+  /** Arranca en la moneda que ya se está mirando en Finanzas — no inventa un tercer estado de moneda. */
+  monedaDefault: Moneda
+  onGuardar: (input: NuevaFinanceMovimiento) => Promise<void>
+  onCerrar: () => void
+}
+
+/**
+ * Sprint 019 ("Finanzas: convertir Finanzas en una herramienta de
+ * control real"): la única puerta directa para registrar un movimiento
+ * sin pasar por el Umbral. FinanceScreen documenta como "Principio
+ * fundamental" que todo nace en el Umbral — el brief de este sprint es
+ * explícito en que esa regla sigue valiendo para capturar una idea o
+ * intención, pero cuando el usuario ya sabe que está registrando una
+ * operación financiera ("Gasté 18.000 en supermercado") tiene que poder
+ * hacerlo acá mismo, sin salir de Finanzas.
+ *
+ * Mismo motor que ya usa el Umbral: financeMovimientoRepository.add()
+ * ya acepta tipo/monto/concepto/categoria/moneda/medio/fecha tal cual
+ * los necesita este formulario — no hace falta un repositorio nuevo ni
+ * un store nuevo. `medio` no es uno de los 6 campos que pide el brief,
+ * así que se manda 'transferencia' por defecto, el mismo default que ya
+ * usa extraccion.ts cuando el texto no trae ninguna marca.
+ */
+export function NuevoMovimiento({ monedaDefault, onGuardar, onCerrar }: NuevoMovimientoProps) {
+  const [tipo, setTipo] = useState<FinanceMovimientoTipo>('egreso')
+  const [concepto, setConcepto] = useState('')
+  const [monto, setMonto] = useState('')
+  const [categoria, setCategoria] = useState<FinanceCategoria | null>(null)
+  const [fecha, setFecha] = useState(() => new Date().toISOString().slice(0, 10))
+  const [moneda, setMoneda] = useState<Moneda>(monedaDefault)
+  const [guardando, setGuardando] = useState(false)
+
+  const montoNumero = Number(monto.replace(',', '.'))
+  const esValido = concepto.trim().length > 0 && Number.isFinite(montoNumero) && montoNumero > 0
+
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault()
+    if (!esValido || guardando) return
+    setGuardando(true)
+    await onGuardar({
+      tipo,
+      monto: montoNumero,
+      concepto,
+      categoria: tipo === 'egreso' ? categoria : null,
+      moneda,
+      medio: 'transferencia',
+      fecha,
+    })
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+      <button type="button" className="idea-destino self-start" onClick={onCerrar}>
+        ‹ Finanzas
+      </button>
+
+      <section className="flex flex-col items-center gap-3">
+        <p className="font-mono text-[11px] uppercase tracking-wide text-accent">+ Movimiento</p>
+        <div className="idea-destinos" role="group" aria-label="Tipo">
+          {(['egreso', 'ingreso'] as const).map((opcion) => (
+            <button
+              key={opcion}
+              type="button"
+              className="idea-destino"
+              aria-pressed={tipo === opcion}
+              style={tipo === opcion ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
+              onClick={() => setTipo(opcion)}
+            >
+              {opcion === 'ingreso' ? 'Entró' : 'Se fue'}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <input
+        type="text"
+        value={concepto}
+        onChange={(event) => setConcepto(event.target.value)}
+        placeholder="Concepto"
+        aria-label="Concepto"
+        className="border-b border-border/60 bg-transparent px-1 py-2 text-[15px] text-ink outline-none placeholder:text-ink-dim"
+      />
+
+      <input
+        type="number"
+        step="any"
+        inputMode="decimal"
+        value={monto}
+        onChange={(event) => setMonto(event.target.value)}
+        placeholder="Monto"
+        aria-label="Monto"
+        className="border-b border-border/60 bg-transparent px-1 py-2 font-mono text-[15px] text-ink outline-none placeholder:text-ink-dim"
+      />
+
+      {tipo === 'egreso' ? (
+        <div className="idea-destinos" role="group" aria-label="Categoría">
+          {CATEGORIAS.map((opcion) => (
+            <button
+              key={opcion}
+              type="button"
+              className="idea-destino"
+              aria-pressed={categoria === opcion}
+              style={categoria === opcion ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
+              onClick={() => setCategoria((actual) => (actual === opcion ? null : opcion))}
+            >
+              {CATEGORIA_LABEL[opcion]}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      <div className="flex items-center justify-between gap-3">
+        <input
+          type="date"
+          value={fecha}
+          onChange={(event) => setFecha(event.target.value)}
+          aria-label="Fecha"
+          className="border-b border-border/60 bg-transparent px-1 py-2 font-mono text-[13.5px] text-ink outline-none"
+        />
+        <div className="idea-destinos" role="group" aria-label="Moneda">
+          {(['ars', 'usd'] as const).map((opcion) => (
+            <button
+              key={opcion}
+              type="button"
+              className="idea-destino"
+              aria-pressed={moneda === opcion}
+              style={moneda === opcion ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
+              onClick={() => setMoneda(opcion)}
+            >
+              {opcion === 'ars' ? 'Pesos' : 'Dólares'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <button type="submit" disabled={!esValido || guardando} className="accion-primaria self-start px-3.5 py-2 text-[13.5px] disabled:opacity-40">
+        Guardar
+      </button>
+    </form>
+  )
+}
