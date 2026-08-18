@@ -77,6 +77,18 @@ describe('extraerCategoria', () => {
   it('café no se rompe por el borde de palabra con tilde', () => {
     expect(extraerCategoria('Un café con amigos').categoria).toBe('comida')
   })
+
+  /**
+   * Sprint 027: casos reales de producción que quedaban en "Por revisar"
+   * (o, antes de Sprint 025, en Servicios por la colisión de "gas") porque
+   * 'merienda' faltaba en el léxico pese a estar las otras tres comidas.
+   */
+  it.each([
+    ['Gaste 33k en merienda', 'comida'],
+    ['Gaste 17k merienda', 'comida'],
+  ])('%s → %s', (texto, esperado) => {
+    expect(extraerCategoria(texto).categoria).toBe(esperado)
+  })
 })
 
 describe('extraerMovimiento', () => {

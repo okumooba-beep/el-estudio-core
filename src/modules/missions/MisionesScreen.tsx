@@ -163,29 +163,33 @@ export function MisionesScreen() {
         <EmptyState title="Nada que hacer todavía." description="Agregá lo primero que dependa solo de vos." />
       ) : (
         <>
-          {principales.length > 0 && (
-            <div className="flex flex-col gap-2">
-              <h2 className="mision-grupo-titulo">Misiones principales</h2>
+          <div className="flex flex-col gap-2">
+            <h2 className="mision-grupo-titulo">Misiones principales</h2>
+            {principales.length > 0 ? (
               <ul className="mision-lista">{principales.map(renderFila)}</ul>
-              {intentoPrincipal && (
-                <div className="flex flex-col gap-1">
-                  <p className="mision-previa">
-                    Ya tenés {MAX_PRINCIPALES} misiones principales. Elegí cuál sacar para que “{intentoPrincipal.texto}” ocupe su lugar.
-                  </p>
-                  <div className="idea-destinos" role="group" aria-label="Elegir cuál misión principal reemplazar">
-                    {principales.map((p) => (
-                      <button key={p.id} type="button" className="idea-destino" onClick={() => handleElegirReemplazo(p)}>
-                        Sacar “{p.texto}”
-                      </button>
-                    ))}
-                    <button type="button" className="idea-destino" onClick={() => setIntentoPrincipal(null)}>
-                      Cancelar
+            ) : (
+              <p className="mision-previa">
+                Todavía no marcaste ninguna misión como principal. Tocá ☆ en la que quieras priorizar.
+              </p>
+            )}
+            {intentoPrincipal && (
+              <div className="flex flex-col gap-1">
+                <p className="mision-previa">
+                  Ya tenés {MAX_PRINCIPALES} misiones principales. Elegí cuál sacar para que “{intentoPrincipal.texto}” ocupe su lugar.
+                </p>
+                <div className="idea-destinos" role="group" aria-label="Elegir cuál misión principal reemplazar">
+                  {principales.map((p) => (
+                    <button key={p.id} type="button" className="idea-destino" onClick={() => handleElegirReemplazo(p)}>
+                      Sacar “{p.texto}”
                     </button>
-                  </div>
+                  ))}
+                  <button type="button" className="idea-destino" onClick={() => setIntentoPrincipal(null)}>
+                    Cancelar
+                  </button>
                 </div>
-              )}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
           {secundarias.length > 0 && (
             <div className="flex flex-col gap-2">
               <h2 className="mision-grupo-titulo">Misiones secundarias</h2>

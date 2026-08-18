@@ -72,7 +72,7 @@ export const CATEGORIA_COLOR: Record<FinanceCategoria, string> = {
  * este objeto. Ver comentario de `contienePalabra`.
  */
 export const CATEGORIA_LEXICO: Record<FinanceCategoria, readonly string[]> = {
-  comida: ['super', 'súper', 'supermercado', 'almuerzo', 'cena', 'desayuno', 'comida', 'café', 'cafe',
+  comida: ['super', 'súper', 'supermercado', 'almuerzo', 'cena', 'desayuno', 'merienda', 'comida', 'café', 'cafe',
     'restaurante', 'delivery', 'verduler', 'carnicer', 'panader', 'kiosco', 'mercado', 'pedido'],
   auto: ['auto', 'autos', 'nafta', 'gasolina', 'combustible', 'aceite', 'peaje', 'cochera', 'estacionamiento',
     'neumático', 'neumatico', 'cubierta', 'taller', 'mecánico', 'mecanico', 'patente', 'seguro del auto',

@@ -4,6 +4,7 @@ import type { Operacion } from '@/types/operacion'
 import type { HabitCheck } from '@/types/habitCheck'
 import type { FinanceAccount, FinanceMovimiento, FinanceGoal } from '@/types/finance'
 import type { AgendaEvento, AgendaBloque } from '@/types/agenda'
+import { extraerCategoria } from '@modules/finance/extraccion'
 
 interface LegacyNota {
   id: string
@@ -259,6 +260,41 @@ class LifeosDB extends Dexie {
           .equals('misiones')
           .filter((idea) => idea.misionPrincipal === undefined)
           .modify({ misionPrincipal: false })
+      })
+
+    /**
+     * Sprint 027 — antes de Sprint 025, `extraerCategoria` matcheaba 'gas'
+     * (servicios) como substring dentro de "Gasté"/"Gasto", así que
+     * cualquier egreso escrito con ese verbo caía en Servicios sin
+     * importar de qué se tratara. Esos movimientos quedaron guardados así
+     * para siempre — Sprint 025 corrigió el extractor pero nunca tocó lo
+     * ya guardado. Esta migración reintenta la categoría, con el
+     * extractor YA corregido, únicamente sobre filas que hoy dicen
+     * 'servicios' — nunca las demás, así que una corrección manual previa
+     * a otra categoría (Sprint 026) no se pisa. Solo escribe si el nuevo
+     * resultado es `segura` y distinto de 'servicios': un concepto real
+     * de servicios ("Pagué el gas") vuelve a dar 'servicios' y queda
+     * intacto, y lo que el léxico no reconoce (`segura: false`) se deja
+     * sin tocar en vez de adivinar. No modifica monto, fecha, moneda,
+     * concepto ni ID. Correr esto de nuevo no encuentra filas 'servicios'
+     * que hoy reclasifiquen distinto, así que no vuelve a escribir nada
+     * (idempotente).
+     */
+    this.version(13)
+      .stores({})
+      .upgrade(async (tx) => {
+        const movimientos = await tx
+          .table<FinanceMovimiento, string>('financeMovimientos')
+          .where('categoria')
+          .equals('servicios')
+          .toArray()
+        await Promise.all(
+          movimientos.map((movimiento) => {
+            const { categoria, segura } = extraerCategoria(movimiento.concepto)
+            if (!segura || !categoria || categoria === 'servicios') return undefined
+            return tx.table('financeMovimientos').update(movimiento.id, { categoria })
+          }),
+        )
       })
   }
 }
