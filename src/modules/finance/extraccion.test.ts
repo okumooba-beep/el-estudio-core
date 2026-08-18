@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { extraerCategoria, extraerMedio, extraerMonto, extraerMontos, extraerMovimiento, extraerTipo } from './extraccion'
+import {
+  dividirEnCuotas,
+  extraerCategoria,
+  extraerCuotas,
+  extraerMedio,
+  extraerMonto,
+  extraerMontos,
+  extraerMovimiento,
+  extraerTipo,
+  fechaCuota,
+} from './extraccion'
 
 describe('extraerMonto', () => {
   it.each([
@@ -95,7 +105,7 @@ describe('extraerMovimiento', () => {
   it('resuelve todo de una sola pasada', () => {
     expect(extraerMovimiento('Gasté 80k en gasolina en efectivo')).toEqual({
       montos: [{ monto: 80_000, moneda: 'ars' }],
-      tipo: 'egreso', medio: 'efectivo', categoria: 'auto', categoriaSegura: true,
+      tipo: 'egreso', medio: 'efectivo', categoria: 'auto', categoriaSegura: true, cuotas: null,
     })
   })
 
@@ -103,6 +113,75 @@ describe('extraerMovimiento', () => {
     expect(extraerMovimiento('Cobré 250k del trabajo de Juan')).toMatchObject({
       montos: [{ monto: 250_000, moneda: 'ars' }], tipo: 'ingreso', categoria: null,
     })
+  })
+
+  it('reconoce las cuotas de una compra financiada', () => {
+    expect(extraerMovimiento('Gaste 87k en Ropa - 3 cuotas sin intereses')).toMatchObject({
+      montos: [{ monto: 87_000, moneda: 'ars' }], categoria: 'ropa', cuotas: 3,
+    })
+  })
+
+  it('un ingreso nunca reconoce cuotas, aunque el texto las mencione', () => {
+    expect(extraerMovimiento('Cobré 3 cuotas de un préstamo que hice')).toMatchObject({ tipo: 'ingreso', cuotas: null })
+  })
+})
+
+/** Sprint 028 — "N cuotas" (§5 del brief). */
+describe('extraerCuotas', () => {
+  it.each([
+    ['3 cuotas', 3],
+    ['3 cuotas sin intereses', 3],
+    ['en 3 cuotas', 3],
+    ['3 cuotas s/i', 3],
+    ['12 cuotas', 12],
+  ])('%s → %i', (texto, esperado) => {
+    expect(extraerCuotas(texto)).toBe(esperado)
+  })
+
+  it('sin mención de cuotas, no hay serie', () => {
+    expect(extraerCuotas('Gasté 80k en gasolina')).toBeNull()
+  })
+
+  it('"una cuota" no arma una serie: es un movimiento normal', () => {
+    expect(extraerCuotas('Gaste 20k en una cuota del gimnasio')).toBeNull()
+  })
+
+  it('no toma un número arbitrario del concepto como cantidad de cuotas', () => {
+    expect(extraerCuotas('Compré 3 remeras por 20k')).toBeNull()
+  })
+})
+
+/** Sprint 028 — dividir el total sin perder centavos (§6 del brief). */
+describe('dividirEnCuotas', () => {
+  it('87.000 en 3 cuotas da tres cuotas iguales que suman el total exacto', () => {
+    const cuotas = dividirEnCuotas(87_000, 3)
+    expect(cuotas).toEqual([29_000, 29_000, 29_000])
+    expect(cuotas.reduce((suma, cuota) => suma + cuota, 0)).toBe(87_000)
+  })
+
+  it('cuando no divide exacto, el resto se reparte sin perder ni sumar de más', () => {
+    const cuotas = dividirEnCuotas(100, 3)
+    expect(cuotas).toEqual([33.34, 33.33, 33.33])
+    expect(Math.round(cuotas.reduce((suma, cuota) => suma + cuota, 0) * 100) / 100).toBe(100)
+  })
+})
+
+/** Sprint 028 — regla temporal de cuotas (§3 del brief). */
+describe('fechaCuota', () => {
+  it('mismo día, un mes después por cada cuota', () => {
+    expect(fechaCuota('2026-08-17', 0)).toBe('2026-08-17')
+    expect(fechaCuota('2026-08-17', 1)).toBe('2026-09-17')
+    expect(fechaCuota('2026-08-17', 2)).toBe('2026-10-17')
+  })
+
+  it('cuando el día no existe en el mes destino, usa el último día válido', () => {
+    expect(fechaCuota('2026-01-31', 0)).toBe('2026-01-31')
+    expect(fechaCuota('2026-01-31', 1)).toBe('2026-02-28')
+    expect(fechaCuota('2026-01-31', 2)).toBe('2026-03-31')
+  })
+
+  it('cruza el año cuando la cuota cae en enero', () => {
+    expect(fechaCuota('2026-11-15', 2)).toBe('2027-01-15')
   })
 })
 

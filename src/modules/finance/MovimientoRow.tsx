@@ -29,6 +29,12 @@ export function MovimientoRow({ movimiento, moneda, signo = '', onCambiarCategor
         <span className="flex flex-col gap-0.5">
           <span className="text-[12.5px] text-ink-faint">{etiquetaDia(movimiento.fecha)}</span>
           <span className="text-[15px] leading-snug text-ink">{movimiento.concepto}</span>
+          {movimiento.cuotaTotal ? (
+            <span className="text-[11.5px] text-ink-faint">
+              {movimiento.categoria ? `${CATEGORIA_LABEL[movimiento.categoria]} · ` : ''}
+              Cuota {movimiento.cuotaNumero}/{movimiento.cuotaTotal}
+            </span>
+          ) : null}
         </span>
         <span className={`shrink-0 font-mono text-[14px] ${signo === '+' ? 'text-good' : 'text-ink-dim'}`}>
           {signo}

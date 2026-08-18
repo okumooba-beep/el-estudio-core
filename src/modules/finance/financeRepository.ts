@@ -2,7 +2,7 @@ import { db } from '@/lib/db/db'
 import { generateId } from '@shared-kernel/id'
 import type { Repository } from '@shared-kernel/persistence/Repository'
 import type { FinanceCategoria } from './categorias'
-import type { Medio, Moneda } from './extraccion'
+import { dividirEnCuotas, fechaCuota, type Medio, type Moneda } from './extraccion'
 import type { FinanceAccount, FinanceAccountTipo, FinanceMovimiento, FinanceMovimientoTipo, FinanceGoal } from '@/types/finance'
 
 /**
@@ -67,10 +67,45 @@ export interface NuevaFinanceMovimiento {
   fecha?: string
 }
 
+/**
+ * Sprint 028 — lo que pide una compra financiada: el total, no el monto
+ * por cuota (§6 del brief: "Gaste 87k ... 3 cuotas" son $87.000 en
+ * total, no $87.000 x 3). `addCompra` es la única lógica que arma la
+ * serie, para que el Umbral y "+ Movimiento" (NuevoMovimiento.tsx)
+ * compartan exactamente el mismo cálculo (§13: "no duplicar la lógica").
+ */
+export interface NuevaCompraEnCuotas {
+  concepto: string
+  /** El total de la compra, tal cual lo dice el texto — se divide acá adentro, nunca antes. */
+  montoTotal: number
+  cantidadCuotas: number
+  categoria: FinanceCategoria | null
+  moneda: Moneda
+  medio: Medio
+  ideaId?: string
+  /** YYYY-MM-DD de la compra — cuota 1. Por defecto hoy. */
+  fecha?: string
+}
+
 export interface FinanceMovimientoRepository extends Repository<FinanceMovimiento> {
   add(input: NuevaFinanceMovimiento): Promise<FinanceMovimiento>
-  /** Sprint 007 — corrige la categoría de un movimiento "Por revisar" con una interacción simple. */
-  update(id: string, patch: Partial<Omit<FinanceMovimiento, 'id' | 'createdAt'>>): Promise<FinanceMovimiento>
+  /** Sprint 028 — una compra en cuotas nace como N movimientos, uno por mes, todos con el mismo compraId. */
+  addCompra(input: NuevaCompraEnCuotas): Promise<FinanceMovimiento[]>
+  /**
+   * Sprint 007 — corrige la categoría de un movimiento "Por revisar"
+   * con una interacción simple.
+   *
+   * Sprint 028 — si el movimiento pertenece a una compra en cuotas y el
+   * patch cambia `categoria`, la corrección se propaga a las demás
+   * cuotas de la misma compra (§9/§10/§18: todas las cuotas de una
+   * operación comparten categoría; editar la categoría de una es editar
+   * la operación entera, la única forma de edición que existe hoy en
+   * Finanzas — no hay UI para editar monto/fecha/concepto de nada, así
+   * que no hay otro campo cuya edición pueda desalinear el total). Por
+   * eso devuelve todos los movimientos que terminaron afectados, no
+   * solo el que se pidió corregir.
+   */
+  update(id: string, patch: Partial<Omit<FinanceMovimiento, 'id' | 'createdAt'>>): Promise<FinanceMovimiento[]>
 }
 
 class DexieFinanceMovimientoRepository implements FinanceMovimientoRepository {
@@ -99,11 +134,51 @@ class DexieFinanceMovimientoRepository implements FinanceMovimientoRepository {
     return movimiento
   }
 
-  async update(id: string, patch: Partial<Omit<FinanceMovimiento, 'id' | 'createdAt'>>): Promise<FinanceMovimiento> {
-    await db.financeMovimientos.update(id, { ...patch, updatedAt: new Date().toISOString(), pendingSync: true })
+  async addCompra(input: NuevaCompraEnCuotas): Promise<FinanceMovimiento[]> {
+    const compraId = generateId()
+    const fechaCompra = input.fecha ?? new Date().toISOString().slice(0, 10)
+    const montos = dividirEnCuotas(input.montoTotal, input.cantidadCuotas)
+    const now = new Date().toISOString()
+    const movimientos: FinanceMovimiento[] = montos.map((monto, indice) => ({
+      id: generateId(),
+      tipo: 'egreso',
+      monto,
+      concepto: input.concepto.trim(),
+      categoria: input.categoria,
+      moneda: input.moneda,
+      medio: input.medio,
+      ...(input.ideaId ? { ideaId: input.ideaId } : {}),
+      fecha: fechaCuota(fechaCompra, indice),
+      createdAt: now,
+      updatedAt: now,
+      pendingSync: true,
+      compraId,
+      cuotaNumero: indice + 1,
+      cuotaTotal: input.cantidadCuotas,
+      montoOriginal: input.montoTotal,
+    }))
+    await db.financeMovimientos.bulkAdd(movimientos)
+    return movimientos
+  }
+
+  async update(id: string, patch: Partial<Omit<FinanceMovimiento, 'id' | 'createdAt'>>): Promise<FinanceMovimiento[]> {
+    const actual = await db.financeMovimientos.get(id)
+    if (!actual) throw new Error(`Movimiento ${id} no encontrado`)
+    const now = new Date().toISOString()
+    await db.financeMovimientos.update(id, { ...patch, updatedAt: now, pendingSync: true })
+    let hermanas: FinanceMovimiento[] = []
+    if (patch.categoria !== undefined && actual.compraId) {
+      const compraId = actual.compraId
+      await db.financeMovimientos
+        .where('compraId')
+        .equals(compraId)
+        .and((movimiento) => movimiento.id !== id)
+        .modify({ categoria: patch.categoria, updatedAt: now, pendingSync: true })
+      hermanas = await db.financeMovimientos.where('compraId').equals(compraId).and((m) => m.id !== id).toArray()
+    }
     const updated = await db.financeMovimientos.get(id)
     if (!updated) throw new Error(`Movimiento ${id} no encontrado`)
-    return updated
+    return [updated, ...hermanas]
   }
 }
 

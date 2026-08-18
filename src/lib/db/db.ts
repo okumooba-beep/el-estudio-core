@@ -296,6 +296,19 @@ class LifeosDB extends Dexie {
           }),
         )
       })
+
+    /**
+     * Sprint 028 — "Sistema de cuotas": índice para `compraId`, así una
+     * corrección de categoría puede encontrar las demás cuotas de la
+     * misma compra sin escanear toda la tabla (ver `update` en
+     * financeRepository.ts). Solo índice, sin `.upgrade()`: no hay datos
+     * que migrar — las cuotas se aplican únicamente a operaciones
+     * nuevas (§14 del brief), los movimientos existentes simplemente no
+     * tienen `compraId` y quedan intactos.
+     */
+    this.version(14).stores({
+      financeMovimientos: 'id, createdAt, categoria, ideaId, moneda, medio, compraId',
+    })
   }
 }
 

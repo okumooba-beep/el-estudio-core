@@ -29,6 +29,12 @@ export interface MovimientoExtraido {
   categoria: FinanceCategoria | null
   /** true solo si el léxico acertó una categoría; con `false` la categoría es `null` — "Por revisar", nunca 'otros'. */
   categoriaSegura: boolean
+  /**
+   * Sprint 028 — cantidad de cuotas si el texto las menciona ("3
+   * cuotas", "en 3 cuotas sin intereses"), `null` si no. Solo se
+   * reconoce en egresos: un ingreso en cuotas no existe en este modelo.
+   */
+  cuotas: number | null
 }
 
 /** "cobré", "me pagaron", "ingreso" → entra plata. Todo lo demás sale. */
@@ -156,6 +162,54 @@ export function extraerCategoria(texto: string): { categoria: FinanceCategoria |
 }
 
 /**
+ * Sprint 028 — reconoce "3 cuotas", "en 3 cuotas", "3 cuotas sin
+ * intereses", "3 cuotas s/i". El número tiene que estar pegado a la
+ * palabra "cuota(s)": nunca se toma un número suelto del concepto como
+ * cantidad de cuotas (§5 del brief — "no interpretar números
+ * arbitrarios"). "Una cuota" no matchea (no hay dígito), y a propósito:
+ * una sola cuota es un movimiento normal, no una serie.
+ */
+const CUOTAS_PATRON = /(\d+)\s*cuotas?\b/i
+
+export function extraerCuotas(texto: string): number | null {
+  const hallazgo = texto.match(CUOTAS_PATRON)
+  if (!hallazgo) return null
+  const cantidad = Number(hallazgo[1])
+  return Number.isFinite(cantidad) && cantidad >= 2 ? cantidad : null
+}
+
+/**
+ * Divide un total en N cuotas sin perder centavos (§6 del brief): el
+ * resto de la división entera de centavos se reparte de a uno entre las
+ * primeras cuotas, así la suma de todas siempre da exacto el total
+ * original — nunca una diferencia acumulada por redondeo.
+ */
+export function dividirEnCuotas(total: number, cantidadCuotas: number): number[] {
+  const centavosTotal = Math.round(total * 100)
+  const base = Math.floor(centavosTotal / cantidadCuotas)
+  const resto = centavosTotal - base * cantidadCuotas
+  return Array.from({ length: cantidadCuotas }, (_, indice) => (base + (indice < resto ? 1 : 0)) / 100)
+}
+
+/**
+ * Regla temporal de cuotas (§3 del brief): cuota 1 = mes de la compra,
+ * cuota N = mismo día, N-1 meses después. Si ese día no existe en el
+ * mes destino (31/01 → febrero), se usa el último día válido de ese
+ * mes — nunca una regla de vencimiento de tarjeta, solo el calendario.
+ */
+export function fechaCuota(fechaInicial: string, indiceCuota: number): string {
+  const anio = Number(fechaInicial.slice(0, 4))
+  const mes = Number(fechaInicial.slice(5, 7))
+  const dia = Number(fechaInicial.slice(8, 10))
+  const mesesDesdeEnero = mes - 1 + indiceCuota
+  const anioDestino = anio + Math.floor(mesesDesdeEnero / 12)
+  const mesDestino = ((mesesDesdeEnero % 12) + 12) % 12
+  const ultimoDiaMesDestino = new Date(anioDestino, mesDestino + 1, 0).getDate()
+  const diaDestino = Math.min(dia, ultimoDiaMesDestino)
+  return `${anioDestino}-${String(mesDestino + 1).padStart(2, '0')}-${String(diaDestino).padStart(2, '0')}`
+}
+
+/**
  * Motor de movimientos. Convierte lo que escribiste en el Umbral —"Gasté
  * 80k en gasolina"— en lo que Finanzas necesita: cuánto, en qué moneda,
  * si entra o sale, cómo se movió y de qué se trata.
@@ -167,11 +221,13 @@ export function extraerCategoria(texto: string): { categoria: FinanceCategoria |
  */
 export function extraerMovimiento(texto: string): MovimientoExtraido {
   const { categoria, segura } = extraerCategoria(texto)
+  const tipo = extraerTipo(texto)
   return {
     montos: extraerMontos(texto),
-    tipo: extraerTipo(texto),
+    tipo,
     medio: extraerMedio(texto),
     categoria,
     categoriaSegura: segura,
+    cuotas: tipo === 'egreso' ? extraerCuotas(texto) : null,
   }
 }

@@ -21,7 +21,7 @@ import {
   semanaDelMes,
 } from './mes'
 import type { FinanceMovimiento } from '@/types/finance'
-import type { NuevaFinanceMovimiento } from './financeRepository'
+import type { NuevaCompraEnCuotas, NuevaFinanceMovimiento } from './financeRepository'
 
 type Vista = 'semana' | 'mes'
 type Detalle = 'entro' | 'sefue' | 'nuevo' | null
@@ -58,7 +58,7 @@ type Detalle = 'entro' | 'sefue' | 'nuevo' | null
  * rechaza).
  */
 export function FinanceScreen() {
-  const { movimientos, ready, addMovimiento, updateMovimiento } = useFinance()
+  const { movimientos, ready, addMovimiento, addCompra, updateMovimiento } = useFinance()
   const { ideas, moveSheet } = useIdeas()
   const [mes] = useState(() => mesDe(new Date()))
   const [moneda, setMoneda] = useState<Moneda>('ars')
@@ -102,16 +102,32 @@ export function FinanceScreen() {
       if (extraido.montos.length === 0) continue
       enConversion.current.add(idea.id)
       for (const montoExtraido of extraido.montos) {
-        void addMovimiento({
-          tipo: extraido.tipo,
-          monto: montoExtraido.monto,
-          moneda: montoExtraido.moneda,
-          medio: extraido.medio,
-          concepto: idea.texto,
-          categoria: extraido.categoriaSegura ? extraido.categoria : null,
-          ideaId: idea.id,
-          fecha: idea.fecha,
-        })
+        // Sprint 028: "Gasté 87k en Ropa - 3 cuotas" es una compra en
+        // cuotas, no un movimiento por el total — mismo `addCompra` que
+        // usa "+ Movimiento" (§13: una sola lógica para las dos puertas).
+        if (extraido.cuotas) {
+          void addCompra({
+            concepto: idea.texto,
+            montoTotal: montoExtraido.monto,
+            cantidadCuotas: extraido.cuotas,
+            categoria: extraido.categoriaSegura ? extraido.categoria : null,
+            moneda: montoExtraido.moneda,
+            medio: extraido.medio,
+            ideaId: idea.id,
+            fecha: idea.fecha,
+          })
+        } else {
+          void addMovimiento({
+            tipo: extraido.tipo,
+            monto: montoExtraido.monto,
+            moneda: montoExtraido.moneda,
+            medio: extraido.medio,
+            concepto: idea.texto,
+            categoria: extraido.categoriaSegura ? extraido.categoria : null,
+            ideaId: idea.id,
+            fecha: idea.fecha,
+          })
+        }
       }
     }
     // Se re-ejecuta cuando cambian ideas o movimientos: cada alta reduce
@@ -157,10 +173,21 @@ export function FinanceScreen() {
     cerrarDetalle()
   }
 
+  /** Sprint 028 — mismo camino que "guardarMovimiento", para una compra en cuotas armada desde el formulario. */
+  async function guardarCompra(input: NuevaCompraEnCuotas) {
+    await addCompra(input)
+    cerrarDetalle()
+  }
+
   if (detalle === 'nuevo') {
     return (
       <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10">
-        <NuevoMovimiento monedaDefault={moneda} onGuardar={guardarMovimiento} onCerrar={cerrarDetalle} />
+        <NuevoMovimiento
+          monedaDefault={moneda}
+          onGuardar={guardarMovimiento}
+          onGuardarCompra={guardarCompra}
+          onCerrar={cerrarDetalle}
+        />
       </div>
     )
   }

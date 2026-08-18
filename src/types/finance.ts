@@ -66,6 +66,24 @@ export interface FinanceMovimiento {
   createdAt: string
   updatedAt: string
   pendingSync: boolean
+  /**
+   * Sprint 028 — "Sistema de cuotas": una compra financiada no se
+   * guarda como un solo movimiento por el total, se guarda como una
+   * cuota por mes (§1/§2 del brief). Estos cuatro campos son la única
+   * diferencia entre una cuota y un movimiento común — todo lo demás
+   * (tipo, monto, categoria, moneda, medio, fecha) es igual, así que
+   * Entró/Se fue/categorías/períodos no necesitan saber que existen.
+   *
+   * `compraId` agrupa las cuotas de una misma operación. `cuotaNumero`
+   * es 1-based. `montoOriginal` es el total de la compra, no de esta
+   * cuota — sirve para mostrarlo y para verificar que la suma de las
+   * cuotas nunca se desvía del total (§6). Los tres nacen juntos o no
+   * nacen: un movimiento sin cuotas no tiene ninguno de los cuatro.
+   */
+  compraId?: string
+  cuotaNumero?: number
+  cuotaTotal?: number
+  montoOriginal?: number
 }
 
 export interface FinanceGoal {

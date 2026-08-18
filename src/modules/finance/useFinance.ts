@@ -5,6 +5,7 @@ import {
   financeGoalRepository,
   type NuevaFinanceAccount,
   type NuevaFinanceMovimiento,
+  type NuevaCompraEnCuotas,
   type NuevaFinanceGoal,
 } from './financeRepository'
 import type { FinanceAccount, FinanceMovimiento, FinanceGoal } from '@/types/finance'
@@ -50,9 +51,22 @@ export function useFinance() {
     setMovimientos((current) => [created, ...current])
   }
 
+  /** Sprint 028 — misma alta que `addMovimiento`, pero arma N cuotas de una compra financiada. */
+  async function addCompra(input: NuevaCompraEnCuotas): Promise<void> {
+    const creadas = await financeMovimientoRepository.addCompra(input)
+    setMovimientos((current) => [...creadas, ...current])
+  }
+
+  /**
+   * Sprint 028 — `update` puede devolver más de un movimiento afectado
+   * (una corrección de categoría que se propaga a las demás cuotas de
+   * la misma compra), así que el estado local se actualiza por id para
+   * cada uno, no solo para el que se pidió corregir.
+   */
   async function updateMovimiento(id: string, patch: Partial<Omit<FinanceMovimiento, 'id' | 'createdAt'>>): Promise<void> {
-    const updated = await financeMovimientoRepository.update(id, patch)
-    setMovimientos((current) => current.map((movimiento) => (movimiento.id === id ? updated : movimiento)))
+    const actualizados = await financeMovimientoRepository.update(id, patch)
+    const porId = new Map(actualizados.map((movimiento) => [movimiento.id, movimiento]))
+    setMovimientos((current) => current.map((movimiento) => porId.get(movimiento.id) ?? movimiento))
   }
 
   async function addGoal(input: NuevaFinanceGoal): Promise<void> {
@@ -65,5 +79,17 @@ export function useFinance() {
     setGoals((current) => current.map((goal) => (goal.id === id ? updated : goal)))
   }
 
-  return { accounts, movimientos, goals, ready, addAccount, updateAccount, addMovimiento, updateMovimiento, addGoal, updateGoal }
+  return {
+    accounts,
+    movimientos,
+    goals,
+    ready,
+    addAccount,
+    updateAccount,
+    addMovimiento,
+    addCompra,
+    updateMovimiento,
+    addGoal,
+    updateGoal,
+  }
 }

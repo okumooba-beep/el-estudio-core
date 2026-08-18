@@ -1,13 +1,16 @@
 import { useState } from 'react'
 import { CATEGORIAS, CATEGORIA_LABEL, type FinanceCategoria } from './categorias'
-import type { Moneda } from './extraccion'
-import type { NuevaFinanceMovimiento } from './financeRepository'
+import { dividirEnCuotas, type Moneda } from './extraccion'
+import type { NuevaCompraEnCuotas, NuevaFinanceMovimiento } from './financeRepository'
+import { formatearMonto } from './mes'
 import type { FinanceMovimientoTipo } from '@/types/finance'
 
 interface NuevoMovimientoProps {
   /** Arranca en la moneda que ya se está mirando en Finanzas — no inventa un tercer estado de moneda. */
   monedaDefault: Moneda
   onGuardar: (input: NuevaFinanceMovimiento) => Promise<void>
+  /** Sprint 028 — mismo formulario, pero cuando hay 2+ cuotas la alta va por acá, no por `onGuardar`. */
+  onGuardarCompra: (input: NuevaCompraEnCuotas) => Promise<void>
   onCerrar: () => void
 }
 
@@ -28,31 +31,46 @@ interface NuevoMovimientoProps {
  * así que se manda 'transferencia' por defecto, el mismo default que ya
  * usa extraccion.ts cuando el texto no trae ninguna marca.
  */
-export function NuevoMovimiento({ monedaDefault, onGuardar, onCerrar }: NuevoMovimientoProps) {
+export function NuevoMovimiento({ monedaDefault, onGuardar, onGuardarCompra, onCerrar }: NuevoMovimientoProps) {
   const [tipo, setTipo] = useState<FinanceMovimientoTipo>('egreso')
   const [concepto, setConcepto] = useState('')
   const [monto, setMonto] = useState('')
   const [categoria, setCategoria] = useState<FinanceCategoria | null>(null)
   const [fecha, setFecha] = useState(() => new Date().toISOString().slice(0, 10))
   const [moneda, setMoneda] = useState<Moneda>(monedaDefault)
+  const [cuotas, setCuotas] = useState('1')
   const [guardando, setGuardando] = useState(false)
 
   const montoNumero = Number(monto.replace(',', '.'))
+  const cuotasNumero = Number(cuotas)
+  const esCompraEnCuotas = tipo === 'egreso' && Number.isFinite(cuotasNumero) && cuotasNumero >= 2
   const esValido = concepto.trim().length > 0 && Number.isFinite(montoNumero) && montoNumero > 0
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
     if (!esValido || guardando) return
     setGuardando(true)
-    await onGuardar({
-      tipo,
-      monto: montoNumero,
-      concepto,
-      categoria: tipo === 'egreso' ? categoria : null,
-      moneda,
-      medio: 'transferencia',
-      fecha,
-    })
+    if (esCompraEnCuotas) {
+      await onGuardarCompra({
+        concepto,
+        montoTotal: montoNumero,
+        cantidadCuotas: cuotasNumero,
+        categoria,
+        moneda,
+        medio: 'transferencia',
+        fecha,
+      })
+    } else {
+      await onGuardar({
+        tipo,
+        monto: montoNumero,
+        concepto,
+        categoria: tipo === 'egreso' ? categoria : null,
+        moneda,
+        medio: 'transferencia',
+        fecha,
+      })
+    }
   }
 
   return (
@@ -113,6 +131,27 @@ export function NuevoMovimiento({ monedaDefault, onGuardar, onCerrar }: NuevoMov
               {CATEGORIA_LABEL[opcion]}
             </button>
           ))}
+        </div>
+      ) : null}
+
+      {tipo === 'egreso' ? (
+        <div className="flex items-center justify-between gap-3">
+          <input
+            type="number"
+            step="1"
+            min="1"
+            inputMode="numeric"
+            value={cuotas}
+            onChange={(event) => setCuotas(event.target.value)}
+            placeholder="Cuotas"
+            aria-label="Cuotas"
+            className="w-20 border-b border-border/60 bg-transparent px-1 py-2 font-mono text-[15px] text-ink outline-none placeholder:text-ink-dim"
+          />
+          {esCompraEnCuotas && Number.isFinite(montoNumero) && montoNumero > 0 ? (
+            <p className="font-mono text-[12.5px] text-ink-faint">
+              {cuotasNumero} cuotas de {formatearMonto(dividirEnCuotas(montoNumero, cuotasNumero)[0] ?? 0, moneda)}
+            </p>
+          ) : null}
         </div>
       ) : null}
 
