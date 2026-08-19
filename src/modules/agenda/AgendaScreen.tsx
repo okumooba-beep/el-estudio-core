@@ -249,7 +249,7 @@ export function AgendaScreen() {
               return (
                 <li key={dia} className="border-b border-border/40 pb-4 last:border-b-0">
                   <button type="button" className="flex w-full items-center justify-between text-left" onClick={alternarDiaPasado}>
-                    <span className="text-[13px] text-ink-dim">{nombreDia(dia)}</span>
+                    <span className="text-[13px] font-medium text-accent">{nombreDia(dia)}</span>
                     <span className="text-[12.5px] text-ink-faint">Pasado</span>
                   </button>
                 </li>
@@ -267,11 +267,11 @@ export function AgendaScreen() {
               <li key={dia} className="flex flex-col gap-2 border-b border-border/40 pb-4 last:border-b-0">
                 {esPasado ? (
                   <button type="button" className="flex w-full items-center justify-between text-left" onClick={alternarDiaPasado}>
-                    <span className="text-[13px] text-ink-dim">{nombreDia(dia)}</span>
+                    <span className="text-[13px] font-medium text-accent">{nombreDia(dia)}</span>
                     <span className="text-[12.5px] text-ink-faint">Pasado</span>
                   </button>
                 ) : (
-                  <p className="text-[13px] text-ink-dim">{nombreDia(dia)}</p>
+                  <p className="text-[13px] font-medium text-accent">{nombreDia(dia)}</p>
                 )}
                 {itemsDelDia.map((item) => {
                   if (item.tipo === 'bloque' && bloqueIdsEnConflicto.has(item.id)) return null
@@ -373,24 +373,35 @@ export function AgendaScreen() {
                 })}
                 {editandoDia === dia ? (
                   <div className="flex flex-col gap-1.5">
-                    <input
-                      autoFocus
-                      className="border-b border-border/60 bg-transparent text-[15px] text-ink outline-none"
-                      value={textoBloque}
-                      placeholder="Gimnasio 7 a 8"
-                      onChange={(evento) => setTextoBloque(evento.target.value)}
-                      onKeyDown={(evento) => {
-                        if (evento.key === 'Enter') {
-                          evento.preventDefault()
-                          agregarBloque(dia)
-                        }
-                        if (evento.key === 'Escape') {
-                          setEditandoDia(null)
-                          setTextoBloque('')
-                          setCopiarSemana(false)
-                        }
-                      }}
-                    />
+                    <div className="flex items-center gap-3">
+                      <input
+                        autoFocus
+                        className="min-w-0 flex-1 border-b border-border/60 bg-transparent text-[15px] text-ink outline-none"
+                        value={textoBloque}
+                        placeholder="Gimnasio 7 a 8"
+                        onChange={(evento) => setTextoBloque(evento.target.value)}
+                        onKeyDown={(evento) => {
+                          if (evento.key === 'Enter') {
+                            evento.preventDefault()
+                            agregarBloque(dia)
+                          }
+                          if (evento.key === 'Escape') {
+                            setEditandoDia(null)
+                            setTextoBloque('')
+                            setCopiarSemana(false)
+                          }
+                        }}
+                      />
+                      {textoBloque.trim() ? (
+                        <button
+                          type="button"
+                          className="accion-primaria shrink-0 px-3 py-1.5 text-[13px]"
+                          onClick={() => agregarBloque(dia)}
+                        >
+                          Guardar
+                        </button>
+                      ) : null}
+                    </div>
                     <label className="flex items-center gap-1.5 text-[12.5px] text-ink-faint">
                       <input
                         type="checkbox"

@@ -116,11 +116,22 @@ body {
   de ella (el regreso) — hoy coinciden en el mismo instante porque
   Escritorio es el único lugar navegable, pero son señales distintas:
   una es presencia física, la otra es intención del mundo.
+
+  Sprint 029 ("Corrección de experiencia real"): este acercamiento
+  pensaba .room-layer-photo todavía como el fondo de una futura cámara
+  diegética — pero desde Sprint 020 esa foto es la base fija de
+  .room-layer-* en cada ruta viva (ver comentario de .room-layer-photo
+  más abajo), y position:fixed la ancla a <body>. Escalar <body> aquí
+  no acerca ninguna escena: reancla el containing block de esa foto
+  fija y la zoomea de verdad, cada vez que alguien toca el campo de
+  captura del Umbral en Hoy. El sensor (gaze.ts, data-gaze) sigue vivo
+  para cuando exista esa cámara; el gesto que dependía de él queda en
+  none hasta entonces — no se borra, se apaga.
 */
 body:has(.workspace:hover),
 body:has(.workspace:focus-within),
 html[data-gaze="escritorio"] body {
-  transform: scale(1.006);
+  transform: none;
 }
 
 #root {
@@ -1181,6 +1192,25 @@ html[data-route='hoy'] .room-layer-window::after {
   transition: transform 420ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/*
+  Sprint 029, Biblioteca (§7): el span editable nace sin texto en una
+  frase nueva — sin ancho ni alto propios, un span vacío mide 0×0, así
+  que no hay nada real para tocar aunque el foco ya esté puesto por el
+  useEffect de arriba. Esto es lo que rompía "tocar el campo, pegar":
+  el toque caía en el papel, no en el span. Solo se corrige el caso
+  vacío; con texto ya tiene su propio tamaño natural.
+*/
+.idea-hoja [contenteditable='true']:empty {
+  display: inline-block;
+  width: 100%;
+  min-height: 1.55em;
+}
+
+.idea-hoja [contenteditable='true']:empty::before {
+  content: 'Escribí algo…';
+  color: var(--ink-faint);
+}
+
 .idea-hoja-time {
   display: block;
   margin-top: 0.4rem;
@@ -1440,13 +1470,21 @@ html[data-route='hoy'] .room-layer-window::after {
   flex-direction: column;
 }
 
-/* Sprint 013, punto 6: rótulo silencioso — no compite con el texto de la misión. */
+/*
+  Sprint 013, punto 6: rótulo silencioso — no compite con el texto de la
+  misión. Sprint 029 (§8): usaba --muted-foreground, una variable que
+  nunca se define en este archivo — color, al ser heredado, caía en lo
+  que sea que herede del ancestro en vez de fallar visiblemente, y eso
+  volvía "MISIONES PRINCIPALES" casi invisible sobre la foto (se leía
+  o no según qué parte de la imagen quedara detrás). --ink-faint es el
+  tono real ya usado al lado, en .mision-previa.
+*/
 .mision-grupo-titulo {
   font-size: 0.7rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--muted-foreground);
+  color: var(--ink-faint);
 }
 
 .mision-fila {
@@ -3661,6 +3699,17 @@ html[data-route='hoy'] .room-layer-window::after {
   position: fixed;
   inset: 0;
   z-index: -1;
+  /*
+    Sprint 029 (§10): color-mix produce un color sólido y opaco — sin
+    mix-blend-mode, esta capa (delante de .room-layer-photo, -z-10) tapaba
+    la foto entera en vez de aclararla, dejando el Cuaderno como una
+    pantalla plana sin la habitación detrás. La intención original del
+    comentario de arriba ("cambia la luz, no una caja") solo es real con
+    un blend que aclara sin reemplazar: screen nunca oscurece, así que un
+    --canvas todavía oscuro (92%) suma poca luz, y un canvas más claro de
+    noche suma más — proporcional, igual que antes.
+  */
+  mix-blend-mode: screen;
   background: color-mix(in srgb, var(--canvas) 92%, white 8%);
 }
 

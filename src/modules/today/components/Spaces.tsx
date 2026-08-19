@@ -27,7 +27,7 @@ export function Spaces() {
             >
               {Icon ? <Icon width={20} height={20} className="shrink-0 text-ink-faint" /> : null}
               <span className="flex min-w-0 flex-1 flex-col">
-                <span className="text-[15px]">{espacio.label}</span>
+                <span className="text-[15px] text-accent">{espacio.label}</span>
                 {espacio.proposito ? <span className="mt-0.5 text-[12px] text-ink-faint">{espacio.proposito}</span> : null}
               </span>
               <span
