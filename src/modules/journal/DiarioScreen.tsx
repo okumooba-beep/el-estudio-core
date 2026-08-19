@@ -188,6 +188,8 @@ export function DiarioScreen() {
   return (
     <div className="mx-auto flex max-w-xl flex-col pb-16 pt-8">
       <div className="cuaderno-luz" aria-hidden="true" />
+      <p className="mb-3 font-mono text-[11px] uppercase tracking-wide text-accent">Cuaderno</p>
+      <div className="diario-pagina material-paper">
       <header className="mb-6">
         <h1 className="diario-fecha-pagina">{fechaDePagina(fechaActual, hoy)}</h1>
       </header>
@@ -268,6 +270,7 @@ export function DiarioScreen() {
             : null}
         </div>
       ) : null}
+      </div>
 
       {fechas.length > 1 ? (
         <nav className="diario-nav">

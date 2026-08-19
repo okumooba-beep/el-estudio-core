@@ -3731,6 +3731,45 @@ html[data-route='hoy'] .room-layer-window::after {
   background: color-mix(in srgb, var(--canvas) 92%, white 8%);
 }
 
+/*
+  Sprint 033 — "Writing Comfort" había descartado a propósito cualquier
+  metáfora de papel ("the room is already the environment"); este sprint
+  pide lo opuesto: que el Cuaderno se sienta como un objeto de verdad
+  sobre el escritorio, no una pantalla gris más. En vez de inventar un
+  color propio, reutiliza .material-paper (misma superficie que ya usan
+  Ideas y Trading) y aprovecha que ninguna regla de abajo tiene un color
+  hardcodeado: todas leen var(--ink)/var(--ink-dim)/var(--ink-faint), así
+  que redefinir esas tres variables acá adentro (apuntando a las que ya
+  trae .material-paper) alcanza para que toda la página existente —
+  fecha, párrafos, acciones, destinos, archivadas — pase a leerse en tinta
+  oscura sobre papel sin tocar una sola regla de ellas.
+*/
+.diario-pagina {
+  position: relative;
+  --ink: var(--paper-ink);
+  --ink-dim: var(--paper-ink);
+  --ink-faint: var(--paper-ink-faint);
+  padding: 1.75rem 1.5rem 2rem;
+  box-shadow: 0 14px 26px -18px rgba(0, 0, 0, 0.55);
+}
+
+/*
+  Única señal física adicional (§16: "menos es más" — una sola línea de
+  margen, nada de renglones ni ilustración de cuaderno completa). Sin
+  desplazar el padding del texto: no marca "acá empieza lo escrito",
+  solo un resto de estructura casi imperceptible cerca del borde.
+*/
+.diario-pagina::before {
+  content: '';
+  position: absolute;
+  top: 1.1rem;
+  bottom: 1.1rem;
+  left: 0.9rem;
+  width: 1px;
+  background: var(--paper-border);
+  pointer-events: none;
+}
+
 .diario-fecha-pagina {
   font-size: 13px;
   letter-spacing: 0.02em;
@@ -3887,6 +3926,16 @@ html[data-route='hoy'] .room-layer-window::after {
 .diario-archivada-restaurar:hover,
 .diario-archivada-restaurar:focus-visible {
   color: var(--ink);
+}
+
+/*
+  rgba(255,255,255,...) de arriba fue pensado para tinta clara sobre
+  --canvas oscuro; adentro de .diario-pagina el texto pasa a ser oscuro
+  sobre papel claro (ver .diario-pagina más arriba) y ese subrayado
+  blanco casi desaparece contra #e5d9c0. Mismo tono que --paper-border.
+*/
+.diario-pagina .diario-archivada-restaurar {
+  text-decoration-color: rgba(60, 51, 39, 0.22);
 }
 
 /*
