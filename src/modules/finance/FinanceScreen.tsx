@@ -16,12 +16,14 @@ import {
   formatearMonto,
   mesDe,
   monedaDe,
+  rangoSemana,
   resumirMes,
   resumirSemana,
   semanaDelMes,
 } from './mes'
 import type { FinanceMovimiento } from '@/types/finance'
 import type { NuevaCompraEnCuotas, NuevaFinanceMovimiento } from './financeRepository'
+import type { PatchMovimiento } from './MovimientoRow'
 
 type Vista = 'semana' | 'mes'
 type Detalle = 'entro' | 'sefue' | 'nuevo' | null
@@ -66,6 +68,8 @@ export function FinanceScreen() {
   const [corrigiendo, setCorrigiendo] = useState<string | null>(null)
   const [detalle, setDetalle] = useState<Detalle>(null)
   const [categoriaDetalle, setCategoriaDetalle] = useState<FinanceCategoria | null>(null)
+  /** Mini Sprint 032 (§2) — semana desde la que se abrió "+ Agregar ingreso", para volver a Ingresos (no a Finanzas) al guardar o cancelar. `null` cuando el formulario se abrió desde "+ Movimiento" general. */
+  const [nuevoIngresoSemana, setNuevoIngresoSemana] = useState<number | null>(null)
 
   const convertidas = useMemo(
     () => new Set(movimientos.map((movimiento) => movimiento.ideaId).filter(Boolean)),
@@ -160,9 +164,15 @@ export function FinanceScreen() {
     setCorrigiendo(null)
   }
 
-  /** Mini Sprint 029.1 (§4/§5/§6) — misma `updateMovimiento` que ya usa `corregirCategoria`, ahora para monto/fecha. */
-  function editarMovimiento(movimiento: FinanceMovimiento, patch: { monto: number; fecha: string }) {
+  /** Mini Sprint 029.1 (§4/§5/§6) — misma `updateMovimiento` que ya usa `corregirCategoria`. Mini Sprint 032 (§7) amplió el patch a monto/fecha/moneda/medio/concepto. */
+  function editarMovimiento(movimiento: FinanceMovimiento, patch: PatchMovimiento) {
     void updateMovimiento(movimiento.id, patch)
+  }
+
+  /** Mini Sprint 032 (§2) — abre "+ Movimiento" desde una semana puntual de Ingresos: tipo fijo, fecha dentro de esa semana. */
+  function abrirNuevoIngreso(semana: number) {
+    setNuevoIngresoSemana(semana)
+    setDetalle('nuevo')
   }
 
   /** Mini Sprint 029.1 (§7). */
@@ -177,6 +187,16 @@ export function FinanceScreen() {
     setCategoriaDetalle(null)
   }
 
+  /** Mini Sprint 032 (§2) — cierra "+ Movimiento": si vino de una semana de Ingresos vuelve ahí, no a Finanzas. */
+  function cerrarNuevo() {
+    if (nuevoIngresoSemana !== null) {
+      setNuevoIngresoSemana(null)
+      setDetalle('entro')
+    } else {
+      cerrarDetalle()
+    }
+  }
+
   /**
    * Sprint 019: registrar un movimiento no depende de que ya exista
    * algo en Finanzas — tiene que poder abrirse incluso desde el estado
@@ -185,23 +205,35 @@ export function FinanceScreen() {
    */
   async function guardarMovimiento(input: NuevaFinanceMovimiento) {
     await addMovimiento(input)
-    cerrarDetalle()
+    cerrarNuevo()
   }
 
   /** Sprint 028 — mismo camino que "guardarMovimiento", para una compra en cuotas armada desde el formulario. */
   async function guardarCompra(input: NuevaCompraEnCuotas) {
     await addCompra(input)
-    cerrarDetalle()
+    cerrarNuevo()
   }
 
   if (detalle === 'nuevo') {
+    /** exactOptionalPropertyTypes: `tipoFijo`/`fechaDefault` son opcionales de verdad — solo entran en el spread cuando hay semana, nunca como `undefined` explícito. */
+    const propsDeSemana =
+      nuevoIngresoSemana !== null
+        ? (() => {
+            const { desde } = rangoSemana(mes, nuevoIngresoSemana)
+            const hoy = new Date().toISOString().slice(0, 10)
+            const fechaDefault =
+              hoy.startsWith(mes) && semanaDelMes(hoy) === nuevoIngresoSemana ? hoy : `${mes}-${String(desde).padStart(2, '0')}`
+            return { tipoFijo: 'ingreso' as const, fechaDefault }
+          })()
+        : {}
     return (
       <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10">
         <NuevoMovimiento
           monedaDefault={moneda}
+          {...propsDeSemana}
           onGuardar={guardarMovimiento}
           onGuardarCompra={guardarCompra}
-          onCerrar={cerrarDetalle}
+          onCerrar={cerrarNuevo}
         />
       </div>
     )
@@ -237,14 +269,14 @@ export function FinanceScreen() {
     return (
       <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10">
         <EntroDetalle
-          vista={vista}
           mes={mes}
           moneda={moneda}
-          periodoLabel={periodoLabel}
-          total={entro}
-          movimientos={movimientosDelPeriodo}
+          periodoLabel={nombreMes}
+          total={resumen.ingresado}
+          movimientos={resumen.movimientos}
           onEditar={editarMovimiento}
           onEliminar={eliminarMovimiento}
+          onAgregarIngreso={abrirNuevoIngreso}
           onCerrar={cerrarDetalle}
         />
       </div>

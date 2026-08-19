@@ -48,7 +48,7 @@ export interface MovimientoExtraido {
 
 /** "cobré", "me pagaron", "ingreso" → entra plata. Todo lo demás sale. */
 const VERBOS_INGRESO = ['cobré', 'cobre ', 'me pagaron', 'me depositaron', 'me transfirieron',
-  'ingreso', 'ingresó', 'ingresé', 'entró', 'entro ', 'recibí', 'recibi ', 'facturé', 'facture ',
+  'ingreso', 'ingresó', 'ingresé', 'ingresaron', 'entró', 'entro ', 'recibí', 'recibi ', 'facturé', 'facture ',
   'sueldo', 'honorarios', 'venta']
 
 /** Marca explícita de dólar. Un `$` suelto es peso: en Argentina lo es. */

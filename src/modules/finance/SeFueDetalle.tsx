@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { CATEGORIA_COLOR, CATEGORIA_LABEL, type FinanceCategoria } from './categorias'
-import { MovimientoRow } from './MovimientoRow'
+import { MovimientoRow, type PatchMovimiento } from './MovimientoRow'
 import { categoriaDe, formatearMonto, type GrupoCategoria } from './mes'
 import type { FinanceMovimiento } from '@/types/finance'
 import type { Moneda } from './extraccion'
@@ -18,8 +18,8 @@ interface SeFueDetalleProps {
   categoriaInicial: FinanceCategoria | null
   /** Sprint 026: corrige la categoría de un movimiento ya existente, sin borrarlo y recrearlo. */
   onCambiarCategoria: (movimiento: FinanceMovimiento, categoria: FinanceCategoria) => void
-  /** Mini Sprint 029.1 (§4/§6) — corrige monto y/o fecha de un egreso ya existente. */
-  onEditar: (movimiento: FinanceMovimiento, patch: { monto: number; fecha: string }) => void
+  /** Mini Sprint 029.1 (§4/§6) — corrige un egreso ya existente. Mini Sprint 032 (§7) amplió el patch. */
+  onEditar: (movimiento: FinanceMovimiento, patch: PatchMovimiento) => void
   /** Mini Sprint 029.1 (§7) — borra un egreso individual. */
   onEliminar: (movimiento: FinanceMovimiento) => void
   onCerrar: () => void

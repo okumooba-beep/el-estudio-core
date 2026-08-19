@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { categoriaDe, formatearMonto, resumirMes } from './mes'
+import { categoriaDe, formatearMonto, rangoSemana, resumirMes, semanaDelMes, semanasEnMes } from './mes'
 import type { FinanceMovimiento } from '@/types/finance'
 
 function mov(over: Partial<FinanceMovimiento>): FinanceMovimiento {
@@ -81,5 +81,28 @@ describe('categoriaDe', () => {
 describe('formatearMonto', () => {
   it('redondea a pesos enteros', () => {
     expect(formatearMonto(1250.5)).toBe('$1.251')
+  })
+})
+
+describe('semanas del mes (Mini Sprint 032 §1 — no hardcodear exactamente cuatro)', () => {
+  it('un mes de 31 días abre una quinta semana real (29–31)', () => {
+    expect(semanasEnMes('2026-08')).toBe(5)
+    expect(semanaDelMes('2026-08-31')).toBe(5)
+  })
+
+  it('un mes de 30 días no abre una quinta semana', () => {
+    expect(semanasEnMes('2026-04')).toBe(5)
+    expect(semanaDelMes('2026-04-30')).toBe(5)
+  })
+
+  it('febrero (28 días) tiene solo 4 semanas', () => {
+    expect(semanasEnMes('2026-02')).toBe(4)
+    expect(semanaDelMes('2026-02-28')).toBe(4)
+  })
+
+  it('rangoSemana recorta la última semana al largo real del mes, sin estirar la semana 4', () => {
+    expect(rangoSemana('2026-08', 4)).toEqual({ desde: 22, hasta: 28 })
+    expect(rangoSemana('2026-08', 5)).toEqual({ desde: 29, hasta: 31 })
+    expect(rangoSemana('2026-02', 4)).toEqual({ desde: 22, hasta: 28 })
   })
 })

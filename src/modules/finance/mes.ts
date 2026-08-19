@@ -35,15 +35,24 @@ export interface ResumenMes {
 }
 
 /**
- * Semana 1-4 dentro del mes (día 1-7 = semana 1, 8-14 = semana 2, ...).
- * Capada en 4: en meses de 29-31 días los días finales (29, 30, 31) caen
- * en la semana 4 en lugar de abrir una semana 5 aislada de 1-3 días —
- * Sprint 016, punto 2, es explícito en que un mes tiene 4 semanas
- * ("Semana 4 / 22–31 agosto"), nunca una quinta suelta.
+ * Semana calendario dentro del mes (día 1-7 = semana 1, 8-14 = semana 2,
+ * ...). Mini Sprint 032 (§1): ya no se capa en 4 — un mes de 29-31 días
+ * abre una semana 5 real (29-31, por ejemplo) en lugar de estirar la
+ * semana 4 a 8-10 días. `semanasEnMes` es el techo real para saber
+ * cuántos bloques semanales mostrar, incluso los que todavía no tienen
+ * ningún movimiento.
  */
 export function semanaDelMes(fecha: string): number {
   const dia = Number(fecha.slice(8, 10))
-  return Math.min(Math.ceil(dia / 7), 4)
+  return Math.ceil(dia / 7)
+}
+
+/** Cuántas semanas calendario tiene un mes (4 o 5 según cuántos días tenga). */
+export function semanasEnMes(mes: string): number {
+  const anio = Number(mes.slice(0, 4))
+  const mesNum = Number(mes.slice(5, 7))
+  const diasEnMes = new Date(anio, mesNum, 0).getDate()
+  return Math.ceil(diasEnMes / 7)
 }
 
 /**
@@ -209,7 +218,7 @@ export function rangoSemana(mes: string, semana: number): { desde: number; hasta
   const mesNum = Number(mes.slice(5, 7))
   const diasEnMes = new Date(anio, mesNum, 0).getDate()
   const desde = (semana - 1) * 7 + 1
-  const hasta = semana >= 4 ? diasEnMes : semana * 7
+  const hasta = Math.min(semana * 7, diasEnMes)
   return { desde, hasta }
 }
 
