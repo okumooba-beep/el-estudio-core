@@ -273,9 +273,27 @@ html.light-boot *::after {
   transparente), así que la habitación ES el fondo real del texto, no un
   wallpaper detrás de una tarjeta.
 */
+/*
+  Sprint 030 (§8-§10, "legibilidad global"): la banda ~10%-40% del alto
+  (donde el degradado de arriba pasaba de 0.4 a 0.5) coincide con la
+  parte más clara de la foto — el bosque a través de la ventana — y es
+  donde caen "¿Qué tenés en mente?" (IdeaCapture), los subtítulos de
+  Cuaderno/Misiones/Asuntos/Hábitos en Espacios y Lunes/Martes/Miércoles
+  en Planificación semanal. Se suma un stop intermedio (24%) que
+  adelanta la parte más oscura del degradado sin tocar 0% (el saludo/
+  encabezado ya lee bien contra el techo oscuro) ni exagerar 100% (el
+  escritorio ya leía bien). Mismo mecanismo de siempre, ningún layer ni
+  elemento nuevo — la foto sigue siendo la base, nunca una tarjeta.
+*/
 .room-layer-photo {
   background-image:
-    linear-gradient(180deg, rgba(12, 9, 7, 0.4) 0%, rgba(12, 9, 7, 0.5) 45%, rgba(12, 9, 7, 0.68) 100%),
+    linear-gradient(
+      180deg,
+      rgba(12, 9, 7, 0.4) 0%,
+      rgba(12, 9, 7, 0.56) 24%,
+      rgba(12, 9, 7, 0.58) 45%,
+      rgba(12, 9, 7, 0.68) 100%
+    ),
     url('/room/estudio-hero.png');
   background-repeat: no-repeat, no-repeat;
   /*

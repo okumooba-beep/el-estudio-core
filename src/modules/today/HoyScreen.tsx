@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom'
 import { HoyHeader } from './components/HoyHeader'
 import { PhraseSlot } from './components/PhraseSlot'
 import { FraseHoy } from './components/FraseHoy'
@@ -99,15 +98,12 @@ import { useMisionesPrincipales } from '@modules/missions/public'
  * frase (ver PhraseSlot.tsx), así que el `gap-10` del contenedor no reserva
  * espacio para ella cuando falta.
  *
- * Sprint 029 (§9): el nav inferior cambia Espacios por Finanzas (destino
- * directo, no un mueble de paso). Con eso, la razón por la que Sprint
- * 015.1 dejó de mostrar "Espacios" acá deja de valer para el nav
- * inferior — "ya están a un toque de distancia por la navegación
- * existente" ya no es cierto en mobile, donde el nav inferior es la
- * única navegación real. No vuelve la lista completa (`Spaces`, eso sí
- * sería reabrir Sprint 015.1); alcanza con un único link bajo, mismo
- * tono que "Agregar frase" en Biblioteca, para que Espacios nunca
- * desaparezca del producto.
+ * Sprint 030 (§16): el link aislado a "Espacios" que Sprint 029 (§9)
+ * agregó acá para compensar su salida del nav inferior deja de hacer
+ * falta — Sprint 030 (§12-15) devuelve Espacios al nav inferior como
+ * sexto destino directo, así que ese acceso de respaldo queda
+ * redundante y rompe la composición del cierre de Hoy (ver PhraseSlot
+ * más abajo, que ahora vuelve a ser lo último que aparece).
  */
 export function HoyScreen() {
   const { ahora, proximo, atencion, resumen, ready } = useAgendaHoy()
@@ -126,12 +122,6 @@ export function HoyScreen() {
       <MisionesPrincipales misiones={misionesPrincipales} />
       <AttentionSummary atencion={atencion} />
       <PhraseSlot />
-      <Link
-        to="/espacios"
-        className="self-start text-[12.5px] text-ink-faint transition-colors duration-150 hover:text-ink active:text-ink"
-      >
-        Espacios
-      </Link>
     </div>
   )
 }
