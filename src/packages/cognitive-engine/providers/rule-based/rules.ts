@@ -100,14 +100,17 @@ export const ESTRUCTURA: readonly StructuralRule<Destino>[] = [
   },
   {
     id: 'finanzas-monto',
-    // Tres formas, todas vistas en uso real:
+    // Cuatro formas, todas vistas en uso real:
     //   $35.000        signo adelante
     //   200$ / 200 usd signo o moneda atrás
     //   1.090.000      miles con puntos, sin ninguna moneda
-    // La tercera faltaba, y era la que dejaba "Ingreso primera semana =
-    // 1.090.000" sin una sola señal: la captura quedaba varada en el
-    // Umbral en vez de llegar a Finanzas.
-    patron: /\$\s?\d|\d\s?\$|(?:\d[\d.,]*)\s?(?:pesos|d[oó]lares|dolares|usd|mil|luca|lucas|palo|palos)\b|\d{1,3}(?:\.\d{3})+(?:,\d+)?/i,
+    //   820k / 400K    abreviatura de mil, sin espacio
+    // Mini Sprint 029.2: "k" faltaba en el léxico de la última rama —
+    // extraerMontos() (extraccion.ts) ya sabe leer "820k" desde antes,
+    // pero el clasificador nunca lo reconocía como señal financiera, así
+    // que la captura completa se quedaba varada en el Umbral (destino
+    // 'hoy', confianza baja y en silencio) y nunca llegaba a Finanzas.
+    patron: /\$\s?\d|\d\s?\$|(?:\d[\d.,]*)\s?(?:pesos|d[oó]lares|dolares|usd|mil|luca|lucas|palo|palos|k)\b|\d{1,3}(?:\.\d{3})+(?:,\d+)?/i,
     destino: 'finanzas',
   },
 ]

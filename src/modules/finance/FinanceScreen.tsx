@@ -105,6 +105,11 @@ export function FinanceScreen() {
         // Sprint 028: "Gasté 87k en Ropa - 3 cuotas" es una compra en
         // cuotas, no un movimiento por el total — mismo `addCompra` que
         // usa "+ Movimiento" (§13: una sola lógica para las dos puertas).
+        // Mini Sprint 029.2 (§9): el medio de ESTE monto si la frase lo
+        // dice cerca ("820K en efectivo + 400K transferencias"), y si no
+        // lo dice, el medio global de toda la captura — mismo criterio
+        // que ya regía antes de este mini-sprint.
+        const medio = montoExtraido.medio ?? extraido.medio
         if (extraido.cuotas) {
           void addCompra({
             concepto: idea.texto,
@@ -112,7 +117,7 @@ export function FinanceScreen() {
             cantidadCuotas: extraido.cuotas,
             categoria: extraido.categoriaSegura ? extraido.categoria : null,
             moneda: montoExtraido.moneda,
-            medio: extraido.medio,
+            medio,
             ideaId: idea.id,
             fecha: idea.fecha,
           })
@@ -121,7 +126,7 @@ export function FinanceScreen() {
             tipo: extraido.tipo,
             monto: montoExtraido.monto,
             moneda: montoExtraido.moneda,
-            medio: extraido.medio,
+            medio,
             concepto: idea.texto,
             categoria: extraido.categoriaSegura ? extraido.categoria : null,
             ideaId: idea.id,
@@ -310,7 +315,7 @@ export function FinanceScreen() {
           className="flex w-full appearance-none items-baseline justify-between gap-3 border-0 bg-transparent p-0 text-left"
           onClick={() => setDetalle('entro')}
         >
-          <span className="text-[15px] text-ink-dim">Entró</span>
+          <span className="text-[15px] text-ink-dim">Ingresos</span>
           <span className="font-mono text-[16px] text-good">{formatearMonto(entro, moneda)}</span>
         </button>
         <button

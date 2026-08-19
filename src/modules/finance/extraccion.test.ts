@@ -104,7 +104,7 @@ describe('extraerCategoria', () => {
 describe('extraerMovimiento', () => {
   it('resuelve todo de una sola pasada', () => {
     expect(extraerMovimiento('Gasté 80k en gasolina en efectivo')).toEqual({
-      montos: [{ monto: 80_000, moneda: 'ars' }],
+      montos: [{ monto: 80_000, moneda: 'ars', medio: 'efectivo' }],
       tipo: 'egreso', medio: 'efectivo', categoria: 'auto', categoriaSegura: true, cuotas: null,
     })
   })
@@ -192,13 +192,13 @@ describe('fechaCuota', () => {
 describe('monedas', () => {
   it('separa pesos de dólares en la misma línea', () => {
     expect(extraerMontos('Ingreso de agosto = 1.090.000 + 200 usd')).toEqual([
-      { monto: 1_090_000, moneda: 'ars' },
-      { monto: 200, moneda: 'usd' },
+      { monto: 1_090_000, moneda: 'ars', medio: null },
+      { monto: 200, moneda: 'usd', medio: null },
     ])
   })
 
   it('un $ suelto es peso, no dólar', () => {
-    expect(extraerMontos('Gasté 5.000$')[0]).toEqual({ monto: 5_000, moneda: 'ars' })
+    expect(extraerMontos('Gasté 5.000$')[0]).toEqual({ monto: 5_000, moneda: 'ars', medio: null })
   })
 
   it.each([['u$s 300'], ['300 dólares'], ['US$ 300']])('%s es dólar', (texto) => {

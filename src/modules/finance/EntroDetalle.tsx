@@ -53,7 +53,7 @@ export function EntroDetalle({ vista, mes, moneda, periodoLabel, total, movimien
 
       <section className="flex flex-col items-center gap-1">
         <p className="font-mono text-[11px] text-ink-faint">{periodoLabel}</p>
-        <p className="font-mono text-[11px] uppercase tracking-wide text-accent">Total entrado</p>
+        <p className="font-mono text-[11px] uppercase tracking-wide text-accent">Total ingresos</p>
         <p className="font-mono text-[28px] text-good">{formatearMonto(total, moneda)}</p>
       </section>
 

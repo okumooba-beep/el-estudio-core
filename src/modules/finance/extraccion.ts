@@ -15,6 +15,15 @@ export type Medio = 'efectivo' | 'transferencia'
 export interface MontoExtraido {
   monto: number
   moneda: Moneda
+  /**
+   * Mini Sprint 029.2 (§9): el medio más cercano a ESTE monto, no el de
+   * toda la frase. "820K en efectivo + 400K transferencias" tiene un
+   * medio distinto para cada número — usar `extraerMedio(texto)` entero
+   * les asignaba "efectivo" a los dos. `null` si ningún medio aparece
+   * cerca: quien llama cae al medio global (`extraerMedio`), igual que
+   * antes de este mini-sprint.
+   */
+  medio: Medio | null
 }
 
 export interface MovimientoExtraido {
@@ -71,6 +80,52 @@ function aNumero(bruto: string, factor: number): number {
 }
 
 /**
+ * Todas las posiciones donde aparece `marca` en el texto. Mismo criterio
+ * laxo que `extraerMedio` ya usa (`.includes()`, no palabra completa):
+ * "transferencia" tiene que encontrar "transferencias" también, plural
+ * incluido, así que un borde de palabra estricto (como el que usa
+ * `contienePalabra` para categorías) rompería justo el caso que motivó
+ * esto — "400K transferencias".
+ */
+function indicesDeMarca(texto: string, marca: string): number[] {
+  const normalizado = texto.toLowerCase()
+  const objetivo = marca.toLowerCase()
+  const indices: number[] = []
+  let desde = 0
+  for (let encontrado = normalizado.indexOf(objetivo, desde); encontrado !== -1; encontrado = normalizado.indexOf(objetivo, desde)) {
+    indices.push(encontrado)
+    desde = encontrado + 1
+  }
+  return indices
+}
+
+/**
+ * Mini Sprint 029.2 (§9): más allá de esta distancia, un medio en la
+ * frase ya no describe a este monto en particular — es ruido de otra
+ * parte de la captura, y es mejor no adivinar (`null`, cae al medio
+ * global de `extraerMedio`).
+ */
+const MEDIO_DISTANCIA_MAXIMA = 40
+
+function medioCercano(texto: string, indice: number, largo: number): Medio | null {
+  const candidatos: { medio: Medio; distancia: number }[] = []
+  const acumular = (palabras: readonly string[], medio: Medio) => {
+    for (const palabra of palabras) {
+      for (const posicion of indicesDeMarca(texto, palabra)) {
+        const distancia =
+          posicion < indice ? Math.max(indice - (posicion + palabra.length), 0) : Math.max(posicion - (indice + largo), 0)
+        candidatos.push({ medio, distancia })
+      }
+    }
+  }
+  acumular(MEDIO_EFECTIVO, 'efectivo')
+  acumular(MEDIO_TRANSFERENCIA, 'transferencia')
+  if (candidatos.length === 0) return null
+  const mejor = candidatos.reduce((a, b) => (b.distancia < a.distancia ? b : a))
+  return mejor.distancia <= MEDIO_DISTANCIA_MAXIMA ? mejor.medio : null
+}
+
+/**
  * Todos los montos del texto, cada uno con su moneda, del mayor al
  * menor. La marca de moneda se busca **junto al número**, no en toda la
  * frase: "1.090.000 + 200 usd" tiene un peso y un dólar en la misma
@@ -96,6 +151,7 @@ export function extraerMontos(texto: string): MontoExtraido[] {
     encontrados.push({
       monto,
       moneda: MARCA_USD.test(prefijo + texto.slice(indice, indice + largo) + sufijo) ? 'usd' : 'ars',
+      medio: medioCercano(texto, indice, largo),
     })
   }
 

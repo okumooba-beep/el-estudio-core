@@ -91,7 +91,7 @@ export function NuevoMovimiento({ monedaDefault, onGuardar, onGuardarCompra, onC
               style={tipo === opcion ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
               onClick={() => setTipo(opcion)}
             >
-              {opcion === 'ingreso' ? 'Entró' : 'Se fue'}
+              {opcion === 'ingreso' ? 'Ingresos' : 'Se fue'}
             </button>
           ))}
         </div>
