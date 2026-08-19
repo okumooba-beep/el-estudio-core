@@ -69,6 +69,12 @@ export function useFinance() {
     setMovimientos((current) => current.map((movimiento) => porId.get(movimiento.id) ?? movimiento))
   }
 
+  /** Mini Sprint 029.1 (§7) — borra un movimiento y lo saca del estado local, así todos los resúmenes derivados se recalculan solos. */
+  async function deleteMovimiento(id: string): Promise<void> {
+    await financeMovimientoRepository.delete(id)
+    setMovimientos((current) => current.filter((movimiento) => movimiento.id !== id))
+  }
+
   async function addGoal(input: NuevaFinanceGoal): Promise<void> {
     const created = await financeGoalRepository.add(input)
     setGoals((current) => [created, ...current])
@@ -89,6 +95,7 @@ export function useFinance() {
     addMovimiento,
     addCompra,
     updateMovimiento,
+    deleteMovimiento,
     addGoal,
     updateGoal,
   }

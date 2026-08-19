@@ -106,6 +106,15 @@ export interface FinanceMovimientoRepository extends Repository<FinanceMovimient
    * solo el que se pidió corregir.
    */
   update(id: string, patch: Partial<Omit<FinanceMovimiento, 'id' | 'createdAt'>>): Promise<FinanceMovimiento[]>
+  /**
+   * Mini Sprint 029.1 (§7) — borra un movimiento individual. Nunca una
+   * semana ni una categoría entera: siempre un solo id. Sin protección
+   * de cuotas acá adentro a propósito: la decisión de qué se puede
+   * borrar es de producto, no de datos, y todavía no está tomada para
+   * una cuota (§10) — así que quien llama a esto (la UI) es quien nunca
+   * ofrece el botón para un movimiento con `compraId`, no este método.
+   */
+  delete(id: string): Promise<void>
 }
 
 class DexieFinanceMovimientoRepository implements FinanceMovimientoRepository {
@@ -179,6 +188,10 @@ class DexieFinanceMovimientoRepository implements FinanceMovimientoRepository {
     const updated = await db.financeMovimientos.get(id)
     if (!updated) throw new Error(`Movimiento ${id} no encontrado`)
     return [updated, ...hermanas]
+  }
+
+  async delete(id: string): Promise<void> {
+    await db.financeMovimientos.delete(id)
   }
 }
 

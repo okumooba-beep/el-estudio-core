@@ -18,6 +18,10 @@ interface SeFueDetalleProps {
   categoriaInicial: FinanceCategoria | null
   /** Sprint 026: corrige la categoría de un movimiento ya existente, sin borrarlo y recrearlo. */
   onCambiarCategoria: (movimiento: FinanceMovimiento, categoria: FinanceCategoria) => void
+  /** Mini Sprint 029.1 (§4/§6) — corrige monto y/o fecha de un egreso ya existente. */
+  onEditar: (movimiento: FinanceMovimiento, patch: { monto: number; fecha: string }) => void
+  /** Mini Sprint 029.1 (§7) — borra un egreso individual. */
+  onEliminar: (movimiento: FinanceMovimiento) => void
   onCerrar: () => void
 }
 
@@ -37,6 +41,8 @@ export function SeFueDetalle({
   movimientos,
   categoriaInicial,
   onCambiarCategoria,
+  onEditar,
+  onEliminar,
   onCerrar,
 }: SeFueDetalleProps) {
   const [categoria, setCategoria] = useState<FinanceCategoria | null>(categoriaInicial)
@@ -64,6 +70,8 @@ export function SeFueDetalle({
               movimiento={movimiento}
               moneda={moneda}
               onCambiarCategoria={(nuevaCategoria) => onCambiarCategoria(movimiento, nuevaCategoria)}
+              onEditar={movimiento.compraId ? undefined : (patch) => onEditar(movimiento, patch)}
+              onEliminar={movimiento.compraId ? undefined : () => onEliminar(movimiento)}
             />
           ))}
         </ul>

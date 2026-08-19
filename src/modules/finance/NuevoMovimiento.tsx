@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { CATEGORIAS, CATEGORIA_LABEL, type FinanceCategoria } from './categorias'
-import { dividirEnCuotas, type Moneda } from './extraccion'
+import { dividirEnCuotas, parsearMontoManual, type Moneda } from './extraccion'
 import type { NuevaCompraEnCuotas, NuevaFinanceMovimiento } from './financeRepository'
 import { formatearMonto } from './mes'
 import type { FinanceMovimientoTipo } from '@/types/finance'
@@ -41,7 +41,7 @@ export function NuevoMovimiento({ monedaDefault, onGuardar, onGuardarCompra, onC
   const [cuotas, setCuotas] = useState('1')
   const [guardando, setGuardando] = useState(false)
 
-  const montoNumero = Number(monto.replace(',', '.'))
+  const montoNumero = parsearMontoManual(monto) ?? NaN
   const cuotasNumero = Number(cuotas)
   const esCompraEnCuotas = tipo === 'egreso' && Number.isFinite(cuotasNumero) && cuotasNumero >= 2
   const esValido = concepto.trim().length > 0 && Number.isFinite(montoNumero) && montoNumero > 0
@@ -107,12 +107,11 @@ export function NuevoMovimiento({ monedaDefault, onGuardar, onGuardarCompra, onC
       />
 
       <input
-        type="number"
-        step="any"
+        type="text"
         inputMode="decimal"
         value={monto}
         onChange={(event) => setMonto(event.target.value)}
-        placeholder="Monto"
+        placeholder="Monto (100.000)"
         aria-label="Monto"
         className="border-b border-border/60 bg-transparent px-1 py-2 font-mono text-[15px] text-ink outline-none placeholder:text-ink-dim"
       />

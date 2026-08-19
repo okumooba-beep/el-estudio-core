@@ -58,7 +58,7 @@ type Detalle = 'entro' | 'sefue' | 'nuevo' | null
  * rechaza).
  */
 export function FinanceScreen() {
-  const { movimientos, ready, addMovimiento, addCompra, updateMovimiento } = useFinance()
+  const { movimientos, ready, addMovimiento, addCompra, updateMovimiento, deleteMovimiento } = useFinance()
   const { ideas, moveSheet } = useIdeas()
   const [mes] = useState(() => mesDe(new Date()))
   const [moneda, setMoneda] = useState<Moneda>('ars')
@@ -155,6 +155,16 @@ export function FinanceScreen() {
     setCorrigiendo(null)
   }
 
+  /** Mini Sprint 029.1 (§4/§5/§6) — misma `updateMovimiento` que ya usa `corregirCategoria`, ahora para monto/fecha. */
+  function editarMovimiento(movimiento: FinanceMovimiento, patch: { monto: number; fecha: string }) {
+    void updateMovimiento(movimiento.id, patch)
+  }
+
+  /** Mini Sprint 029.1 (§7). */
+  function eliminarMovimiento(movimiento: FinanceMovimiento) {
+    void deleteMovimiento(movimiento.id)
+  }
+
   if (!ready) return null
 
   function cerrarDetalle() {
@@ -228,6 +238,8 @@ export function FinanceScreen() {
           periodoLabel={periodoLabel}
           total={entro}
           movimientos={movimientosDelPeriodo}
+          onEditar={editarMovimiento}
+          onEliminar={eliminarMovimiento}
           onCerrar={cerrarDetalle}
         />
       </div>
@@ -245,6 +257,8 @@ export function FinanceScreen() {
           movimientos={movimientosDelPeriodo}
           categoriaInicial={categoriaDetalle}
           onCambiarCategoria={corregirCategoria}
+          onEditar={editarMovimiento}
+          onEliminar={eliminarMovimiento}
           onCerrar={cerrarDetalle}
         />
       </div>

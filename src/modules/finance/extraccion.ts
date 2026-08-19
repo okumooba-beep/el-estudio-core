@@ -119,6 +119,24 @@ export function extraerMonto(texto: string): number | null {
   return extraerMontos(texto)[0]?.monto ?? null
 }
 
+/**
+ * Sprint 029.1 (§2/§4): el campo "Monto" de "+ Movimiento"/editar no es
+ * una frase — no hay "pesos" ni "usd" al lado que buscar, la moneda ya
+ * la eligió el toggle de arriba. Antes ese campo era un
+ * `<input type="number">` nativo: el navegador interpreta el punto como
+ * separador decimal (convención US), así que "100.000" tipeado se
+ * guardaba como 100 — el bug reportado. Misma regla que `aNumero` ya usa
+ * arriba para el texto libre (ya probada: "1.250,50" → 1250.5), aplicada
+ * acá a la cifra sola: el punto siempre es miles, la coma es decimal.
+ */
+export function parsearMontoManual(texto: string): number | null {
+  const limpio = texto.trim()
+  if (!/^\d[\d.,]*$/.test(limpio)) return null
+  const normalizado = limpio.replace(/\./g, '').replace(',', '.')
+  const monto = Math.round(Number(normalizado) * 100) / 100
+  return Number.isFinite(monto) && monto > 0 ? monto : null
+}
+
 export function extraerTipo(texto: string): FinanceMovimientoTipo {
   const normalizado = texto.toLowerCase()
   return VERBOS_INGRESO.some((verbo) => normalizado.includes(verbo)) ? 'ingreso' : 'egreso'

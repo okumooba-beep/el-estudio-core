@@ -12,6 +12,15 @@ interface EntroDetalleProps {
   total: number
   /** Movimientos ya recortados al período (semana o mes) — se filtra acá solo por tipo. */
   movimientos: readonly FinanceMovimiento[]
+  /**
+   * Mini Sprint 029.1 (§5/§6) — corrige monto y/o fecha de un ingreso ya
+   * existente. Corregir la fecha es lo que mueve el movimiento de semana
+   * (§6): la semana sigue siendo un resumen calculado, nunca se edita
+   * directo.
+   */
+  onEditar: (movimiento: FinanceMovimiento, patch: { monto: number; fecha: string }) => void
+  /** Mini Sprint 029.1 (§7) — borra un ingreso individual. */
+  onEliminar: (movimiento: FinanceMovimiento) => void
   onCerrar: () => void
 }
 
@@ -23,7 +32,7 @@ interface EntroDetalleProps {
  * semana, así que alcanza con la lista cronológica de movimientos
  * (punto 8: "¿Qué entró esta semana?").
  */
-export function EntroDetalle({ vista, mes, moneda, periodoLabel, total, movimientos, onCerrar }: EntroDetalleProps) {
+export function EntroDetalle({ vista, mes, moneda, periodoLabel, total, movimientos, onEditar, onEliminar, onCerrar }: EntroDetalleProps) {
   const ingresos = movimientos.filter((m) => m.tipo === 'ingreso').sort((a, b) => a.fecha.localeCompare(b.fecha))
 
   const semanas =
@@ -67,7 +76,14 @@ export function EntroDetalle({ vista, mes, moneda, periodoLabel, total, movimien
               </div>
               <ul className="flex flex-col">
                 {deLaSemana.map((movimiento) => (
-                  <MovimientoRow key={movimiento.id} movimiento={movimiento} moneda={moneda} signo="+" />
+                  <MovimientoRow
+                    key={movimiento.id}
+                    movimiento={movimiento}
+                    moneda={moneda}
+                    signo="+"
+                    onEditar={movimiento.compraId ? undefined : (patch) => onEditar(movimiento, patch)}
+                    onEliminar={movimiento.compraId ? undefined : () => onEliminar(movimiento)}
+                  />
                 ))}
               </ul>
             </li>
@@ -76,7 +92,14 @@ export function EntroDetalle({ vista, mes, moneda, periodoLabel, total, movimien
       ) : (
         <ul className="flex flex-col">
           {ingresos.map((movimiento) => (
-            <MovimientoRow key={movimiento.id} movimiento={movimiento} moneda={moneda} signo="+" />
+            <MovimientoRow
+              key={movimiento.id}
+              movimiento={movimiento}
+              moneda={moneda}
+              signo="+"
+              onEditar={movimiento.compraId ? undefined : (patch) => onEditar(movimiento, patch)}
+              onEliminar={movimiento.compraId ? undefined : () => onEliminar(movimiento)}
+            />
           ))}
         </ul>
       )}
