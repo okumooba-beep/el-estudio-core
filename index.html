@@ -4,13 +4,28 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=overlays-content" />
     <meta name="theme-color" content="#120F0C" />
     <meta name="description" content="El Estudio — un lugar personal para pensar. Hoy es el único lugar donde puedes actuar." />
     <!--
       La app se abre como un lugar, no como una página: sin barra de
       navegador, con su propio tono en la barra de estado (el color real
       lo corrige src/lib/light/applyLight.ts antes del primer paint).
+
+      Sprint 031 ("Eliminar movimiento/zoom involuntario"): interactive-
+      widget pasa de resizes-content a overlays-content. resizes-content
+      encoge el layout viewport real cuando se abre el teclado en pantalla
+      — y la habitación (fixed inset-0, background-size:cover, ver
+      RoomBackground.tsx/index.html más abajo) recalcula su cover contra
+      ese viewport más chico en cada tap sobre cualquier input (captura
+      del Umbral, Cuaderno, bloques de Agenda): eso es el "la habitación
+      se acerca y hay que echarla hacia atrás" que se sentía al escribir.
+      No existe ningún motor de cámara real corriendo hoy (SceneStage/
+      useCameraRig nunca se construyeron, ver comentario de
+      .room-layer-photo) — este único atributo era la única causa real
+      del movimiento. overlays-content deja el teclado flotando encima
+      del contenido sin tocar el tamaño del viewport, así que la foto
+      fija nunca vuelve a recalcular su escala.
     -->
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
