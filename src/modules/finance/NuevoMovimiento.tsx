@@ -137,7 +137,11 @@ export function NuevoMovimiento({ monedaDefault, tipoFijo, fechaDefault, onGuard
               className="idea-destino"
               aria-pressed={medio === opcion}
               style={medio === opcion ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
-              onClick={() => setMedio(opcion)}
+              onClick={() => {
+                if (opcion === medio) return
+                setMedio(opcion)
+                setMonto('')
+              }}
             >
               {opcion === 'efectivo' ? 'Efectivo' : 'Transferencia'}
             </button>
@@ -199,7 +203,11 @@ export function NuevoMovimiento({ monedaDefault, tipoFijo, fechaDefault, onGuard
               className="idea-destino"
               aria-pressed={moneda === opcion}
               style={moneda === opcion ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
-              onClick={() => setMoneda(opcion)}
+              onClick={() => {
+                if (opcion === moneda) return
+                setMoneda(opcion)
+                setMonto('')
+              }}
             >
               {opcion === 'ars' ? 'Pesos' : 'Dólares'}
             </button>

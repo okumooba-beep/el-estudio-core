@@ -39,10 +39,35 @@ interface MovimientoRowProps {
   onEditar?: ((patch: PatchMovimiento) => void) | undefined
   /** Mini Sprint 029.1 (§7) — borra este movimiento. Mismo cuidado con cuotas que `onEditar`. */
   onEliminar?: (() => void) | undefined
+  /**
+   * Sprint 034 (§16) — reclasifica un movimiento "Por revisar" que en
+   * realidad es plata que entró (p. ej. un texto viejo del Umbral que no
+   * matcheó ningún verbo de ingreso y quedó como egreso sin categoría).
+   * Nunca se ofrece junto a `onCambiarCategoria` en el mismo lugar salvo
+   * en "Por revisar" — mismo cuidado con cuotas que `onEditar`.
+   */
+  onConvertirAIngreso?: (() => void) | undefined
 }
 
-/** Una fila de movimiento dentro de los detalles de Entró/Se fue (Sprint 016). */
-export function MovimientoRow({ movimiento, moneda, signo = '', onCambiarCategoria, onEditar, onEliminar }: MovimientoRowProps) {
+/**
+ * Sprint 034 (§5) — Editar/Eliminar/Editar categoría nunca estuvieron
+ * permanentemente visibles en el diseño del brief: hasta acá se
+ * renderizaban siempre que la prop existía, sin ningún gesto de por
+ * medio. Tocar la fila revela los disparadores; tocarla de nuevo (o
+ * cambiar de fila) los vuelve a esconder y cierra cualquier
+ * sub-formulario abierto, para que nunca quede un formulario editable
+ * escondido detrás de un disparador oculto.
+ */
+export function MovimientoRow({
+  movimiento,
+  moneda,
+  signo = '',
+  onCambiarCategoria,
+  onEditar,
+  onEliminar,
+  onConvertirAIngreso,
+}: MovimientoRowProps) {
+  const [interactuando, setInteractuando] = useState(false)
   const [categoriaAbierta, setCategoriaAbierta] = useState(false)
   const [formAbierto, setFormAbierto] = useState(false)
   const [confirmandoBorrado, setConfirmandoBorrado] = useState(false)
@@ -51,6 +76,20 @@ export function MovimientoRow({ movimiento, moneda, signo = '', onCambiarCategor
   const [monedaEditada, setMonedaEditada] = useState<Moneda>(movimiento.moneda)
   const [medioEditado, setMedioEditado] = useState<Medio>(movimiento.medio)
   const [conceptoTexto, setConceptoTexto] = useState(movimiento.concepto)
+
+  const tieneAcciones = Boolean(onCambiarCategoria || onEditar || onEliminar || onConvertirAIngreso)
+
+  function alternarInteraccion() {
+    if (!tieneAcciones) return
+    setInteractuando((actual) => {
+      if (actual) {
+        setCategoriaAbierta(false)
+        setFormAbierto(false)
+        setConfirmandoBorrado(false)
+      }
+      return !actual
+    })
+  }
 
   const montoEditado = parsearMontoManual(montoTexto)
   const puedeGuardar = montoEditado !== null && fechaTexto.length === 10
@@ -76,44 +115,65 @@ export function MovimientoRow({ movimiento, moneda, signo = '', onCambiarCategor
     setFormAbierto(false)
   }
 
+  const contenidoFila = (
+    <>
+      <span className="flex flex-col gap-0.5">
+        <span className="text-[12.5px] text-ink-faint">
+          {etiquetaDia(movimiento.fecha)} · {movimiento.medio === 'efectivo' ? 'Efectivo' : 'Transferencia'}
+        </span>
+        <span className="text-[15px] leading-snug text-ink">{movimiento.concepto}</span>
+        {movimiento.cuotaTotal ? (
+          <span className="text-[11.5px] text-ink-faint">
+            {movimiento.categoria ? `${CATEGORIA_LABEL[movimiento.categoria]} · ` : ''}
+            Cuota {movimiento.cuotaNumero}/{movimiento.cuotaTotal}
+          </span>
+        ) : null}
+      </span>
+      <span className={`shrink-0 font-mono text-[14px] ${signo === '+' ? 'text-good' : 'text-ink-dim'}`}>
+        {signo}
+        {formatearMonto(movimiento.monto, moneda)}
+      </span>
+    </>
+  )
+
   return (
     <li className="border-b border-border/40 py-2 last:border-b-0">
-      <div className="flex items-baseline justify-between gap-3">
-        <span className="flex flex-col gap-0.5">
-          <span className="text-[12.5px] text-ink-faint">
-            {etiquetaDia(movimiento.fecha)} · {movimiento.medio === 'efectivo' ? 'Efectivo' : 'Transferencia'}
-          </span>
-          <span className="text-[15px] leading-snug text-ink">{movimiento.concepto}</span>
-          {movimiento.cuotaTotal ? (
-            <span className="text-[11.5px] text-ink-faint">
-              {movimiento.categoria ? `${CATEGORIA_LABEL[movimiento.categoria]} · ` : ''}
-              Cuota {movimiento.cuotaNumero}/{movimiento.cuotaTotal}
-            </span>
-          ) : null}
-        </span>
-        <span className={`shrink-0 font-mono text-[14px] ${signo === '+' ? 'text-good' : 'text-ink-dim'}`}>
-          {signo}
-          {formatearMonto(movimiento.monto, moneda)}
-        </span>
-      </div>
+      {tieneAcciones ? (
+        <button
+          type="button"
+          className="flex w-full appearance-none items-baseline justify-between gap-3 border-0 bg-transparent p-0 text-left"
+          onClick={alternarInteraccion}
+        >
+          {contenidoFila}
+        </button>
+      ) : (
+        <div className="flex items-baseline justify-between gap-3">{contenidoFila}</div>
+      )}
 
-      <div className="mt-1 flex flex-wrap gap-3">
-        {onCambiarCategoria ? (
-          <button type="button" className="idea-destino" onClick={() => setCategoriaAbierta((actual) => !actual)}>
-            {categoriaAbierta ? 'Cancelar' : 'Editar categoría'}
-          </button>
-        ) : null}
-        {onEditar ? (
-          <button type="button" className="idea-destino" onClick={() => (formAbierto ? setFormAbierto(false) : abrirForm())}>
-            {formAbierto ? 'Cancelar' : 'Editar'}
-          </button>
-        ) : null}
-        {onEliminar ? (
-          <button type="button" className="idea-destino" onClick={() => setConfirmandoBorrado((actual) => !actual)}>
-            Eliminar
-          </button>
-        ) : null}
-      </div>
+      {interactuando ? (
+        <div className="mt-1 flex flex-wrap gap-3">
+          {onCambiarCategoria ? (
+            <button type="button" className="idea-destino" onClick={() => setCategoriaAbierta((actual) => !actual)}>
+              {categoriaAbierta ? 'Cancelar' : 'Editar categoría'}
+            </button>
+          ) : null}
+          {onConvertirAIngreso ? (
+            <button type="button" className="idea-destino" onClick={onConvertirAIngreso}>
+              Es un ingreso
+            </button>
+          ) : null}
+          {onEditar ? (
+            <button type="button" className="idea-destino" onClick={() => (formAbierto ? setFormAbierto(false) : abrirForm())}>
+              {formAbierto ? 'Cancelar' : 'Editar'}
+            </button>
+          ) : null}
+          {onEliminar ? (
+            <button type="button" className="idea-destino" onClick={() => setConfirmandoBorrado((actual) => !actual)}>
+              Eliminar
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
       {categoriaAbierta && onCambiarCategoria ? (
         <div className="idea-destinos mt-2" role="group" aria-label="Elegir categoría">

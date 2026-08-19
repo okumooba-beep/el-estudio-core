@@ -7,7 +7,7 @@ import { EntroDetalle } from './EntroDetalle'
 import { SeFueDetalle } from './SeFueDetalle'
 import { MovimientoRow } from './MovimientoRow'
 import { NuevoMovimiento } from './NuevoMovimiento'
-import { CATEGORIAS, CATEGORIA_COLOR, CATEGORIA_LABEL, type FinanceCategoria } from './categorias'
+import { CATEGORIA_COLOR, CATEGORIA_LABEL, type FinanceCategoria } from './categorias'
 import { extraerMovimiento, type Moneda } from './extraccion'
 import {
   estaEnCurso,
@@ -65,7 +65,6 @@ export function FinanceScreen() {
   const [mes] = useState(() => mesDe(new Date()))
   const [moneda, setMoneda] = useState<Moneda>('ars')
   const [vista, setVista] = useState<Vista>('semana')
-  const [corrigiendo, setCorrigiendo] = useState<string | null>(null)
   const [detalle, setDetalle] = useState<Detalle>(null)
   const [categoriaDetalle, setCategoriaDetalle] = useState<FinanceCategoria | null>(null)
   /** Mini Sprint 032 (§2) — semana desde la que se abrió "+ Agregar ingreso", para volver a Ingresos (no a Finanzas) al guardar o cancelar. `null` cuando el formulario se abrió desde "+ Movimiento" general. */
@@ -161,7 +160,20 @@ export function FinanceScreen() {
 
   function corregirCategoria(movimiento: FinanceMovimiento, categoria: FinanceCategoria) {
     void updateMovimiento(movimiento.id, { categoria })
-    setCorrigiendo(null)
+  }
+
+  /**
+   * Sprint 034 (§16) — "Por revisar" solo existe para egresos sin
+   * categoría (ver `resumirPeriodo` en mes.ts), pero un texto viejo del
+   * Umbral que no matcheó ningún verbo de ingreso ("Semana 3, 200K") cae
+   * ahí como egreso aunque en realidad haya sido plata que entró. Acá se
+   * corrige el dato en la raíz — tipo pasa a 'ingreso' y la categoría se
+   * limpia porque un ingreso nunca tiene una — así el movimiento sale de
+   * "Por revisar" y aparece en Ingresos, agrupado por su semana como
+   * cualquier otro.
+   */
+  function convertirAIngreso(movimiento: FinanceMovimiento) {
+    void updateMovimiento(movimiento.id, { tipo: 'ingreso', categoria: null })
   }
 
   /** Mini Sprint 029.1 (§4/§5/§6) — misma `updateMovimiento` que ya usa `corregirCategoria`. Mini Sprint 032 (§7) amplió el patch a monto/fecha/moneda/medio/concepto. */
@@ -264,6 +276,14 @@ export function FinanceScreen() {
   const movimientosDelPeriodo = vista === 'semana' ? semanal.movimientos : resumen.movimientos
   const gruposDelPeriodo = vista === 'semana' ? semanal.grupos : resumen.grupos
   const registradoHastaHoy = estaEnCurso(mes)
+  /**
+   * Sprint 034 (§19/§20) — "Movimientos recientes" responde "¿en qué se
+   * fue?", no un timeline general: antes mostraba `movimientosDelPeriodo`
+   * sin filtrar, así que un ingreso ("Ingreso Semana 3, $10") aparecía acá
+   * mezclado con salidas reales. Mismo campo `tipo` que ya usa toda
+   * Finanzas como fuente de verdad — nada de clasificación paralela.
+   */
+  const movimientosRecientes = movimientosDelPeriodo.filter((movimiento) => movimiento.tipo === 'egreso').slice(0, 5)
 
   if (detalle === 'entro') {
     return (
@@ -371,40 +391,17 @@ export function FinanceScreen() {
         <section>
           <h2 className="mb-1 font-mono text-[11px] uppercase tracking-wide text-accent">Por revisar</h2>
           <ul className="flex flex-col">
-            {resumen.porRevisar.map((movimiento) => {
-              const abierto = corrigiendo === movimiento.id
-              return (
-                <li key={movimiento.id} className="border-b border-border/40 py-3 last:border-b-0">
-                  <div className="flex items-baseline justify-between gap-3">
-                    <span className="text-[15px] leading-snug text-ink">{movimiento.concepto}</span>
-                    <span className="shrink-0 font-mono text-[13.5px] text-ink-faint">
-                      {formatearMonto(movimiento.monto, moneda)}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    className="idea-destino mt-1"
-                    onClick={() => setCorrigiendo(abierto ? null : movimiento.id)}
-                  >
-                    Elegir categoría
-                  </button>
-                  {abierto ? (
-                    <div className="idea-destinos mt-2" role="group" aria-label="Elegir categoría">
-                      {CATEGORIAS.map((categoria) => (
-                        <button
-                          key={categoria}
-                          type="button"
-                          className="idea-destino"
-                          onClick={() => corregirCategoria(movimiento, categoria)}
-                        >
-                          {CATEGORIA_LABEL[categoria]}
-                        </button>
-                      ))}
-                    </div>
-                  ) : null}
-                </li>
-              )
-            })}
+            {resumen.porRevisar.map((movimiento) => (
+              <MovimientoRow
+                key={movimiento.id}
+                movimiento={movimiento}
+                moneda={moneda}
+                onCambiarCategoria={(categoria) => corregirCategoria(movimiento, categoria)}
+                onConvertirAIngreso={movimiento.compraId ? undefined : () => convertirAIngreso(movimiento)}
+                onEditar={movimiento.compraId ? undefined : (patch) => editarMovimiento(movimiento, patch)}
+                onEliminar={movimiento.compraId ? undefined : () => eliminarMovimiento(movimiento)}
+              />
+            ))}
           </ul>
         </section>
       ) : null}
@@ -474,17 +471,12 @@ export function FinanceScreen() {
         </section>
       ) : null}
 
-      {movimientosDelPeriodo.length > 0 ? (
+      {movimientosRecientes.length > 0 ? (
         <section className="flex flex-col gap-1.5">
           <h2 className="mb-1 font-mono text-[11px] uppercase tracking-wide text-accent">Movimientos recientes</h2>
           <ul className="flex flex-col">
-            {movimientosDelPeriodo.slice(0, 5).map((movimiento) => (
-              <MovimientoRow
-                key={movimiento.id}
-                movimiento={movimiento}
-                moneda={moneda}
-                signo={movimiento.tipo === 'ingreso' ? '+' : ''}
-              />
+            {movimientosRecientes.map((movimiento) => (
+              <MovimientoRow key={movimiento.id} movimiento={movimiento} moneda={moneda} />
             ))}
           </ul>
         </section>
