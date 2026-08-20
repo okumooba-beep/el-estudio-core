@@ -2,7 +2,7 @@ import Dexie, { type EntityTable } from 'dexie'
 import type { Idea } from '@/types/idea'
 import type { Operacion } from '@/types/operacion'
 import type { HabitCheck } from '@/types/habitCheck'
-import type { FinanceAccount, FinanceMovimiento, FinanceGoal } from '@/types/finance'
+import type { FinanceAccount, FinanceMovimiento, FinanceGoal, FinanceIncomePeriod } from '@/types/finance'
 import type { AgendaEvento, AgendaBloque } from '@/types/agenda'
 import { extraerCategoria } from '@modules/finance/extraccion'
 
@@ -37,6 +37,7 @@ class LifeosDB extends Dexie {
   financeAccounts!: EntityTable<FinanceAccount, 'id'>
   financeMovimientos!: EntityTable<FinanceMovimiento, 'id'>
   financeGoals!: EntityTable<FinanceGoal, 'id'>
+  financeIncomePeriods!: EntityTable<FinanceIncomePeriod, 'id'>
   agendaEventos!: EntityTable<AgendaEvento, 'id'>
   agendaBloques!: EntityTable<AgendaBloque, 'id'>
 
@@ -309,6 +310,43 @@ class LifeosDB extends Dexie {
     this.version(14).stores({
       financeMovimientos: 'id, createdAt, categoria, ideaId, moneda, medio, compraId',
     })
+
+    /**
+     * Sprint 036 — "Ingresos como períodos financieros reales". Auditoría
+     * previa (ver §32 del sprint): `financeMovimientos` no tenía, en
+     * ningún momento de su historia, un campo de período — "semana" era
+     * siempre `Math.ceil(día/7)` calculado al vuelo (semanaDelMes en
+     * mes.ts). Esa función no puede representar un período con fechas que
+     * el usuario elige ("Semana 1: lunes 10 → domingo 16"), así que no
+     * hay forma de inferir a qué período pertenecía cada ingreso ya
+     * guardado — no hay dato que migrar, solo una columna que nunca
+     * existió.
+     *
+     * `financeIncomePeriods` es la tabla nueva y mínima que hacía falta:
+     * un período es `{ nombre, fechaInicio, fechaFin }`, nada más. Nace
+     * vacía — los períodos los crea el usuario desde Ingresos, no un
+     * migrador.
+     *
+     * `periodoId` se agrega como índice a `financeMovimientos` para poder
+     * listar los ingresos de un período sin recorrer toda la tabla.
+     *
+     * Limpieza autorizada explícitamente por el usuario ("Podés borrar
+     * los datos actuales de Finanzas... prefiero 0 movimientos + un
+     * modelo correcto que 100 movimientos antiguos + un modelo que sigue
+     * fallando"): se vacía únicamente `financeMovimientos` — la única
+     * tabla de Finanzas cuyo modelo cambia en este sprint. `financeAccounts`
+     * y `financeGoals` no se tocan: no forman parte de Ingresos ni tienen
+     * relación con `periodoId`, y no hay necesidad conceptual de vaciarlos
+     * para dejar el módulo de Ingresos limpio.
+     */
+    this.version(15)
+      .stores({
+        financeIncomePeriods: 'id, createdAt, orden',
+        financeMovimientos: 'id, createdAt, categoria, ideaId, moneda, medio, compraId, periodoId',
+      })
+      .upgrade(async (tx) => {
+        await tx.table('financeMovimientos').clear()
+      })
   }
 }
 

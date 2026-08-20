@@ -3,12 +3,14 @@ import {
   financeAccountRepository,
   financeMovimientoRepository,
   financeGoalRepository,
+  financeIncomePeriodRepository,
   type NuevaFinanceAccount,
   type NuevaFinanceMovimiento,
   type NuevaCompraEnCuotas,
   type NuevaFinanceGoal,
+  type NuevoFinanceIncomePeriod,
 } from './financeRepository'
-import type { FinanceAccount, FinanceMovimiento, FinanceGoal } from '@/types/finance'
+import type { FinanceAccount, FinanceMovimiento, FinanceGoal, FinanceIncomePeriod } from '@/types/finance'
 
 /**
  * Threshold Experience V1 — mismo patrón que useHabitChecks: carga una
@@ -23,17 +25,22 @@ export function useFinance() {
   const [accounts, setAccounts] = useState<FinanceAccount[]>([])
   const [movimientos, setMovimientos] = useState<FinanceMovimiento[]>([])
   const [goals, setGoals] = useState<FinanceGoal[]>([])
+  const [periodos, setPeriodos] = useState<FinanceIncomePeriod[]>([])
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
-    Promise.all([financeAccountRepository.list(), financeMovimientoRepository.list(), financeGoalRepository.list()]).then(
-      ([loadedAccounts, loadedMovimientos, loadedGoals]) => {
-        setAccounts(loadedAccounts)
-        setMovimientos(loadedMovimientos)
-        setGoals(loadedGoals)
-        setReady(true)
-      },
-    )
+    Promise.all([
+      financeAccountRepository.list(),
+      financeMovimientoRepository.list(),
+      financeGoalRepository.list(),
+      financeIncomePeriodRepository.list(),
+    ]).then(([loadedAccounts, loadedMovimientos, loadedGoals, loadedPeriodos]) => {
+      setAccounts(loadedAccounts)
+      setMovimientos(loadedMovimientos)
+      setGoals(loadedGoals)
+      setPeriodos(loadedPeriodos)
+      setReady(true)
+    })
   }, [])
 
   async function addAccount(input: NuevaFinanceAccount): Promise<void> {
@@ -85,10 +92,29 @@ export function useFinance() {
     setGoals((current) => current.map((goal) => (goal.id === id ? updated : goal)))
   }
 
+  /** Sprint 036 — crea un período de ingresos ("+ Nueva semana"). */
+  async function addPeriodo(input: NuevoFinanceIncomePeriod): Promise<void> {
+    const created = await financeIncomePeriodRepository.add(input)
+    setPeriodos((current) => [...current, created])
+  }
+
+  /** Sprint 036 — corrige nombre/fechaInicio/fechaFin de un período ya existente. */
+  async function updatePeriodo(id: string, patch: Partial<Omit<FinanceIncomePeriod, 'id' | 'createdAt'>>): Promise<void> {
+    const updated = await financeIncomePeriodRepository.update(id, patch)
+    setPeriodos((current) => current.map((periodo) => (periodo.id === id ? updated : periodo)))
+  }
+
+  /** Sprint 036 — borra un período. La UI solo lo ofrece cuando ya no tiene ingresos asignados. */
+  async function deletePeriodo(id: string): Promise<void> {
+    await financeIncomePeriodRepository.delete(id)
+    setPeriodos((current) => current.filter((periodo) => periodo.id !== id))
+  }
+
   return {
     accounts,
     movimientos,
     goals,
+    periodos,
     ready,
     addAccount,
     updateAccount,
@@ -98,5 +124,8 @@ export function useFinance() {
     deleteMovimiento,
     addGoal,
     updateGoal,
+    addPeriodo,
+    updatePeriodo,
+    deletePeriodo,
   }
 }

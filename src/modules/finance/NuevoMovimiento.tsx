@@ -12,6 +12,8 @@ interface NuevoMovimientoProps {
   tipoFijo?: FinanceMovimientoTipo
   /** Mini Sprint 032 (§3) — fecha con la que arranca el formulario cuando viene de una semana puntual. */
   fechaDefault?: string
+  /** Sprint 036 — cuando "+ Agregar ingreso" se abre desde un período puntual, el ingreso nace ya asociado a ese período, sin que el usuario tenga que elegirlo. */
+  periodoIdFijo?: string
   onGuardar: (input: NuevaFinanceMovimiento) => Promise<void>
   /** Sprint 028 — mismo formulario, pero cuando hay 2+ cuotas la alta va por acá, no por `onGuardar`. */
   onGuardarCompra: (input: NuevaCompraEnCuotas) => Promise<void>
@@ -35,7 +37,15 @@ interface NuevoMovimientoProps {
  * así que se manda 'transferencia' por defecto, el mismo default que ya
  * usa extraccion.ts cuando el texto no trae ninguna marca.
  */
-export function NuevoMovimiento({ monedaDefault, tipoFijo, fechaDefault, onGuardar, onGuardarCompra, onCerrar }: NuevoMovimientoProps) {
+export function NuevoMovimiento({
+  monedaDefault,
+  tipoFijo,
+  fechaDefault,
+  periodoIdFijo,
+  onGuardar,
+  onGuardarCompra,
+  onCerrar,
+}: NuevoMovimientoProps) {
   const [tipo, setTipo] = useState<FinanceMovimientoTipo>(tipoFijo ?? 'egreso')
   const [concepto, setConcepto] = useState('')
   const [monto, setMonto] = useState('')
@@ -77,6 +87,7 @@ export function NuevoMovimiento({ monedaDefault, tipoFijo, fechaDefault, onGuard
         moneda,
         medio,
         fecha,
+        ...(tipo === 'ingreso' && periodoIdFijo ? { periodoId: periodoIdFijo } : {}),
       })
     }
   }

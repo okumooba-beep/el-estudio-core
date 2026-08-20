@@ -3,7 +3,14 @@ import { generateId } from '@shared-kernel/id'
 import type { Repository } from '@shared-kernel/persistence/Repository'
 import type { FinanceCategoria } from './categorias'
 import { dividirEnCuotas, fechaCuota, type Medio, type Moneda } from './extraccion'
-import type { FinanceAccount, FinanceAccountTipo, FinanceMovimiento, FinanceMovimientoTipo, FinanceGoal } from '@/types/finance'
+import type {
+  FinanceAccount,
+  FinanceAccountTipo,
+  FinanceMovimiento,
+  FinanceMovimientoTipo,
+  FinanceGoal,
+  FinanceIncomePeriod,
+} from '@/types/finance'
 
 /**
  * Threshold Experience V1 — mismo patrón que operacionRepository.ts:
@@ -65,6 +72,8 @@ export interface NuevaFinanceMovimiento {
   ideaId?: string
   /** YYYY-MM-DD. Por defecto hoy — una captura vieja conserva su día. */
   fecha?: string
+  /** Sprint 036 — a qué período pertenece, cuando nace ya asociado a uno (p. ej. "+ Agregar ingreso" de una Semana puntual). */
+  periodoId?: string
 }
 
 /**
@@ -134,6 +143,7 @@ class DexieFinanceMovimientoRepository implements FinanceMovimientoRepository {
       moneda: input.moneda,
       medio: input.medio,
       ...(input.ideaId ? { ideaId: input.ideaId } : {}),
+      ...(input.periodoId ? { periodoId: input.periodoId } : {}),
       fecha: input.fecha ?? now.toISOString().slice(0, 10),
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
@@ -234,6 +244,61 @@ class DexieFinanceGoalRepository implements FinanceGoalRepository {
   }
 }
 
+export interface NuevoFinanceIncomePeriod {
+  nombre: string
+  fechaInicio: string
+  fechaFin: string
+}
+
+/**
+ * Sprint 036 — un período de ingresos: create/edit/delete, igual que
+ * las otras entidades de Finanzas. Nunca se deriva del calendario — lo
+ * define el usuario y sigue siendo lo que él eligió hasta que lo
+ * cambie a mano.
+ */
+export interface FinanceIncomePeriodRepository extends Repository<FinanceIncomePeriod> {
+  add(input: NuevoFinanceIncomePeriod): Promise<FinanceIncomePeriod>
+  update(id: string, patch: Partial<Omit<FinanceIncomePeriod, 'id' | 'createdAt'>>): Promise<FinanceIncomePeriod>
+  /** Borra un período. Quien llama decide si corresponde (la UI no ofrece esto para un período que todavía tiene ingresos asignados). */
+  delete(id: string): Promise<void>
+}
+
+class DexieFinanceIncomePeriodRepository implements FinanceIncomePeriodRepository {
+  async list(): Promise<FinanceIncomePeriod[]> {
+    const periodos = await db.financeIncomePeriods.toArray()
+    return periodos.sort((a, b) => a.fechaInicio.localeCompare(b.fechaInicio) || a.orden - b.orden)
+  }
+
+  async add(input: NuevoFinanceIncomePeriod): Promise<FinanceIncomePeriod> {
+    const now = new Date().toISOString()
+    const orden = await db.financeIncomePeriods.count()
+    const periodo: FinanceIncomePeriod = {
+      id: generateId(),
+      nombre: input.nombre.trim(),
+      fechaInicio: input.fechaInicio,
+      fechaFin: input.fechaFin,
+      orden,
+      createdAt: now,
+      updatedAt: now,
+      pendingSync: true,
+    }
+    await db.financeIncomePeriods.add(periodo)
+    return periodo
+  }
+
+  async update(id: string, patch: Partial<Omit<FinanceIncomePeriod, 'id' | 'createdAt'>>): Promise<FinanceIncomePeriod> {
+    await db.financeIncomePeriods.update(id, { ...patch, updatedAt: new Date().toISOString(), pendingSync: true })
+    const updated = await db.financeIncomePeriods.get(id)
+    if (!updated) throw new Error(`Período ${id} no encontrado`)
+    return updated
+  }
+
+  async delete(id: string): Promise<void> {
+    await db.financeIncomePeriods.delete(id)
+  }
+}
+
 export const financeAccountRepository: FinanceAccountRepository = new DexieFinanceAccountRepository()
 export const financeMovimientoRepository: FinanceMovimientoRepository = new DexieFinanceMovimientoRepository()
 export const financeGoalRepository: FinanceGoalRepository = new DexieFinanceGoalRepository()
+export const financeIncomePeriodRepository: FinanceIncomePeriodRepository = new DexieFinanceIncomePeriodRepository()

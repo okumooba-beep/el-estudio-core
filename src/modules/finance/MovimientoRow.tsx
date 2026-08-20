@@ -2,16 +2,22 @@ import { useState } from 'react'
 import { CATEGORIAS, CATEGORIA_LABEL, type FinanceCategoria } from './categorias'
 import { etiquetaDia, formatearMonto } from './mes'
 import { parsearMontoManual } from './extraccion'
-import type { FinanceMovimiento } from '@/types/finance'
+import type { FinanceMovimiento, FinanceIncomePeriod } from '@/types/finance'
 import type { Medio, Moneda } from './extraccion'
 
-/** Mini Sprint 032 (§7) — todo lo que se puede corregir de un movimiento ya existente. */
+/**
+ * Mini Sprint 032 (§7) — todo lo que se puede corregir de un movimiento
+ * ya existente. Sprint 036 agrega `periodoId`: a qué período pertenece
+ * este ingreso, solo relevante cuando la fila se edita desde Ingresos
+ * (ver prop `periodos` más abajo) — un egreso nunca lo manda.
+ */
 export interface PatchMovimiento {
   monto: number
   fecha: string
   moneda: Moneda
   medio: Medio
   concepto: string
+  periodoId?: string
 }
 
 interface MovimientoRowProps {
@@ -47,6 +53,13 @@ interface MovimientoRowProps {
    * en "Por revisar" — mismo cuidado con cuotas que `onEditar`.
    */
   onConvertirAIngreso?: (() => void) | undefined
+  /**
+   * Sprint 036 — lista de períodos disponibles para reasignar este
+   * ingreso. Solo se pasa desde Ingresos (EntroDetalle); si no se pasa,
+   * el formulario de edición no muestra selector de período — un egreso
+   * o una fila de "Por revisar"/"Movimientos recientes" nunca lo tiene.
+   */
+  periodos?: readonly FinanceIncomePeriod[]
 }
 
 /**
@@ -66,6 +79,7 @@ export function MovimientoRow({
   onEditar,
   onEliminar,
   onConvertirAIngreso,
+  periodos,
 }: MovimientoRowProps) {
   const [interactuando, setInteractuando] = useState(false)
   const [categoriaAbierta, setCategoriaAbierta] = useState(false)
@@ -76,6 +90,9 @@ export function MovimientoRow({
   const [monedaEditada, setMonedaEditada] = useState<Moneda>(movimiento.moneda)
   const [medioEditado, setMedioEditado] = useState<Medio>(movimiento.medio)
   const [conceptoTexto, setConceptoTexto] = useState(movimiento.concepto)
+  const [periodoEditado, setPeriodoEditado] = useState<string | undefined>(
+    () => movimiento.periodoId ?? periodos?.[0]?.id,
+  )
 
   const tieneAcciones = Boolean(onCambiarCategoria || onEditar || onEliminar || onConvertirAIngreso)
 
@@ -100,6 +117,7 @@ export function MovimientoRow({
     setMonedaEditada(movimiento.moneda)
     setMedioEditado(movimiento.medio)
     setConceptoTexto(movimiento.concepto)
+    setPeriodoEditado(movimiento.periodoId ?? periodos?.[0]?.id)
     setFormAbierto(true)
   }
 
@@ -111,6 +129,7 @@ export function MovimientoRow({
       moneda: monedaEditada,
       medio: medioEditado,
       concepto: conceptoTexto.trim(),
+      ...(periodos && periodoEditado ? { periodoId: periodoEditado } : {}),
     })
     setFormAbierto(false)
   }
@@ -256,6 +275,22 @@ export function MovimientoRow({
               </button>
             ))}
           </div>
+          {periodos && periodos.length > 0 ? (
+            <div className="idea-destinos" role="group" aria-label="Período">
+              {periodos.map((periodo) => (
+                <button
+                  key={periodo.id}
+                  type="button"
+                  className="idea-destino"
+                  aria-pressed={periodoEditado === periodo.id}
+                  style={periodoEditado === periodo.id ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
+                  onClick={() => setPeriodoEditado(periodo.id)}
+                >
+                  {periodo.nombre}
+                </button>
+              ))}
+            </div>
+          ) : null}
           <button
             type="button"
             className="idea-destino self-start disabled:opacity-40"

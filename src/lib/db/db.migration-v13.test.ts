@@ -1,14 +1,24 @@
 import 'fake-indexeddb/auto'
 import Dexie from 'dexie'
 import { afterEach, describe, expect, it } from 'vitest'
+import { extraerCategoria } from '@modules/finance/extraccion'
 
 /**
  * Sprint 027 — prueba la migración v13 (backfill de Finanzas) contra una
  * base real que ya tiene datos "de antes de Sprint 025", sin inventar el
  * escenario: arma la base a mano en una versión previa (como si fuera un
- * usuario real) y recién ahí abre `db.ts`, para que Dexie dispare
- * `.upgrade()` de verdad — no alcanza con importar el módulo en una base
- * vacía, ahí nunca cruza la versión y el upgrade no corre.
+ * usuario real).
+ *
+ * Sprint 036 — v15 (ver db.ts) vacía `financeMovimientos` por completo:
+ * autorización explícita del usuario para reconstruir Ingresos como
+ * períodos reales, sin migrar el modelo viejo. Abrir hoy el singleton
+ * `db` (que ya encadena hasta v15) borraría los datos que esta prueba
+ * necesita inspeccionar DESPUÉS de v13 — no porque v13 esté rota, sino
+ * porque una versión posterior legítimamente limpia todo. Por eso esta
+ * prueba abre una réplica acotada del esquema hasta v13 (misma lógica de
+ * `.upgrade()` que `db.ts` tenía en ese momento) en vez del singleton
+ * actual: sigue probando exactamente lo que el nombre del archivo dice,
+ * sin depender de qué versiones se agreguen después.
  */
 describe('migración v13: backfill de categoría en financeMovimientos', () => {
   afterEach(async () => {
@@ -95,14 +105,31 @@ describe('migración v13: backfill de categoría en financeMovimientos', () => {
     ])
     previa.close()
 
-    const { db } = await import('./db')
-    await db.open()
+    const acotada = new Dexie('lifeos')
+    acotada.version(10).stores({
+      financeMovimientos: 'id, createdAt, categoria, ideaId, moneda, medio',
+    })
+    acotada
+      .version(13)
+      .stores({})
+      .upgrade(async (tx) => {
+        const movimientos = await tx.table('financeMovimientos').where('categoria').equals('servicios').toArray()
+        await Promise.all(
+          movimientos.map((movimiento: { id: string; concepto: string }) => {
+            const { categoria, segura } = extraerCategoria(movimiento.concepto)
+            if (!segura || !categoria || categoria === 'servicios') return undefined
+            return tx.table('financeMovimientos').update(movimiento.id, { categoria })
+          }),
+        )
+      })
+    await acotada.open()
+    const db = acotada.table('financeMovimientos')
 
-    const ropa = await db.financeMovimientos.get('ropa-1')
-    const auto = await db.financeMovimientos.get('auto-1')
-    const sinLexico = await db.financeMovimientos.get('sin-lexico-1')
-    const servicioReal = await db.financeMovimientos.get('servicios-real-1')
-    const corregidoManual = await db.financeMovimientos.get('corregido-manual-1')
+    const ropa = await db.get('ropa-1')
+    const auto = await db.get('auto-1')
+    const sinLexico = await db.get('sin-lexico-1')
+    const servicioReal = await db.get('servicios-real-1')
+    const corregidoManual = await db.get('corregido-manual-1')
 
     expect(ropa?.categoria).toBe('ropa')
     expect(auto?.categoria).toBe('auto')
@@ -117,13 +144,13 @@ describe('migración v13: backfill de categoría en financeMovimientos', () => {
     expect(ropa?.concepto).toBe('Gaste 87k en Ropa (le uthe) - 3 cuotas sin intereses')
     expect(ropa?.moneda).toBe('ars')
 
-    const totalAntes = await db.financeMovimientos.count()
+    const totalAntes = await db.count()
 
     // Idempotencia: cerrar y volver a abrir no debe re-modificar ni duplicar nada.
-    db.close()
-    await db.open()
-    const totalDespues = await db.financeMovimientos.count()
-    const ropaReabierta = await db.financeMovimientos.get('ropa-1')
+    acotada.close()
+    await acotada.open()
+    const totalDespues = await db.count()
+    const ropaReabierta = await db.get('ropa-1')
 
     expect(totalDespues).toBe(totalAntes)
     expect(ropaReabierta?.categoria).toBe('ropa')

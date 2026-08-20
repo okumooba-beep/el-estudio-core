@@ -16,7 +16,6 @@ import {
   formatearMonto,
   mesDe,
   monedaDe,
-  rangoSemana,
   resumirMes,
   resumirSemana,
   semanaDelMes,
@@ -60,15 +59,31 @@ type Detalle = 'entro' | 'sefue' | 'nuevo' | null
  * rechaza).
  */
 export function FinanceScreen() {
-  const { movimientos, ready, addMovimiento, addCompra, updateMovimiento, deleteMovimiento } = useFinance()
+  const {
+    movimientos,
+    periodos,
+    ready,
+    addMovimiento,
+    addCompra,
+    updateMovimiento,
+    deleteMovimiento,
+    addPeriodo,
+    updatePeriodo,
+    deletePeriodo,
+  } = useFinance()
   const { ideas, moveSheet } = useIdeas()
   const [mes] = useState(() => mesDe(new Date()))
   const [moneda, setMoneda] = useState<Moneda>('ars')
   const [vista, setVista] = useState<Vista>('semana')
   const [detalle, setDetalle] = useState<Detalle>(null)
   const [categoriaDetalle, setCategoriaDetalle] = useState<FinanceCategoria | null>(null)
-  /** Mini Sprint 032 (§2) — semana desde la que se abrió "+ Agregar ingreso", para volver a Ingresos (no a Finanzas) al guardar o cancelar. `null` cuando el formulario se abrió desde "+ Movimiento" general. */
-  const [nuevoIngresoSemana, setNuevoIngresoSemana] = useState<number | null>(null)
+  /**
+   * Sprint 036 — período desde el que se abrió "+ Agregar ingreso", para
+   * volver a Ingresos (no a Finanzas) al guardar o cancelar, y para que
+   * el ingreso nuevo nazca ya asociado a ese período. `null` cuando el
+   * formulario se abrió desde "+ Movimiento" general.
+   */
+  const [nuevoIngresoPeriodoId, setNuevoIngresoPeriodoId] = useState<string | null>(null)
 
   const convertidas = useMemo(
     () => new Set(movimientos.map((movimiento) => movimiento.ideaId).filter(Boolean)),
@@ -195,9 +210,9 @@ export function FinanceScreen() {
     if (patch.moneda !== moneda) setMoneda(patch.moneda)
   }
 
-  /** Mini Sprint 032 (§2) — abre "+ Movimiento" desde una semana puntual de Ingresos: tipo fijo, fecha dentro de esa semana. */
-  function abrirNuevoIngreso(semana: number) {
-    setNuevoIngresoSemana(semana)
+  /** Sprint 036 — abre "+ Movimiento" desde un período puntual de Ingresos: tipo fijo, ya asociado a ese período. */
+  function abrirNuevoIngreso(periodoId: string) {
+    setNuevoIngresoPeriodoId(periodoId)
     setDetalle('nuevo')
   }
 
@@ -213,10 +228,10 @@ export function FinanceScreen() {
     setCategoriaDetalle(null)
   }
 
-  /** Mini Sprint 032 (§2) — cierra "+ Movimiento": si vino de una semana de Ingresos vuelve ahí, no a Finanzas. */
+  /** Sprint 036 — cierra "+ Movimiento": si vino de un período de Ingresos vuelve ahí, no a Finanzas. */
   function cerrarNuevo() {
-    if (nuevoIngresoSemana !== null) {
-      setNuevoIngresoSemana(null)
+    if (nuevoIngresoPeriodoId !== null) {
+      setNuevoIngresoPeriodoId(null)
       setDetalle('entro')
     } else {
       cerrarDetalle()
@@ -241,25 +256,47 @@ export function FinanceScreen() {
   }
 
   if (detalle === 'nuevo') {
-    /** exactOptionalPropertyTypes: `tipoFijo`/`fechaDefault` son opcionales de verdad — solo entran en el spread cuando hay semana, nunca como `undefined` explícito. */
-    const propsDeSemana =
-      nuevoIngresoSemana !== null
-        ? (() => {
-            const { desde } = rangoSemana(mes, nuevoIngresoSemana)
-            const hoy = new Date().toISOString().slice(0, 10)
-            const fechaDefault =
-              hoy.startsWith(mes) && semanaDelMes(hoy) === nuevoIngresoSemana ? hoy : `${mes}-${String(desde).padStart(2, '0')}`
-            return { tipoFijo: 'ingreso' as const, fechaDefault }
-          })()
-        : {}
+    const periodoActivo = nuevoIngresoPeriodoId !== null ? periodos.find((p) => p.id === nuevoIngresoPeriodoId) : undefined
+    /** exactOptionalPropertyTypes: `tipoFijo`/`fechaDefault`/`periodoIdFijo` son opcionales de verdad — solo entran en el spread cuando hay período, nunca como `undefined` explícito. */
+    const propsDePeriodo = periodoActivo
+      ? { tipoFijo: 'ingreso' as const, fechaDefault: periodoActivo.fechaInicio, periodoIdFijo: periodoActivo.id }
+      : {}
     return (
       <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10">
         <NuevoMovimiento
           monedaDefault={moneda}
-          {...propsDeSemana}
+          {...propsDePeriodo}
           onGuardar={guardarMovimiento}
           onGuardarCompra={guardarCompra}
           onCerrar={cerrarNuevo}
+        />
+      </div>
+    )
+  }
+
+  /**
+   * Sprint 036 — Ingresos ya no depende de que exista algún movimiento
+   * este mes: es la misma razón por la que `EntroDetalle` mira
+   * `movimientos` entero y no `resumen` (filtrado por mes). Este bloque
+   * tiene que resolverse ANTES del gate de `sinNada` de abajo — si no,
+   * el usuario recién llegado a un Finanzas vacío (0 movimientos, el
+   * estado exacto que deja la migración de este sprint) no tendría forma
+   * de abrir Ingresos para crear su primer período: quedaría atrapado en
+   * el EmptyState de "+ Movimiento", que exige anotar un gasto primero.
+   */
+  if (detalle === 'entro') {
+    return (
+      <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10">
+        <EntroDetalle
+          ingresos={movimientos.filter((movimiento) => movimiento.tipo === 'ingreso')}
+          periodos={periodos}
+          onEditar={editarMovimiento}
+          onEliminar={eliminarMovimiento}
+          onAgregarIngreso={abrirNuevoIngreso}
+          onCrearPeriodo={(input) => void addPeriodo(input)}
+          onEditarPeriodo={(id, patch) => void updatePeriodo(id, patch)}
+          onEliminarPeriodo={(id) => void deletePeriodo(id)}
+          onCerrar={cerrarDetalle}
         />
       </div>
     )
@@ -277,9 +314,14 @@ export function FinanceScreen() {
           title="Todavía no se movió un peso."
           description="Escribí un gasto en el Umbral — “Gasté 80k en gasolina” — y el Estudio lo trae acá con su categoría."
         />
-        <button type="button" className="idea-destino" onClick={() => setDetalle('nuevo')}>
-          + Movimiento
-        </button>
+        <div className="flex gap-3">
+          <button type="button" className="idea-destino" onClick={() => setDetalle('nuevo')}>
+            + Movimiento
+          </button>
+          <button type="button" className="idea-destino" onClick={() => setDetalle('entro')}>
+            Ingresos
+          </button>
+        </div>
       </div>
     )
   }
@@ -298,24 +340,6 @@ export function FinanceScreen() {
    * Finanzas como fuente de verdad — nada de clasificación paralela.
    */
   const movimientosRecientes = movimientosDelPeriodo.filter((movimiento) => movimiento.tipo === 'egreso').slice(0, 5)
-
-  if (detalle === 'entro') {
-    return (
-      <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10">
-        <EntroDetalle
-          mes={mes}
-          moneda={moneda}
-          periodoLabel={nombreMes}
-          total={resumen.ingresado}
-          movimientos={resumen.movimientos}
-          onEditar={editarMovimiento}
-          onEliminar={eliminarMovimiento}
-          onAgregarIngreso={abrirNuevoIngreso}
-          onCerrar={cerrarDetalle}
-        />
-      </div>
-    )
-  }
 
   if (detalle === 'sefue') {
     return (

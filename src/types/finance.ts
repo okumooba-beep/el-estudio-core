@@ -84,6 +84,35 @@ export interface FinanceMovimiento {
   cuotaNumero?: number
   cuotaTotal?: number
   montoOriginal?: number
+  /**
+   * Sprint 036 — "Ingresos como períodos financieros reales": a qué
+   * período (Semana 1, Semana 2...) pertenece este ingreso. Solo tiene
+   * sentido cuando `tipo === 'ingreso'`; un egreso nunca lo usa, sigue
+   * agrupándose por semana calendario (mes.ts). `undefined` es "sin
+   * período asignar" — el caso de un ingreso que todavía no se movió a
+   * ningún período (p. ej. recién llegado del Umbral).
+   */
+  periodoId?: string
+}
+
+/**
+ * Sprint 036 — la "semana" deja de ser una función del calendario
+ * (`semanaDelMes` en mes.ts) para los ingresos: acá vive como una
+ * entidad real que el usuario define y puede editar después. `nombre`
+ * es lo que el usuario ve ("Semana 1"), `fechaInicio`/`fechaFin` son el
+ * rango que el usuario eligió — nunca se recalculan solos. `orden` es
+ * el orden de creación, usado solo como desempate cuando dos períodos
+ * comparten `fechaInicio` (la vista ordena por fecha, no por `orden`).
+ */
+export interface FinanceIncomePeriod {
+  id: string
+  nombre: string
+  fechaInicio: string
+  fechaFin: string
+  orden: number
+  createdAt: string
+  updatedAt: string
+  pendingSync: boolean
 }
 
 export interface FinanceGoal {
