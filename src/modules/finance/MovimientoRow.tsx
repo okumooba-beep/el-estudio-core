@@ -228,7 +228,11 @@ export function MovimientoRow({
                 className="idea-destino"
                 aria-pressed={monedaEditada === opcion}
                 style={monedaEditada === opcion ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
-                onClick={() => setMonedaEditada(opcion)}
+                onClick={() => {
+                  if (opcion === monedaEditada) return
+                  setMonedaEditada(opcion)
+                  setMontoTexto('')
+                }}
               >
                 {opcion === 'ars' ? 'Pesos' : 'Dólares'}
               </button>
@@ -242,7 +246,11 @@ export function MovimientoRow({
                 className="idea-destino"
                 aria-pressed={medioEditado === opcion}
                 style={medioEditado === opcion ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
-                onClick={() => setMedioEditado(opcion)}
+                onClick={() => {
+                  if (opcion === medioEditado) return
+                  setMedioEditado(opcion)
+                  setMontoTexto('')
+                }}
               >
                 {opcion === 'efectivo' ? 'Efectivo' : 'Transferencia'}
               </button>

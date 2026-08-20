@@ -176,9 +176,23 @@ export function FinanceScreen() {
     void updateMovimiento(movimiento.id, { tipo: 'ingreso', categoria: null })
   }
 
-  /** Mini Sprint 029.1 (§4/§5/§6) — misma `updateMovimiento` que ya usa `corregirCategoria`. Mini Sprint 032 (§7) amplió el patch a monto/fecha/moneda/medio/concepto. */
+  /**
+   * Mini Sprint 029.1 (§4/§5/§6) — misma `updateMovimiento` que ya usa `corregirCategoria`. Mini Sprint 032 (§7) amplió el patch a monto/fecha/moneda/medio/concepto.
+   *
+   * Mini Sprint 035 (§18/§21) — `resumen`/`semanal` (y todo lo que de ahí
+   * cuelga: Ingresos, Se fue, Por revisar) están filtrados por la moneda
+   * que esta pantalla tiene seleccionada (`moneda`, arriba). Editar un
+   * movimiento a la OTRA moneda lo persiste bien (Dexie hace PATCH, no
+   * reemplazo), pero si la vista se queda mirando la moneda vieja el
+   * movimiento sale del filtro en el próximo render — si era el único
+   * movimiento de la app, `sinNada` se vuelve `true` y la pantalla entera
+   * cae al EmptyState, dando la falsa impresión de que "no se guardó".
+   * Seguir a la moneda nueva es lo único que hace que el mismo movimiento
+   * editado siga a la vista, tal como pide el brief.
+   */
   function editarMovimiento(movimiento: FinanceMovimiento, patch: PatchMovimiento) {
     void updateMovimiento(movimiento.id, patch)
+    if (patch.moneda !== moneda) setMoneda(patch.moneda)
   }
 
   /** Mini Sprint 032 (§2) — abre "+ Movimiento" desde una semana puntual de Ingresos: tipo fijo, fecha dentro de esa semana. */
