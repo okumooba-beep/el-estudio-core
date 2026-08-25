@@ -3,6 +3,7 @@ import { MODULE as missions } from '@modules/missions/public'
 import { MODULE as habits } from '@modules/habits/public'
 import { MODULE as trading } from '@modules/trading/public'
 import { MODULE as finanzas } from '@modules/finance/public'
+import { MODULE as auditoria } from '@modules/auditoria/public'
 
 export interface ModuleDef {
   path: string
@@ -22,5 +23,9 @@ export interface ModuleDef {
  * Espacios reemplaza al link aislado que Sprint 029 había agregado a
  * HoyScreen: con Espacios de vuelta en el nav directo, ese link queda
  * redundante y se retira (ver HoyScreen.tsx).
+ *
+ * Módulo Auditoría: entra al nav de primer nivel junto a Finanzas — es
+ * pantalla de uso diario ("sentado en la computadora", §20 del brief),
+ * no secundaria como Agenda (que vive dentro de Espacios).
  */
-export const MODULES: readonly ModuleDef[] = [today, missions, habits, trading, finanzas, ESPACIOS_MODULE]
+export const MODULES: readonly ModuleDef[] = [today, missions, habits, trading, finanzas, auditoria, ESPACIOS_MODULE]

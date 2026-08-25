@@ -152,6 +152,10 @@ export function AgendaScreen() {
     void updateEvento(item.id, { prioridad: SIGUIENTE_PRIORIDAD[item.item.prioridad] })
   }
 
+  function protegerDesdeItem(item: AgendaItem) {
+    if (item.tipo === 'bloque') alternarProtegido(item.item)
+  }
+
   /**
    * Sprint 011, punto 1: el "Bloque desaparece" reportado era el
    * `onBlur` del input cerrando `editandoDia` — en el teclado virtual
@@ -190,6 +194,17 @@ export function AgendaScreen() {
 
   function archivarBloque(id: string) {
     void updateBloque(id, { archivado: true })
+  }
+
+  /** Módulo Auditoría, §5: proteger nunca significa intocable — solo hace que un conflicto contra este Bloque fuerce la resolución de 3 vías (ver ConflictoIndicador). */
+  function alternarProtegido(bloque: AgendaBloque) {
+    void updateBloque(bloque.id, { protegido: !bloque.protegido })
+  }
+
+  /** "PRIORIZAR TRABAJO" del conflicto de prioridades (§6 del brief): el bloque protegido queda archivado, el evento nuevo se queda como está. */
+  function priorizarTrabajoDesdeConflicto(bloqueId: string) {
+    setConflictoAbierto(null)
+    archivarBloque(bloqueId)
   }
 
   function iniciarEdicionEvento(id: string, texto: string) {
@@ -274,9 +289,17 @@ export function AgendaScreen() {
                   <p className="text-[13px] font-medium text-accent">{nombreDia(dia)}</p>
                 )}
                 {itemsDelDia.map((item) => {
-                  if (item.tipo === 'bloque' && bloqueIdsEnConflicto.has(item.id)) return null
+                  /**
+                   * Un bloque/evento en conflicto se oculta (o se renderiza como
+                   * ConflictoIndicador) solo mientras NO está en edición explícita:
+                   * REPROGRAMAR/PROTEGER NY/Editar horario/Mover bloque ya ponen
+                   * editandoBloqueId o editandoEventoId, y ese estado debe ganarle
+                   * al filtro de conflicto para que el editor exista pueda
+                   * renderizarse en vez de quedar tapado indefinidamente.
+                   */
+                  if (item.tipo === 'bloque' && bloqueIdsEnConflicto.has(item.id) && editandoBloqueId !== item.id) return null
 
-                  if (item.tipo === 'evento' && conflictosPorEvento.has(item.id)) {
+                  if (item.tipo === 'evento' && conflictosPorEvento.has(item.id) && editandoEventoId !== item.id) {
                     return (
                       <ConflictoIndicador
                         key={item.id}
@@ -288,6 +311,7 @@ export function AgendaScreen() {
                         onEditarHorario={() => iniciarEdicionEvento(item.id, item.item.texto)}
                         onMoverBloque={moverBloqueDesdeConflicto}
                         onEliminarBloque={eliminarBloqueDesdeConflicto}
+                        onPriorizarTrabajo={priorizarTrabajoDesdeConflicto}
                       />
                     )
                   }
@@ -353,6 +377,15 @@ export function AgendaScreen() {
                         {bloque.texto}
                       </span>
                       <span className="agenda-bloque-acciones">
+                        <button
+                          type="button"
+                          className="idea-destino shrink-0"
+                          aria-pressed={bloque.protegido}
+                          style={bloque.protegido ? { color: 'var(--accent)' } : undefined}
+                          onClick={() => alternarProtegido(bloque)}
+                        >
+                          Proteger
+                        </button>
                         <button
                           type="button"
                           className="agenda-bloque-accion"
@@ -441,9 +474,9 @@ export function AgendaScreen() {
         />
       ) : (
         <>
-          <Seccion titulo="Ahora" items={buckets.ahora} onCompletar={completar} onAlarma={alternarAlarma} onPrioridad={ciclarPrioridad} />
-          <Seccion titulo="Próximo" items={proximo ? [proximo] : []} onCompletar={completar} onAlarma={alternarAlarma} onPrioridad={ciclarPrioridad} />
-          <Seccion titulo="Atrasado" items={buckets.atrasado} onCompletar={completar} onAlarma={alternarAlarma} onPrioridad={ciclarPrioridad} />
+          <Seccion titulo="Ahora" items={buckets.ahora} onCompletar={completar} onAlarma={alternarAlarma} onPrioridad={ciclarPrioridad} onProteger={protegerDesdeItem} />
+          <Seccion titulo="Próximo" items={proximo ? [proximo] : []} onCompletar={completar} onAlarma={alternarAlarma} onPrioridad={ciclarPrioridad} onProteger={protegerDesdeItem} />
+          <Seccion titulo="Atrasado" items={buckets.atrasado} onCompletar={completar} onAlarma={alternarAlarma} onPrioridad={ciclarPrioridad} onProteger={protegerDesdeItem} />
           {proximamente ? (
             <section>
               <h2 className="mb-1 font-mono text-[11px] uppercase tracking-wide text-accent">Próximamente</h2>
@@ -469,12 +502,14 @@ function Seccion({
   onCompletar,
   onAlarma,
   onPrioridad,
+  onProteger,
 }: {
   titulo: string
   items: AgendaItem[]
   onCompletar: (item: AgendaItem) => void
   onAlarma: (item: AgendaItem) => void
   onPrioridad: (item: AgendaItem) => void
+  onProteger: (item: AgendaItem) => void
 }) {
   if (items.length === 0) return null
   return (
@@ -512,6 +547,17 @@ function Seccion({
                 {rotuloPrioridad(item.item.prioridad)}
               </button>
             ) : null}
+            {item.tipo === 'bloque' ? (
+              <button
+                type="button"
+                className="idea-destino shrink-0"
+                aria-pressed={item.item.protegido}
+                style={item.item.protegido ? { color: 'var(--accent)' } : undefined}
+                onClick={() => onProteger(item)}
+              >
+                Proteger
+              </button>
+            ) : null}
             {item.tipo !== 'mision' ? (
               <button
                 type="button"
@@ -539,6 +585,7 @@ function ConflictoIndicador({
   onEditarHorario,
   onMoverBloque,
   onEliminarBloque,
+  onPriorizarTrabajo,
 }: {
   evento: AgendaEvento
   bloques: AgendaBloque[]
@@ -548,6 +595,7 @@ function ConflictoIndicador({
   onEditarHorario: () => void
   onMoverBloque: (bloque: AgendaBloque) => void
   onEliminarBloque: (bloqueId: string) => void
+  onPriorizarTrabajo: (bloqueId: string) => void
 }) {
   return (
     <div className="flex flex-col gap-1.5">
@@ -574,18 +622,30 @@ function ConflictoIndicador({
             Resolver más tarde
           </button>
           <button type="button" className="idea-destino" onClick={onEditarHorario}>
-            Editar horario
+            {/* Módulo Auditoría, §6: contra un Bloque protegido no hay "editar horario" genérico — es la mitad de la resolución forzada de 3 vías (PRIORIZAR TRABAJO / PROTEGER NY / REPROGRAMAR). */}
+            {bloques.some((bloque) => bloque.protegido) ? 'PROTEGER NY' : 'Editar horario'}
           </button>
-          {bloques.map((bloque) => (
-            <span key={bloque.id} className="flex items-center gap-3">
-              <button type="button" className="idea-destino" onClick={() => onMoverBloque(bloque)}>
-                Mover bloque
-              </button>
-              <button type="button" className="idea-destino" onClick={() => onEliminarBloque(bloque.id)}>
-                Eliminar bloque
-              </button>
-            </span>
-          ))}
+          {bloques.map((bloque) =>
+            bloque.protegido ? (
+              <span key={bloque.id} className="flex items-center gap-3">
+                <button type="button" className="idea-destino" onClick={() => onPriorizarTrabajo(bloque.id)}>
+                  PRIORIZAR TRABAJO
+                </button>
+                <button type="button" className="idea-destino" onClick={() => onMoverBloque(bloque)}>
+                  REPROGRAMAR
+                </button>
+              </span>
+            ) : (
+              <span key={bloque.id} className="flex items-center gap-3">
+                <button type="button" className="idea-destino" onClick={() => onMoverBloque(bloque)}>
+                  Mover bloque
+                </button>
+                <button type="button" className="idea-destino" onClick={() => onEliminarBloque(bloque.id)}>
+                  Eliminar bloque
+                </button>
+              </span>
+            ),
+          )}
         </div>
       ) : null}
     </div>

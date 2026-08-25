@@ -64,6 +64,16 @@ export interface AgendaBloque {
    * pasa por el Umbral, su ciclo de vida es propio de Agenda.
    */
   archivado: boolean
+  /**
+   * Módulo Auditoría: `true` cuando el usuario eligió a mano proteger este
+   * Bloque — mismo patrón que `Idea.misionPrincipal?` (ver types/idea.ts):
+   * nunca se infiere de la hora ni del texto, es una decisión explícita.
+   * Ausente/`false` = sin proteger. "Protegido" no es intocable — solo
+   * hace que un conflicto de horario contra este Bloque muestre la
+   * resolución de 3 vías (ConflictoIndicador en AgendaScreen.tsx) en vez
+   * de la genérica.
+   */
+  protegido?: boolean
   createdAt: string
   updatedAt: string
   pendingSync: boolean

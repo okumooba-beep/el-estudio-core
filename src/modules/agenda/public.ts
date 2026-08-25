@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAgenda } from './useAgenda'
+import { agendaBloqueRepository, type NuevoAgendaBloque } from './agendaRepository'
 import { useIdeas } from '@modules/work-table/public'
 import { aItems, agruparPorCuando, proximoItem, type AgendaItem } from './agrupar'
 import { calcularConflictosDia } from './conflictos'
-import { extraerRangoHora } from './extraccionFecha'
+import { extraerHora, extraerRangoHora } from './extraccionFecha'
+import type { AgendaEvento, AgendaBloque } from '@/types/agenda'
 
 /**
  * Superficie pública del módulo Agenda. `agenda` ya existía reservado
@@ -11,8 +13,17 @@ import { extraerRangoHora } from './extraccionFecha'
  * desde antes de tener ruta propia. Mismo patrón que finance/public.ts:
  * la ruta importa AgendaScreen directo de su propio archivo en App.tsx —
  * acá solo se expone la identidad de navegación.
+ *
+ * Módulo Auditoría: nunca reimplementa detección de conflictos ni
+ * parseo de rangos horarios — `calcularConflictosDia` y `extraerRangoHora`
+ * se re-exportan tal cual (mismas funciones que ya usa AgendaScreen.tsx),
+ * y `useAgendaSemana`/`crearBloqueDesdeCorreccion` son la única lectura y
+ * la única escritura que Auditoría necesita de Agenda — nunca toca
+ * `agendaBloqueRepository` ni `useAgenda` directo (ver
+ * dependency-cruiser: Auditoría solo puede importar `public.ts` ajenos).
  */
 export const MODULE = { path: '/agenda', label: 'Agenda' }
+export { calcularConflictosDia, extraerRangoHora }
 
 function hoyISO(): string {
   return new Date().toISOString().slice(0, 10)
@@ -139,4 +150,39 @@ export function useAgendaHoy(): {
 
     return { ahora, proximo, atencion: { conflictoTexto, hayEventoUrgente }, resumen, ready: true }
   }, [ready, buckets, conflictosHoy, eventosHoy, bloquesHoy, misionesHoy])
+}
+
+/**
+ * Módulo Auditoría, §4/§5/§8: los eventos y bloques reales de una semana
+ * (o de cualquier conjunto de días), sin filtrar archivados — a
+ * diferencia de `useAgendaHoy` (que solo mira bloques activos porque su
+ * consumidor es "qué pasa hoy"), Auditoría necesita ver también los
+ * Bloques archivados para poder distinguir "omitido" de "desplazado" en
+ * su vista analítica. Mismo `useAgenda()` de siempre, nunca un segundo
+ * store ni una copia de eventos/bloques.
+ */
+export function useAgendaSemana(dias: readonly string[]): {
+  eventos: AgendaEvento[]
+  bloques: AgendaBloque[]
+  ready: boolean
+} {
+  const { eventos, bloques, ready } = useAgenda()
+  const diasSet = useMemo(() => new Set(dias), [dias])
+  const eventosSemana = useMemo(() => eventos.filter((evento) => diasSet.has(evento.fecha)), [eventos, diasSet])
+  const bloquesSemana = useMemo(() => bloques.filter((bloque) => diasSet.has(bloque.dia)), [bloques, diasSet])
+  return { eventos: eventosSemana, bloques: bloquesSemana, ready }
+}
+
+/**
+ * Módulo Auditoría, §14: "Aplicar a próxima semana" convierte la
+ * corrección elegida en un Bloque real de Agenda — la única escritura
+ * pública que Agenda expone hacia afuera, para que ningún otro módulo
+ * toque `agendaBloqueRepository` directo. Nace protegido a propósito: una
+ * corrección aplicada es, por definición, algo que el sistema decidió
+ * proteger la próxima vez.
+ */
+export async function crearBloqueDesdeCorreccion(input: { texto: string; dia: string }): Promise<AgendaBloque> {
+  const nuevo: NuevoAgendaBloque = { texto: input.texto, dia: input.dia, hora: extraerHora(input.texto), alarma: false }
+  const creado = await agendaBloqueRepository.add(nuevo)
+  return agendaBloqueRepository.update(creado.id, { protegido: true })
 }

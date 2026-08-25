@@ -4,6 +4,7 @@ import type { Operacion } from '@/types/operacion'
 import type { HabitCheck } from '@/types/habitCheck'
 import type { FinanceAccount, FinanceMovimiento, FinanceGoal, FinanceIncomePeriod } from '@/types/finance'
 import type { AgendaEvento, AgendaBloque } from '@/types/agenda'
+import type { AuditRuptura, AuditPremortem, AuditCorreccionSemanal, AuditConfig } from '@/types/auditoria'
 import { extraerCategoria } from '@modules/finance/extraccion'
 
 interface LegacyNota {
@@ -40,6 +41,10 @@ class LifeosDB extends Dexie {
   financeIncomePeriods!: EntityTable<FinanceIncomePeriod, 'id'>
   agendaEventos!: EntityTable<AgendaEvento, 'id'>
   agendaBloques!: EntityTable<AgendaBloque, 'id'>
+  auditRupturas!: EntityTable<AuditRuptura, 'id'>
+  auditPremortems!: EntityTable<AuditPremortem, 'id'>
+  auditCorrecciones!: EntityTable<AuditCorreccionSemanal, 'id'>
+  auditConfig!: EntityTable<AuditConfig, 'id'>
 
   constructor() {
     super('lifeos')
@@ -347,6 +352,23 @@ class LifeosDB extends Dexie {
       .upgrade(async (tx) => {
         await tx.table('financeMovimientos').clear()
       })
+
+    /**
+     * Módulo Auditoría — capa de observación/corrección sobre Agenda y
+     * Misiones (nunca un segundo calendario ni una segunda entidad de
+     * misión, ver src/modules/auditoria/). Cuatro tablas nuevas y
+     * mínimas, todas vacías: no hay dato previo que migrar porque el
+     * concepto no existía. `auditConfig` guarda una única fila (`id:
+     * 'config'`) con el resultado dominante configurable, los patrones
+     * de "evidencia reconocible" y la señal roja — por eso no lleva
+     * más índice que `id`, igual que cualquier tabla de una sola fila.
+     */
+    this.version(16).stores({
+      auditRupturas: 'id, createdAt, fecha, tipo',
+      auditPremortems: 'id, createdAt, semanaId',
+      auditCorrecciones: 'id, createdAt, semanaId',
+      auditConfig: 'id',
+    })
   }
 }
 
