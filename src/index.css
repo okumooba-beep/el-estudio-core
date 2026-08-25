@@ -244,6 +244,23 @@ html.light-boot *::after {
 }
 
 /*
+  Sprint 036 (hotfix) — la regla universal de deriva de luz (más abajo,
+  `*, *::before, *::after { transition: background-color 60s linear,
+  color 60s linear }`) también alcanzaba a estos links: nada acá fijaba
+  su propia `transition-duration`, así que esos 60s eran la única
+  duración en juego. El cambio de ítem activo quedaba correcto y
+  instantáneo en el DOM (la clase se asigna al navegar), pero el color
+  tardaba ~60s reales en alcanzarlo — se veía como si el indicador
+  "quedara pegado" al ítem anterior. Acá no se toca la regla universal
+  (sigue intacta para la habitación): solo se le devuelve a este único
+  selector una duración corta, más específica y con mayor prioridad de
+  cascada que el universal `*`.
+*/
+.nav-inferior a {
+  transition-duration: 150ms, 150ms;
+}
+
+/*
   La habitación: una ventana fría y una lámpara cálida, siempre las dos
   presentes, nunca una luz central. Solo su opacidad cambia con la hora
   (ver src/packages/world/light) — la forma y posición del gradiente es fija.
