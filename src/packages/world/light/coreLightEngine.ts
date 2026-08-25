@@ -29,7 +29,13 @@ const MANANA: CoreLightState = {
   canvas: 'rgb(20 17 14)',
   surface: 'rgb(29 24 20)',
   surfaceAlt: 'rgb(38 31 25)',
-  windowOpacity: 0.45,
+  // Sprint 036: 0.45 → 0.38. La escena se lavaba de día (demasiado
+  // resplandor frío de ventana, poco calor de lámpara) — mismo lever que
+  // ya usaron Sprint "Framing the Studio"/"Threshold Experience V1"/
+  // Sprint 020 en .room-layer-window (nunca --window-opacity en sí),
+  // acá se retoca el valor fuente en vez del multiplicador porque es el
+  // propio motor de luz, no un ajuste de contraste de un layer puntual.
+  windowOpacity: 0.38,
   lampOpacity: 0.2,
 }
 
@@ -37,7 +43,11 @@ const TARDE: CoreLightState = {
   canvas: 'rgb(22 19 15)',
   surface: 'rgb(31 25 20)',
   surfaceAlt: 'rgb(40 32 26)',
-  windowOpacity: 0.62,
+  // Sprint 036: 0.62 → 0.5, mismo motivo que MANANA arriba — era la fase
+  // más brillante de las tres por lejos, y la que más "lavaba" el bosque
+  // real de .room-layer-photo. Sigue siendo la fase más clara del día
+  // (nunca se congela a un solo estado), solo con menos intensidad.
+  windowOpacity: 0.5,
   lampOpacity: 0.1,
 }
 

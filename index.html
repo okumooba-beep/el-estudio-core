@@ -8,6 +8,16 @@
     <meta name="theme-color" content="#120F0C" />
     <meta name="description" content="El Estudio — un lugar personal para pensar. Hoy es el único lugar donde puedes actuar." />
     <!--
+      Sprint 036: la North Star (.room-layer-photo más abajo) solo se
+      referencia desde CSS (background-image), así que el navegador no
+      la descubre hasta parsear esa hoja de estilos — con fetchpriority
+      por default, compite con el resto de los recursos. Este preload le
+      da prioridad alta y arranca la descarga apenas se lee el <head>,
+      antes de que React monte nada. No reemplaza el archivo ni cambia
+      su composición: solo adelanta cuándo empieza a bajar.
+    -->
+    <link rel="preload" as="image" href="/room/estudio-hero.png" fetchpriority="high" />
+    <!--
       La app se abre como un lugar, no como una página: sin barra de
       navegador, con su propio tono en la barra de estado (el color real
       lo corrige src/lib/light/applyLight.ts antes del primer paint).

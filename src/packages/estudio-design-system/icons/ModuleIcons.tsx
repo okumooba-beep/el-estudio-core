@@ -129,6 +129,22 @@ export function AgendaIcon(props: IconProps) {
 }
 
 /**
+ * Auditoría (Sprint 036) — una tablilla con sujetapapeles: el cuerpo de
+ * Cuaderno, pero con la pestaña superior y las marcas de revisión que
+ * distinguen "repasar lo ya escrito" de "escribir algo nuevo".
+ */
+export function AuditoriaIcon(props: IconProps) {
+  return (
+    <svg {...BASE} {...props}>
+      <rect x="5.5" y="5" width="13" height="15" rx="1.5" />
+      <rect x="9" y="3.5" width="6" height="3" rx="1" />
+      <path d="M8.5 12.3l1.4 1.4 2.3-2.6" />
+      <path d="M8.5 16.7h7" />
+    </svg>
+  )
+}
+
+/**
  * Espacios (Sprint 015.4 — "Navegación global de El Estudio Core"): la
  * planta del Estudio, mismo lenguaje arquitectónico que el vano de
  * `HoyIcon` — un plano dividido en varios cuartos, nunca la grilla de
@@ -158,5 +174,6 @@ export const MODULE_ICONS: Record<string, ComponentType<IconProps>> = {
   '/finanzas': FinanzasIcon,
   '/frases': BibliotecaIcon,
   '/agenda': AgendaIcon,
+  '/auditoria': AuditoriaIcon,
   '/espacios': EspaciosIcon,
 }
