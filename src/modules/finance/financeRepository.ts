@@ -3,6 +3,7 @@ import { generateId } from '@shared-kernel/id'
 import type { Repository } from '@shared-kernel/persistence/Repository'
 import type { FinanceCategoria } from './categorias'
 import { dividirEnCuotas, fechaCuota, type Medio, type Moneda } from './extraccion'
+import { etiquetaSemanaCobro, normalizarSemana } from './semanaCobro'
 import type {
   FinanceAccount,
   FinanceAccountTipo,
@@ -245,20 +246,22 @@ class DexieFinanceGoalRepository implements FinanceGoalRepository {
 }
 
 export interface NuevoFinanceIncomePeriod {
-  nombre: string
-  fechaInicio: string
-  fechaFin: string
+  /** Cualquier día de la semana de cobro que se quiere crear — se normaliza acá adentro a lunes→domingo, nunca se guarda el pick arbitrario. */
+  fechaCualquiera: string
 }
 
 /**
  * Sprint 036 — un período de ingresos: create/edit/delete, igual que
- * las otras entidades de Finanzas. Nunca se deriva del calendario — lo
- * define el usuario y sigue siendo lo que él eligió hasta que lo
- * cambie a mano.
+ * las otras entidades de Finanzas.
+ *
+ * Sprint 037 — "semana de cobro": deja de aceptar nombre y rango
+ * libres. Una semana es siempre lunes→domingo (`normalizarSemana`) y su
+ * nombre es siempre la fecha real (`etiquetaSemanaCobro`), nunca texto
+ * tipeado por el usuario — así una semana se identifica por sus fechas
+ * ("24 → 30 ago"), nunca por un número arbitrario ("Semana 4").
  */
 export interface FinanceIncomePeriodRepository extends Repository<FinanceIncomePeriod> {
   add(input: NuevoFinanceIncomePeriod): Promise<FinanceIncomePeriod>
-  update(id: string, patch: Partial<Omit<FinanceIncomePeriod, 'id' | 'createdAt'>>): Promise<FinanceIncomePeriod>
   /** Borra un período. Quien llama decide si corresponde (la UI no ofrece esto para un período que todavía tiene ingresos asignados). */
   delete(id: string): Promise<void>
 }
@@ -269,14 +272,24 @@ class DexieFinanceIncomePeriodRepository implements FinanceIncomePeriodRepositor
     return periodos.sort((a, b) => a.fechaInicio.localeCompare(b.fechaInicio) || a.orden - b.orden)
   }
 
+  /**
+   * Sprint 037 — una semana nunca se duplica: si ya existe un período
+   * para el mismo lunes real, se devuelve ese en vez de crear uno
+   * nuevo (misma identidad de semana, sin importar cuántas veces se
+   * pida crearla).
+   */
   async add(input: NuevoFinanceIncomePeriod): Promise<FinanceIncomePeriod> {
+    const { fechaInicio, fechaFin } = normalizarSemana(input.fechaCualquiera)
+    const existente = await db.financeIncomePeriods.where('fechaInicio').equals(fechaInicio).first()
+    if (existente) return existente
+
     const now = new Date().toISOString()
     const orden = await db.financeIncomePeriods.count()
     const periodo: FinanceIncomePeriod = {
       id: generateId(),
-      nombre: input.nombre.trim(),
-      fechaInicio: input.fechaInicio,
-      fechaFin: input.fechaFin,
+      nombre: etiquetaSemanaCobro(fechaInicio, fechaFin),
+      fechaInicio,
+      fechaFin,
       orden,
       createdAt: now,
       updatedAt: now,
@@ -284,13 +297,6 @@ class DexieFinanceIncomePeriodRepository implements FinanceIncomePeriodRepositor
     }
     await db.financeIncomePeriods.add(periodo)
     return periodo
-  }
-
-  async update(id: string, patch: Partial<Omit<FinanceIncomePeriod, 'id' | 'createdAt'>>): Promise<FinanceIncomePeriod> {
-    await db.financeIncomePeriods.update(id, { ...patch, updatedAt: new Date().toISOString(), pendingSync: true })
-    const updated = await db.financeIncomePeriods.get(id)
-    if (!updated) throw new Error(`Período ${id} no encontrado`)
-    return updated
   }
 
   async delete(id: string): Promise<void> {

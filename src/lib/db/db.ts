@@ -369,6 +369,48 @@ class LifeosDB extends Dexie {
       auditCorrecciones: 'id, createdAt, semanaId',
       auditConfig: 'id',
     })
+
+    /**
+     * Sprint 037 — "Reconstrucción del módulo de Ingresos de Finanzas".
+     * Auditoría previa: `financeIncomePeriods` (Sprint 036) no imponía
+     * ninguna regla de semana real — el usuario podía crear un "período"
+     * con cualquier nombre libre y cualquier par de fechas arbitrario, sin
+     * relación con lunes→domingo. Esto y el hecho de que la pantalla
+     * principal de Finanzas seguía mostrando "Esta semana" con el modelo
+     * viejo (`semanaDelMes`, día-del-mes puro) mientras Ingresos agrupaba
+     * por esos períodos libres, hacía que los dos totales de una misma
+     * semana no coincidieran — la "duplicación" reportada no eran filas
+     * repetidas en la base, sino dos modelos de semana desconectados
+     * operando sobre los mismos datos. No existe forma de inferir, para
+     * cada período ya creado, cuál habría sido su semana lunes→domingo
+     * "correcta" sin arriesgar una reconstrucción ambigua sobre datos que
+     * ya sabemos inconsistentes — así que no se migra, se limpia.
+     *
+     * Limpieza autorizada explícitamente por el usuario, acotada
+     * exactamente a lo que el brief permite:
+     *   - `financeIncomePeriods` se vacía por completo (la tabla entera:
+     *     el concepto de período libre desaparece, lo reemplaza la semana
+     *     de cobro real que el usuario vuelve a crear desde Ingresos).
+     *   - de `financeMovimientos` se borran SOLO las filas con
+     *     `tipo === 'ingreso'` — los egresos, sus cuotas (`compraId`) y
+     *     cualquier otro campo quedan exactamente como estaban.
+     * Nada de `financeAccounts`, `financeGoals`, ni ninguna tabla de otro
+     * módulo (Agenda, Misiones, Hábitos, Cuaderno, Trading, Auditoría,
+     * etc.) se toca en esta migración.
+     */
+    this.version(17)
+      .stores({
+        financeIncomePeriods: 'id, createdAt, orden, fechaInicio',
+      })
+      .upgrade(async (tx) => {
+        await tx.table('financeIncomePeriods').clear()
+        // `tipo` no está indexado en `financeMovimientos` (nunca hizo falta filtrar por él a nivel de índice) — `.filter()` sobre toda la colección es correcto acá porque esto corre una única vez, no en cada carga.
+        await tx
+          .table<FinanceMovimiento, string>('financeMovimientos')
+          .toCollection()
+          .filter((movimiento) => movimiento.tipo === 'ingreso')
+          .delete()
+      })
   }
 }
 

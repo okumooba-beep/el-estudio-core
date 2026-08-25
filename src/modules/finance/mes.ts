@@ -10,13 +10,6 @@ export interface GrupoCategoria {
   parte: number
 }
 
-export interface GrupoSemana {
-  /** 1-based: la semana calendario dentro del mes (día 1-7 = semana 1, etc). */
-  semana: number
-  total: number
-  cantidad: number
-}
-
 export interface ResumenMes {
   /** YYYY-MM */
   mes: string
@@ -27,8 +20,6 @@ export interface ResumenMes {
   ingresado: number
   balance: number
   grupos: readonly GrupoCategoria[]
-  /** Ingresos del mes agrupados por semana (modelo Monefy: Ingresos separado de Egresos). */
-  ingresos: readonly GrupoSemana[]
   movimientos: readonly FinanceMovimiento[]
   /** Sprint 007 — egresos que el léxico no clasificó con confianza: "Por revisar", nunca 'Otros'. */
   porRevisar: readonly FinanceMovimiento[]
@@ -148,18 +139,6 @@ export function resumirMes(
   const base = resumirPeriodo(delMes, moneda)
   const egresos = delMes.filter((movimiento) => movimiento.tipo === 'egreso')
 
-  const porSemana = new Map<number, { total: number; cantidad: number }>()
-  for (const movimiento of delMes.filter((m) => m.tipo === 'ingreso')) {
-    const semana = semanaDelMes(movimiento.fecha)
-    const actual = porSemana.get(semana) ?? { total: 0, cantidad: 0 }
-    actual.total += movimiento.monto
-    actual.cantidad += 1
-    porSemana.set(semana, actual)
-  }
-  const ingresos = [...porSemana.entries()]
-    .map(([semana, valores]) => ({ semana, ...valores }))
-    .sort((a, b) => a.semana - b.semana)
-
   return {
     mes,
     ...base,
@@ -167,7 +146,6 @@ export function resumirMes(
       efectivo: egresos.filter((m) => medioDe(m) === 'efectivo').reduce((t, m) => t + m.monto, 0),
       transferencia: egresos.filter((m) => medioDe(m) === 'transferencia').reduce((t, m) => t + m.monto, 0),
     },
-    ingresos,
   }
 }
 

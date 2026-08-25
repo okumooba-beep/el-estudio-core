@@ -1,18 +1,11 @@
 import { useState } from 'react'
 import { MovimientoRow, type PatchMovimiento } from './MovimientoRow'
-import { etiquetaDia, formatearMonto } from './mes'
+import { formatearMonto } from './mes'
 import type { FinanceMovimiento, FinanceIncomePeriod } from '@/types/finance'
 
 export interface NuevoPeriodoInput {
-  nombre: string
-  fechaInicio: string
-  fechaFin: string
-}
-
-export interface PatchPeriodo {
-  nombre: string
-  fechaInicio: string
-  fechaFin: string
+  /** Cualquier día de la semana que se quiere crear — se normaliza a lunes→domingo antes de guardarse. */
+  fechaCualquiera: string
 }
 
 interface EntroDetalleProps {
@@ -31,37 +24,65 @@ interface EntroDetalleProps {
   onEliminar: (movimiento: FinanceMovimiento) => void
   /** Abre "+ Movimiento" con tipo ingreso y `periodoId` ya fijado a este período. */
   onAgregarIngreso: (periodoId: string) => void
-  /** "+ Nueva semana": crea un período con fechas propias, nunca calculadas del calendario. */
+  /** "+ Semana de cobro": crea (o reabre, si ya existe) la semana real que contiene la fecha elegida. */
   onCrearPeriodo: (input: NuevoPeriodoInput) => void
-  /** Corrige nombre/fechaInicio/fechaFin de un período ya existente. */
-  onEditarPeriodo: (periodoId: string, patch: PatchPeriodo) => void
   /** Borra un período. Esta pantalla solo lo ofrece cuando ya no tiene ningún ingreso asignado. */
   onEliminarPeriodo: (periodoId: string) => void
   onCerrar: () => void
 }
 
-function sumarPorMoneda(movimientos: readonly FinanceMovimiento[]): { ars: number; usd: number } {
-  return {
-    ars: movimientos.filter((m) => m.moneda !== 'usd').reduce((total, m) => total + m.monto, 0),
-    usd: movimientos.filter((m) => m.moneda === 'usd').reduce((total, m) => total + m.monto, 0),
-  }
+interface TotalesPorMedio {
+  efectivo: number
+  transferencia: number
 }
 
-function formatearRango(fechaInicio: string, fechaFin: string): string {
-  return `${etiquetaDia(fechaInicio)} – ${etiquetaDia(fechaFin)}`
+interface TotalesSemana {
+  ars: TotalesPorMedio
+  usd: TotalesPorMedio
+}
+
+/** ARS y USD nunca se suman entre sí, y dentro de cada moneda Efectivo y Transferencia se llevan por separado (Sprint 037). */
+function sumarPorMonedaYMedio(movimientos: readonly FinanceMovimiento[]): TotalesSemana {
+  const vacio = (): TotalesPorMedio => ({ efectivo: 0, transferencia: 0 })
+  const totales: TotalesSemana = { ars: vacio(), usd: vacio() }
+  for (const movimiento of movimientos) {
+    const moneda = movimiento.moneda === 'usd' ? 'usd' : 'ars'
+    const medio = movimiento.medio === 'efectivo' ? 'efectivo' : 'transferencia'
+    totales[moneda][medio] += movimiento.monto
+  }
+  return totales
+}
+
+function sumarPorMoneda(movimientos: readonly FinanceMovimiento[]): { ars: number; usd: number } {
+  const { ars, usd } = sumarPorMonedaYMedio(movimientos)
+  return { ars: ars.efectivo + ars.transferencia, usd: usd.efectivo + usd.transferencia }
 }
 
 interface BloqueTotalesProps {
-  ars: number
-  usd: number
+  movimientos: readonly FinanceMovimiento[]
 }
 
-function BloqueTotales({ ars, usd }: BloqueTotalesProps) {
+/** Hasta 4 líneas — ARS Efectivo, ARS Transferencia, USD Efectivo, USD Transferencia — nunca sumadas entre sí, solo las que de verdad tienen movimiento. */
+function BloqueTotales({ movimientos }: BloqueTotalesProps) {
+  const { ars, usd } = sumarPorMonedaYMedio(movimientos)
+  const lineas = [
+    ars.efectivo !== 0 ? { texto: formatearMonto(ars.efectivo, 'ars'), medio: 'Efectivo' } : null,
+    ars.transferencia !== 0 ? { texto: formatearMonto(ars.transferencia, 'ars'), medio: 'Transferencia' } : null,
+    usd.efectivo !== 0 ? { texto: formatearMonto(usd.efectivo, 'usd'), medio: 'Efectivo' } : null,
+    usd.transferencia !== 0 ? { texto: formatearMonto(usd.transferencia, 'usd'), medio: 'Transferencia' } : null,
+  ].filter((linea): linea is { texto: string; medio: string } => linea !== null)
+
   return (
     <span className="flex flex-col items-end gap-0.5">
-      {ars !== 0 ? <span className="font-mono text-[14px] text-good">{formatearMonto(ars, 'ars')}</span> : null}
-      {usd !== 0 ? <span className="font-mono text-[13px] text-good">{formatearMonto(usd, 'usd')}</span> : null}
-      {ars === 0 && usd === 0 ? <span className="font-mono text-[14px] text-ink-faint">{formatearMonto(0, 'ars')}</span> : null}
+      {lineas.length > 0 ? (
+        lineas.map((linea, indice) => (
+          <span key={indice} className="font-mono text-[13px] text-good">
+            {linea.texto} <span className="text-[10.5px] text-ink-faint">{linea.medio}</span>
+          </span>
+        ))
+      ) : (
+        <span className="font-mono text-[14px] text-ink-faint">{formatearMonto(0, 'ars')}</span>
+      )}
     </span>
   )
 }
@@ -73,16 +94,15 @@ interface PeriodoBlockProps {
   onEditar: (movimiento: FinanceMovimiento, patch: PatchMovimiento) => void
   onEliminar: (movimiento: FinanceMovimiento) => void
   onAgregarIngreso: (periodoId: string) => void
-  onEditarPeriodo: (periodoId: string, patch: PatchPeriodo) => void
   onEliminarPeriodo: (periodoId: string) => void
 }
 
 /**
- * Sprint 036 — un bloque de período: header editable (nombre + rango de
- * fechas, nunca recalculado del calendario), totales propios (ARS y USD
- * nunca sumados), sus ingresos, y "+ Agregar ingreso" ya asociado a este
- * período. Editar el header es una acción distinta de editar un
- * movimiento — cada una abre su propio formulario, nunca el mismo.
+ * Sprint 037 — un bloque de semana de cobro: header con la fecha real
+ * (nunca editable — la fecha es la identidad de la semana, cambiarla
+ * sería otra semana), totales propios por moneda y medio (nunca
+ * sumados entre sí), sus ingresos, y "+ Agregar ingreso" ya asociado a
+ * esta semana. Solo se puede borrar una semana vacía.
  */
 function PeriodoBlock({
   periodo,
@@ -91,103 +111,42 @@ function PeriodoBlock({
   onEditar,
   onEliminar,
   onAgregarIngreso,
-  onEditarPeriodo,
   onEliminarPeriodo,
 }: PeriodoBlockProps) {
-  const [editando, setEditando] = useState(false)
   const [confirmandoBorrado, setConfirmandoBorrado] = useState(false)
-  const [nombreTexto, setNombreTexto] = useState(periodo.nombre)
-  const [inicioTexto, setInicioTexto] = useState(periodo.fechaInicio)
-  const [finTexto, setFinTexto] = useState(periodo.fechaFin)
-
-  const { ars, usd } = sumarPorMoneda(movimientos)
-  const puedeGuardar = nombreTexto.trim().length > 0 && inicioTexto.length === 10 && finTexto.length === 10 && inicioTexto <= finTexto
-
-  function abrirEdicion() {
-    setNombreTexto(periodo.nombre)
-    setInicioTexto(periodo.fechaInicio)
-    setFinTexto(periodo.fechaFin)
-    setEditando(true)
-  }
-
-  function guardarEdicion() {
-    if (!puedeGuardar) return
-    onEditarPeriodo(periodo.id, { nombre: nombreTexto.trim(), fechaInicio: inicioTexto, fechaFin: finTexto })
-    setEditando(false)
-  }
 
   return (
     <li className="flex flex-col gap-2">
       <div className="flex items-start justify-between gap-3">
-        <button
-          type="button"
-          className="flex appearance-none flex-col items-start gap-0.5 border-0 bg-transparent p-0 text-left"
-          onClick={() => (editando ? setEditando(false) : abrirEdicion())}
-        >
+        <div className="flex flex-col items-start gap-0.5">
           <span className="text-[14px] text-ink">{periodo.nombre}</span>
-          <span className="font-mono text-[11.5px] text-ink-faint">{formatearRango(periodo.fechaInicio, periodo.fechaFin)}</span>
-        </button>
-        <BloqueTotales ars={ars} usd={usd} />
-      </div>
-
-      {editando ? (
-        <div className="flex flex-col gap-2 border-b border-border/40 pb-3">
-          <input
-            type="text"
-            value={nombreTexto}
-            onChange={(event) => setNombreTexto(event.target.value)}
-            aria-label="Nombre del período"
-            placeholder="Nombre"
-            className="border-b border-border/60 bg-transparent px-1 py-1.5 text-[14px] text-ink outline-none placeholder:text-ink-dim"
-          />
-          <div className="flex items-center gap-3">
-            <input
-              type="date"
-              value={inicioTexto}
-              onChange={(event) => setInicioTexto(event.target.value)}
-              aria-label="Fecha inicio"
-              className="border-b border-border/60 bg-transparent px-1 py-1.5 font-mono text-[13px] text-ink outline-none"
-            />
-            <span className="text-[12px] text-ink-faint">→</span>
-            <input
-              type="date"
-              value={finTexto}
-              onChange={(event) => setFinTexto(event.target.value)}
-              aria-label="Fecha fin"
-              className="border-b border-border/60 bg-transparent px-1 py-1.5 font-mono text-[13px] text-ink outline-none"
-            />
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
+          {movimientos.length === 0 ? (
             <button
               type="button"
-              className="idea-destino disabled:opacity-40"
-              disabled={!puedeGuardar}
-              onClick={guardarEdicion}
+              className="appearance-none border-0 bg-transparent p-0 text-[11.5px] text-critical"
+              onClick={() => setConfirmandoBorrado((actual) => !actual)}
             >
-              Guardar
+              Eliminar semana vacía
             </button>
-            {movimientos.length === 0 ? (
-              <button type="button" className="idea-destino" onClick={() => setConfirmandoBorrado((actual) => !actual)}>
-                Eliminar período
-              </button>
-            ) : null}
-          </div>
-          {confirmandoBorrado ? (
-            <div className="flex items-center gap-3">
-              <span className="text-[13px] text-ink-faint">¿Eliminar este período vacío?</span>
-              <button
-                type="button"
-                className="idea-destino"
-                style={{ color: 'var(--critical)', borderColor: 'var(--critical)' }}
-                onClick={() => onEliminarPeriodo(periodo.id)}
-              >
-                Sí, eliminar
-              </button>
-              <button type="button" className="idea-destino" onClick={() => setConfirmandoBorrado(false)}>
-                No
-              </button>
-            </div>
           ) : null}
+        </div>
+        <BloqueTotales movimientos={movimientos} />
+      </div>
+
+      {confirmandoBorrado ? (
+        <div className="flex items-center gap-3 border-b border-border/40 pb-3">
+          <span className="text-[13px] text-ink-faint">¿Eliminar esta semana vacía?</span>
+          <button
+            type="button"
+            className="idea-destino"
+            style={{ color: 'var(--critical)', borderColor: 'var(--critical)' }}
+            onClick={() => onEliminarPeriodo(periodo.id)}
+          >
+            Sí, eliminar
+          </button>
+          <button type="button" className="idea-destino" onClick={() => setConfirmandoBorrado(false)}>
+            No
+          </button>
         </div>
       ) : null}
 
@@ -233,32 +192,27 @@ export function EntroDetalle({
   onEliminar,
   onAgregarIngreso,
   onCrearPeriodo,
-  onEditarPeriodo,
   onEliminarPeriodo,
   onCerrar,
 }: EntroDetalleProps) {
   const [creandoPeriodo, setCreandoPeriodo] = useState(false)
-  const [nombreNuevo, setNombreNuevo] = useState(() => `Semana ${periodos.length + 1}`)
-  const [inicioNuevo, setInicioNuevo] = useState('')
-  const [finNuevo, setFinNuevo] = useState('')
+  const [fechaNueva, setFechaNueva] = useState('')
 
   const periodosOrdenados = periodos.slice().sort((a, b) => a.fechaInicio.localeCompare(b.fechaInicio) || a.orden - b.orden)
   const idsConocidos = new Set(periodos.map((p) => p.id))
   const sinPeriodo = ingresos.filter((m) => !m.periodoId || !idsConocidos.has(m.periodoId))
   const { ars: totalArs, usd: totalUsd } = sumarPorMoneda(ingresos)
 
-  const puedeCrear = nombreNuevo.trim().length > 0 && inicioNuevo.length === 10 && finNuevo.length === 10 && inicioNuevo <= finNuevo
+  const puedeCrear = fechaNueva.length === 10
 
   function abrirCreacion() {
-    setNombreNuevo(`Semana ${periodos.length + 1}`)
-    setInicioNuevo('')
-    setFinNuevo('')
+    setFechaNueva('')
     setCreandoPeriodo(true)
   }
 
   function guardarNuevoPeriodo() {
     if (!puedeCrear) return
-    onCrearPeriodo({ nombre: nombreNuevo.trim(), fechaInicio: inicioNuevo, fechaFin: finNuevo })
+    onCrearPeriodo({ fechaCualquiera: fechaNueva })
     setCreandoPeriodo(false)
   }
 
@@ -284,7 +238,6 @@ export function EntroDetalle({
             onEditar={onEditar}
             onEliminar={onEliminar}
             onAgregarIngreso={onAgregarIngreso}
-            onEditarPeriodo={onEditarPeriodo}
             onEliminarPeriodo={onEliminarPeriodo}
           />
         ))}
@@ -314,37 +267,20 @@ export function EntroDetalle({
       ) : null}
 
       {periodosOrdenados.length === 0 && sinPeriodo.length === 0 ? (
-        <p className="text-center text-[13px] text-ink-faint">Todavía no creaste ningún período. Empezá con "Semana 1".</p>
+        <p className="text-center text-[13px] text-ink-faint">Todavía no creaste ninguna semana de cobro.</p>
       ) : null}
 
       {creandoPeriodo ? (
         <section className="flex flex-col gap-2 border-t border-border/40 pt-4">
-          <p className="font-mono text-[11px] uppercase tracking-wide text-accent">Nuevo período</p>
+          <p className="font-mono text-[11px] uppercase tracking-wide text-accent">Semana de cobro</p>
+          <p className="text-[12.5px] text-ink-faint">Elegí cualquier día de la semana que querés abrir.</p>
           <input
-            type="text"
-            value={nombreNuevo}
-            onChange={(event) => setNombreNuevo(event.target.value)}
-            aria-label="Nombre del período"
-            placeholder="Nombre (Semana 1)"
-            className="border-b border-border/60 bg-transparent px-1 py-1.5 text-[14px] text-ink outline-none placeholder:text-ink-dim"
+            type="date"
+            value={fechaNueva}
+            onChange={(event) => setFechaNueva(event.target.value)}
+            aria-label="Cualquier día de la semana"
+            className="border-b border-border/60 bg-transparent px-1 py-1.5 font-mono text-[13px] text-ink outline-none"
           />
-          <div className="flex items-center gap-3">
-            <input
-              type="date"
-              value={inicioNuevo}
-              onChange={(event) => setInicioNuevo(event.target.value)}
-              aria-label="Fecha inicio"
-              className="border-b border-border/60 bg-transparent px-1 py-1.5 font-mono text-[13px] text-ink outline-none"
-            />
-            <span className="text-[12px] text-ink-faint">→</span>
-            <input
-              type="date"
-              value={finNuevo}
-              onChange={(event) => setFinNuevo(event.target.value)}
-              aria-label="Fecha fin"
-              className="border-b border-border/60 bg-transparent px-1 py-1.5 font-mono text-[13px] text-ink outline-none"
-            />
-          </div>
           <div className="flex gap-3">
             <button type="button" className="idea-destino disabled:opacity-40" disabled={!puedeCrear} onClick={guardarNuevoPeriodo}>
               Guardar
@@ -356,7 +292,7 @@ export function EntroDetalle({
         </section>
       ) : (
         <button type="button" className="idea-destino self-center" onClick={abrirCreacion}>
-          + Nueva semana
+          + Semana de cobro
         </button>
       )}
     </div>

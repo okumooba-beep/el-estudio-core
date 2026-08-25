@@ -14,6 +14,9 @@ interface NuevoMovimientoProps {
   fechaDefault?: string
   /** Sprint 036 — cuando "+ Agregar ingreso" se abre desde un período puntual, el ingreso nace ya asociado a ese período, sin que el usuario tenga que elegirlo. */
   periodoIdFijo?: string
+  /** Sprint 037 — cuando viene de una semana de cobro puntual, la fecha del ingreso no puede salirse de esa semana (lunes de `fechaMin` a domingo de `fechaMax`). */
+  fechaMin?: string
+  fechaMax?: string
   onGuardar: (input: NuevaFinanceMovimiento) => Promise<void>
   /** Sprint 028 — mismo formulario, pero cuando hay 2+ cuotas la alta va por acá, no por `onGuardar`. */
   onGuardarCompra: (input: NuevaCompraEnCuotas) => Promise<void>
@@ -42,6 +45,8 @@ export function NuevoMovimiento({
   tipoFijo,
   fechaDefault,
   periodoIdFijo,
+  fechaMin,
+  fechaMax,
   onGuardar,
   onGuardarCompra,
   onCerrar,
@@ -60,8 +65,12 @@ export function NuevoMovimiento({
   const cuotasNumero = Number(cuotas)
   const esCompraEnCuotas = tipo === 'egreso' && Number.isFinite(cuotasNumero) && cuotasNumero >= 2
   /** Mini Sprint 032 (§3) — el concepto es opcional para un ingreso: no todo ingreso tiene algo que contar más allá de cuánto entró. */
+  const fechaEnRango = (fechaMin === undefined || fecha >= fechaMin) && (fechaMax === undefined || fecha <= fechaMax)
   const esValido =
-    (tipo === 'ingreso' || concepto.trim().length > 0) && Number.isFinite(montoNumero) && montoNumero > 0
+    (tipo === 'ingreso' || concepto.trim().length > 0) &&
+    Number.isFinite(montoNumero) &&
+    montoNumero > 0 &&
+    fechaEnRango
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
@@ -203,6 +212,8 @@ export function NuevoMovimiento({
           type="date"
           value={fecha}
           onChange={(event) => setFecha(event.target.value)}
+          min={fechaMin}
+          max={fechaMax}
           aria-label="Fecha"
           className="border-b border-border/60 bg-transparent px-1 py-2 font-mono text-[13.5px] text-ink outline-none"
         />

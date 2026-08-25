@@ -20,6 +20,7 @@ import {
   resumirSemana,
   semanaDelMes,
 } from './mes'
+import { fechaEnSemana, semanaActual as semanaCobroActual } from './semanaCobro'
 import type { FinanceMovimiento } from '@/types/finance'
 import type { NuevaCompraEnCuotas, NuevaFinanceMovimiento } from './financeRepository'
 import type { PatchMovimiento } from './MovimientoRow'
@@ -68,7 +69,6 @@ export function FinanceScreen() {
     updateMovimiento,
     deleteMovimiento,
     addPeriodo,
-    updatePeriodo,
     deletePeriodo,
   } = useFinance()
   const { ideas, moveSheet } = useIdeas()
@@ -165,6 +165,27 @@ export function FinanceScreen() {
     () => resumirSemana(movimientos, mes, semanaActual, moneda),
     [movimientos, mes, semanaActual, moneda],
   )
+  /**
+   * Sprint 037 — "Esta semana" para Ingresos ya no puede usar
+   * `semanal.entro` (ese número viene de `semanaDelMes`, que resetea con
+   * el mes: una semana de cobro real como 27 jul → 2 ago quedaba partida
+   * en dos y el total de "Esta semana" no coincidía con lo que mostraba
+   * Ingresos, que ya agrupa por semana de cobro real desde este sprint).
+   * Acá se suma directo sobre `movimientos` con la semana lunes→domingo
+   * real de hoy — mismo criterio que `EntroDetalle`/`semanaCobro.ts`, sin
+   * tocar cómo se calculan los egresos (`semanal.seFue` sigue viniendo
+   * de `resumirSemana`, que es el modelo correcto y ya probado para
+   * egresos, fuera de alcance de este sprint).
+   */
+  const entroSemanaReal = useMemo(() => {
+    const { fechaInicio, fechaFin } = semanaCobroActual()
+    return movimientos
+      .filter(
+        (movimiento) =>
+          movimiento.tipo === 'ingreso' && monedaDe(movimiento) === moneda && fechaEnSemana(movimiento.fecha, fechaInicio, fechaFin),
+      )
+      .reduce((total, movimiento) => total + movimiento.monto, 0)
+  }, [movimientos, moneda])
   const ahorroPct = resumen.ingresado > 0 ? Math.round((resumen.balance / resumen.ingresado) * 100) : 0
 
   /** El selector de moneda solo aparece si de verdad hay dólares: nada sobra por si acaso. */
@@ -257,9 +278,15 @@ export function FinanceScreen() {
 
   if (detalle === 'nuevo') {
     const periodoActivo = nuevoIngresoPeriodoId !== null ? periodos.find((p) => p.id === nuevoIngresoPeriodoId) : undefined
-    /** exactOptionalPropertyTypes: `tipoFijo`/`fechaDefault`/`periodoIdFijo` son opcionales de verdad — solo entran en el spread cuando hay período, nunca como `undefined` explícito. */
+    /** exactOptionalPropertyTypes: `tipoFijo`/`fechaDefault`/`periodoIdFijo`/`fechaMin`/`fechaMax` son opcionales de verdad — solo entran en el spread cuando hay período, nunca como `undefined` explícito. */
     const propsDePeriodo = periodoActivo
-      ? { tipoFijo: 'ingreso' as const, fechaDefault: periodoActivo.fechaInicio, periodoIdFijo: periodoActivo.id }
+      ? {
+          tipoFijo: 'ingreso' as const,
+          fechaDefault: periodoActivo.fechaInicio,
+          periodoIdFijo: periodoActivo.id,
+          fechaMin: periodoActivo.fechaInicio,
+          fechaMax: periodoActivo.fechaFin,
+        }
       : {}
     return (
       <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10">
@@ -294,7 +321,6 @@ export function FinanceScreen() {
           onEliminar={eliminarMovimiento}
           onAgregarIngreso={abrirNuevoIngreso}
           onCrearPeriodo={(input) => void addPeriodo(input)}
-          onEditarPeriodo={(id, patch) => void updatePeriodo(id, patch)}
           onEliminarPeriodo={(id) => void deletePeriodo(id)}
           onCerrar={cerrarDetalle}
         />
@@ -326,9 +352,9 @@ export function FinanceScreen() {
     )
   }
 
-  const entro = vista === 'semana' ? semanal.entro : resumen.ingresado
+  const entro = vista === 'semana' ? entroSemanaReal : resumen.ingresado
   const seFue = vista === 'semana' ? semanal.seFue : resumen.gastado
-  const teQuedo = vista === 'semana' ? semanal.teQuedo : resumen.balance
+  const teQuedo = vista === 'semana' ? entroSemanaReal - semanal.seFue : resumen.balance
   const movimientosDelPeriodo = vista === 'semana' ? semanal.movimientos : resumen.movimientos
   const gruposDelPeriodo = vista === 'semana' ? semanal.grupos : resumen.grupos
   const registradoHastaHoy = estaEnCurso(mes)

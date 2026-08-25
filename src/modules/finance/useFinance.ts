@@ -98,12 +98,6 @@ export function useFinance() {
     setPeriodos((current) => [...current, created])
   }
 
-  /** Sprint 036 — corrige nombre/fechaInicio/fechaFin de un período ya existente. */
-  async function updatePeriodo(id: string, patch: Partial<Omit<FinanceIncomePeriod, 'id' | 'createdAt'>>): Promise<void> {
-    const updated = await financeIncomePeriodRepository.update(id, patch)
-    setPeriodos((current) => current.map((periodo) => (periodo.id === id ? updated : periodo)))
-  }
-
   /** Sprint 036 — borra un período. La UI solo lo ofrece cuando ya no tiene ingresos asignados. */
   async function deletePeriodo(id: string): Promise<void> {
     await financeIncomePeriodRepository.delete(id)
@@ -125,7 +119,6 @@ export function useFinance() {
     addGoal,
     updateGoal,
     addPeriodo,
-    updatePeriodo,
     deletePeriodo,
   }
 }
