@@ -442,7 +442,7 @@ export function FinanceScreen() {
         ) : null}
       </section>
 
-      <section className="flex flex-col gap-1.5">
+      <section className="finanzas-tarjeta flex flex-col gap-1.5">
         <button
           type="button"
           className="flex w-full appearance-none items-baseline justify-between gap-3 border-0 bg-transparent p-0 text-left"
@@ -468,51 +468,8 @@ export function FinanceScreen() {
         {registradoHastaHoy ? <p className="text-right text-[12px] text-ink-faint">Registrado hasta hoy</p> : null}
       </section>
 
-      {resumen.porRevisar.length > 0 ? (
-        <section>
-          <h2 className="mb-1 font-mono text-[11px] uppercase tracking-wide text-accent">Por revisar</h2>
-          <ul className="flex flex-col">
-            {resumen.porRevisar.map((movimiento) => (
-              <MovimientoRow
-                key={movimiento.id}
-                movimiento={movimiento}
-                moneda={moneda}
-                onCambiarCategoria={(categoria) => corregirCategoria(movimiento, categoria)}
-                onConvertirAIngreso={movimiento.compraId ? undefined : () => convertirAIngreso(movimiento)}
-                onEditar={movimiento.compraId ? undefined : (patch) => editarMovimiento(movimiento, patch)}
-                onEliminar={movimiento.compraId ? undefined : () => eliminarMovimiento(movimiento)}
-              />
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      {sinMonto.length > 0 ? (
-        <section>
-          <h2 className="mb-1 font-mono text-[11px] uppercase tracking-wide text-accent">Sin monto</h2>
-          <ul className="flex flex-col">
-            {sinMonto.map((idea) => (
-              <li key={idea.id} className="border-b border-border/40 py-3 last:border-b-0">
-                <p className="text-[15px] leading-snug text-ink-dim">{idea.texto}</p>
-                <p className="mt-1 flex items-baseline gap-2 text-[13px] text-ink-faint">
-                  No encontré un monto. Escribilo de nuevo con la cifra.
-                  <button
-                    type="button"
-                    className="idea-aviso-cerrar"
-                    aria-label="Descartar"
-                    onClick={() => void moveSheet(idea, 'archivador')}
-                  >
-                    ×
-                  </button>
-                </p>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
       {vista === 'mes' && resumen.grupos.length > 0 ? (
-        <section className="flex flex-col items-center gap-4">
+        <section className="finanzas-tarjeta flex flex-col items-center gap-4">
           <AnilloCategorias grupos={resumen.grupos} total={formatearMonto(resumen.gastado, moneda)} />
           <ul className="flex w-full flex-col gap-3">
             {resumen.grupos.map((grupo) => (
@@ -552,8 +509,51 @@ export function FinanceScreen() {
         </section>
       ) : null}
 
+      {resumen.porRevisar.length > 0 ? (
+        <section className="finanzas-tarjeta">
+          <h2 className="mb-1 font-mono text-[11px] uppercase tracking-wide text-accent">Por revisar</h2>
+          <ul className="flex flex-col">
+            {resumen.porRevisar.map((movimiento) => (
+              <MovimientoRow
+                key={movimiento.id}
+                movimiento={movimiento}
+                moneda={moneda}
+                onCambiarCategoria={(categoria) => corregirCategoria(movimiento, categoria)}
+                onConvertirAIngreso={movimiento.compraId ? undefined : () => convertirAIngreso(movimiento)}
+                onEditar={movimiento.compraId ? undefined : (patch) => editarMovimiento(movimiento, patch)}
+                onEliminar={movimiento.compraId ? undefined : () => eliminarMovimiento(movimiento)}
+              />
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {sinMonto.length > 0 ? (
+        <section className="finanzas-tarjeta">
+          <h2 className="mb-1 font-mono text-[11px] uppercase tracking-wide text-accent">Sin monto</h2>
+          <ul className="flex flex-col">
+            {sinMonto.map((idea) => (
+              <li key={idea.id} className="border-b border-border/40 py-3 last:border-b-0">
+                <p className="text-[15px] leading-snug text-ink-dim">{idea.texto}</p>
+                <p className="mt-1 flex items-baseline gap-2 text-[13px] text-ink-faint">
+                  No encontré un monto. Escribilo de nuevo con la cifra.
+                  <button
+                    type="button"
+                    className="idea-aviso-cerrar"
+                    aria-label="Descartar"
+                    onClick={() => void moveSheet(idea, 'archivador')}
+                  >
+                    ×
+                  </button>
+                </p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       {movimientosRecientes.length > 0 ? (
-        <section className="flex flex-col gap-1.5">
+        <section className="finanzas-tarjeta flex flex-col gap-1.5">
           <h2 className="mb-1 font-mono text-[11px] uppercase tracking-wide text-accent">Movimientos recientes</h2>
           <ul className="flex flex-col">
             {movimientosRecientes.map((movimiento) => (

@@ -285,10 +285,13 @@ html.light-boot *::after {
   que sí está vivo en cada ruta: un div más, mismo mecanismo, cero
   duplicación. El degradado va DENTRO del mismo background-image (dos
   capas en un solo elemento) para que la foto nunca compita con el texto
-  que flota encima en /,/misiones,/habitos,/finanzas,/agenda — ninguna de
-  esas pantallas tiene tarjeta opaca propia (AppShell.tsx <main> es
+  que flota encima en /,/misiones,/habitos,/agenda — ninguna de esas
+  pantallas tiene tarjeta opaca propia (AppShell.tsx <main> es
   transparente), así que la habitación ES el fondo real del texto, no un
-  wallpaper detrás de una tarjeta.
+  wallpaper detrás de una tarjeta. (/finanzas es la excepción desde el
+  mini sprint "Contraste de tarjetas": ver html[data-route='finanzas']
+  y .finanzas-tarjeta más abajo — el fondo pasa a fixed y el contenido
+  gana superficie opaca propia, solo en esa ruta.)
 */
 /*
   Sprint 030 (§8-§10, "legibilidad global"): la banda ~10%-40% del alto
@@ -3970,4 +3973,55 @@ html[data-route='hoy'] .room-layer-window::after {
 .diario-nav button:hover,
 .diario-nav button:active {
   color: var(--ink);
+}
+
+/*
+  Mini sprint "Contraste de tarjetas" (Finanzas) — en el resto de la
+  app la habitación ES el fondo del texto (ver comentario de
+  .room-layer-photo), pero en Finanzas el contenido puede ser mucho más
+  largo que un viewport (varias semanas, varios movimientos) y con
+  .room-layer-* en `absolute` (posicionado relativo a #root, que crece
+  con la página) el fondo se corría fuera de vista al scrollear,
+  dejando el --canvas plano detrás. Acá, y solo acá, el fondo pasa a
+  `fixed` — misma foto, mismo degradado, cero cambio de posición u
+  opacidad — y cada tarjeta de contenido gana su propia superficie
+  opaca (.finanzas-tarjeta) para que el texto se lea igual sin importar
+  qué parte de la foto quede detrás. No es una solución global: ninguna
+  otra ruta toca `.room-layer-*` ni recibe `.finanzas-tarjeta`.
+*/
+html[data-route='finanzas'] .room-layer-photo,
+html[data-route='finanzas'] .room-layer {
+  position: fixed;
+}
+
+/*
+  Misma superficie que ya usa el Cuaderno (.material-paper + .diario-
+  pagina): reutiliza el papel opaco cálido en vez de inventar un cuarto
+  material. Se agrega borde propio + sombra sutil (pedido explícito del
+  fix) y --ink/--ink-dim/--ink-faint locales apuntando a la tinta del
+  papel, para que cualquier texto de adentro (text-ink, text-ink-faint,
+  etc. — utilities de Tailwind ya mapeadas a estas custom properties)
+  quede legible sin tocar una sola clase de los componentes. --accent
+  se redefine también: el dorado pensado para el lienzo oscuro pierde
+  contraste sobre este papel color crema, y un marrón de cuero lee
+  mejor ahí de todos modos.
+*/
+.finanzas-tarjeta {
+  position: relative;
+  --paper-ink: #3c3327;
+  --paper-ink-faint: #7d6e56;
+  --paper-border: rgba(60, 51, 39, 0.16);
+  --ink: var(--paper-ink);
+  --ink-dim: var(--paper-ink);
+  --ink-faint: var(--paper-ink-faint);
+  --accent: #8a5a2a;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--paper-border, rgba(60, 51, 39, 0.35));
+  box-shadow: 0 10px 22px -16px rgba(0, 0, 0, 0.45);
+  padding: 1.1rem 1.25rem;
+  background:
+    radial-gradient(38% 30% at 22% 18%, rgba(255, 255, 255, 0.5), transparent 65%),
+    radial-gradient(30% 26% at 78% 84%, rgba(0, 0, 0, 0.05), transparent 65%),
+    linear-gradient(155deg, rgba(255, 255, 255, 0.3), transparent 60%),
+    #e5d9c0;
 }

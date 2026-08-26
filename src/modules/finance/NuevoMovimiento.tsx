@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { CATEGORIAS, CATEGORIA_LABEL, type FinanceCategoria } from './categorias'
 import { dividirEnCuotas, parsearMontoManual, type Medio, type Moneda } from './extraccion'
 import type { NuevaCompraEnCuotas, NuevaFinanceMovimiento } from './financeRepository'
-import { formatearMonto } from './mes'
+import { etiquetaSemana, formatearMonto, mesDe, rangoSemana, semanaDelMes } from './mes'
 import { numeroDeSemana } from './semanaCobro'
 import type { FinanceIncomePeriod, FinanceMovimientoTipo } from '@/types/finance'
 
@@ -57,11 +57,22 @@ export function NuevoMovimiento({
   const [categoria, setCategoria] = useState<FinanceCategoria | null>(null)
   const [fecha, setFecha] = useState(() => new Date().toISOString().slice(0, 10))
   const [moneda, setMoneda] = useState<Moneda>(monedaDefault)
-  const [medio, setMedio] = useState<Medio>('transferencia')
+  const [medio] = useState<Medio>('transferencia')
   const [cuotas, setCuotas] = useState('1')
   const [guardando, setGuardando] = useState(false)
   /** Sprint 039 — solo se usa cuando hay `periodos` (acción global "+ Agregar ingreso"). */
   const [periodoElegidoId, setPeriodoElegidoId] = useState<string | undefined>(() => periodos?.[0]?.id)
+  /**
+   * Mini sprint "Reconstruir Ingresos, tres montos independientes" — un
+   * ingreso semanal casi siempre mezcla efectivo en pesos, dólares y
+   * transferencia, los tres a la vez. Antes había un solo `monto` +
+   * selectores de moneda/medio que lo pisaban al cambiar de opción
+   * (`setMonto('')`) — acá cada uno tiene su propio estado, así que
+   * cargar o editar uno nunca borra a los otros dos.
+   */
+  const [montoEfectivoArs, setMontoEfectivoArs] = useState('')
+  const [montoDolares, setMontoDolares] = useState('')
+  const [montoTransferenciaArs, setMontoTransferenciaArs] = useState('')
 
   const mostrarSelectorPeriodo = tipo === 'ingreso' && periodos !== undefined
   const periodoElegido = mostrarSelectorPeriodo ? periodos?.find((p) => p.id === periodoElegidoId) : undefined
@@ -75,19 +86,47 @@ export function NuevoMovimiento({
   const montoNumero = parsearMontoManual(monto) ?? NaN
   const cuotasNumero = Number(cuotas)
   const esCompraEnCuotas = tipo === 'egreso' && Number.isFinite(cuotasNumero) && cuotasNumero >= 2
+  /** Base para las 4 chips de "Semana del mes" (Fix 3) — siempre el mes real de hoy, igual que `semanaActual` en FinanceScreen. */
+  const mesEnCurso = mesDe(new Date())
+
+  /** Los tres baldes de un ingreso — solo entra al guardar el que de verdad tiene algo cargado, cada uno como su propia moneda/medio real (nunca sumados). */
+  const efectivoArsNumero = parsearMontoManual(montoEfectivoArs)
+  const dolaresNumero = parsearMontoManual(montoDolares)
+  const transferenciaArsNumero = parsearMontoManual(montoTransferenciaArs)
+  const baldesIngreso: { monto: number; moneda: Moneda; medio: Medio }[] = (
+    [
+      efectivoArsNumero !== null && efectivoArsNumero > 0 ? { monto: efectivoArsNumero, moneda: 'ars', medio: 'efectivo' } : null,
+      dolaresNumero !== null && dolaresNumero > 0 ? { monto: dolaresNumero, moneda: 'usd', medio: 'efectivo' } : null,
+      transferenciaArsNumero !== null && transferenciaArsNumero > 0 ? { monto: transferenciaArsNumero, moneda: 'ars', medio: 'transferencia' } : null,
+    ] as const
+  ).filter((balde): balde is { monto: number; moneda: Moneda; medio: Medio } => balde !== null)
+
   /** Mini Sprint 032 (§3) — el concepto es opcional para un ingreso: no todo ingreso tiene algo que contar más allá de cuánto entró. */
   const esValido =
-    (tipo === 'ingreso' || concepto.trim().length > 0) &&
-    Number.isFinite(montoNumero) &&
-    montoNumero > 0 &&
-    (!mostrarSelectorPeriodo || periodoElegidoId !== undefined)
+    tipo === 'ingreso'
+      ? baldesIngreso.length > 0 && (!mostrarSelectorPeriodo || periodoElegidoId !== undefined)
+      : concepto.trim().length > 0 && Number.isFinite(montoNumero) && montoNumero > 0
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
     if (!esValido || guardando) return
     setGuardando(true)
     const conceptoFinal = concepto.trim() || (tipo === 'ingreso' ? 'Ingreso' : concepto)
-    if (esCompraEnCuotas) {
+    if (tipo === 'ingreso') {
+      /** Cada balde cargado se guarda como su propio movimiento independiente — la semana sigue siendo una sola, comparten el mismo `periodoId`. */
+      for (const balde of baldesIngreso) {
+        await onGuardar({
+          tipo: 'ingreso',
+          monto: balde.monto,
+          concepto: conceptoFinal,
+          categoria: null,
+          moneda: balde.moneda,
+          medio: balde.medio,
+          fecha: fechaEfectiva,
+          ...(periodoElegidoId ? { periodoId: periodoElegidoId } : {}),
+        })
+      }
+    } else if (esCompraEnCuotas) {
       await onGuardarCompra({
         concepto: conceptoFinal,
         montoTotal: montoNumero,
@@ -102,11 +141,10 @@ export function NuevoMovimiento({
         tipo,
         monto: montoNumero,
         concepto: conceptoFinal,
-        categoria: tipo === 'egreso' ? categoria : null,
+        categoria,
         moneda,
         medio,
         fecha: fechaEfectiva,
-        ...(tipo === 'ingreso' && periodoElegidoId ? { periodoId: periodoElegidoId } : {}),
       })
     }
   }
@@ -148,36 +186,56 @@ export function NuevoMovimiento({
         className="border-b border-border/60 bg-transparent px-1 py-2 text-[15px] text-ink outline-none placeholder:text-ink-dim"
       />
 
-      <input
-        type="text"
-        inputMode="decimal"
-        value={monto}
-        onChange={(event) => setMonto(event.target.value)}
-        placeholder="Monto (100.000)"
-        aria-label="Monto"
-        className="border-b border-border/60 bg-transparent px-1 py-2 font-mono text-[15px] text-ink outline-none placeholder:text-ink-dim"
-      />
-
       {tipo === 'ingreso' ? (
-        <div className="idea-destinos" role="group" aria-label="Medio">
-          {(['efectivo', 'transferencia'] as const).map((opcion) => (
-            <button
-              key={opcion}
-              type="button"
-              className="idea-destino"
-              aria-pressed={medio === opcion}
-              style={medio === opcion ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
-              onClick={() => {
-                if (opcion === medio) return
-                setMedio(opcion)
-                setMonto('')
-              }}
-            >
-              {opcion === 'efectivo' ? 'Efectivo' : 'Transferencia'}
-            </button>
-          ))}
+        <div className="flex flex-col gap-3">
+          <label className="flex flex-col gap-1">
+            <span className="text-[12.5px] text-ink-faint">Efectivo (ARS)</span>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={montoEfectivoArs}
+              onChange={(event) => setMontoEfectivoArs(event.target.value)}
+              placeholder="0"
+              aria-label="Efectivo (ARS)"
+              className="border-b border-border/60 bg-transparent px-1 py-2 font-mono text-[15px] text-ink outline-none placeholder:text-ink-dim"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[12.5px] text-ink-faint">Dólares (USD)</span>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={montoDolares}
+              onChange={(event) => setMontoDolares(event.target.value)}
+              placeholder="0"
+              aria-label="Dólares (USD)"
+              className="border-b border-border/60 bg-transparent px-1 py-2 font-mono text-[15px] text-ink outline-none placeholder:text-ink-dim"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[12.5px] text-ink-faint">Transferencia (ARS)</span>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={montoTransferenciaArs}
+              onChange={(event) => setMontoTransferenciaArs(event.target.value)}
+              placeholder="0"
+              aria-label="Transferencia (ARS)"
+              className="border-b border-border/60 bg-transparent px-1 py-2 font-mono text-[15px] text-ink outline-none placeholder:text-ink-dim"
+            />
+          </label>
         </div>
-      ) : null}
+      ) : (
+        <input
+          type="text"
+          inputMode="decimal"
+          value={monto}
+          onChange={(event) => setMonto(event.target.value)}
+          placeholder="Monto (100.000)"
+          aria-label="Monto"
+          className="border-b border-border/60 bg-transparent px-1 py-2 font-mono text-[15px] text-ink outline-none placeholder:text-ink-dim"
+        />
+      )}
 
       {mostrarSelectorPeriodo ? (
         periodos && periodos.length > 0 ? (
@@ -253,25 +311,53 @@ export function NuevoMovimiento({
             className="border-b border-border/60 bg-transparent px-1 py-2 font-mono text-[13.5px] text-ink outline-none"
           />
         )}
-        <div className="idea-destinos" role="group" aria-label="Moneda">
-          {(['ars', 'usd'] as const).map((opcion) => (
-            <button
-              key={opcion}
-              type="button"
-              className="idea-destino"
-              aria-pressed={moneda === opcion}
-              style={moneda === opcion ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
-              onClick={() => {
-                if (opcion === moneda) return
-                setMoneda(opcion)
-                setMonto('')
-              }}
-            >
-              {opcion === 'ars' ? 'Pesos' : 'Dólares'}
-            </button>
-          ))}
-        </div>
+        {tipo === 'egreso' ? (
+          <div className="idea-destinos" role="group" aria-label="Moneda">
+            {(['ars', 'usd'] as const).map((opcion) => (
+              <button
+                key={opcion}
+                type="button"
+                className="idea-destino"
+                aria-pressed={moneda === opcion}
+                style={moneda === opcion ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
+                onClick={() => {
+                  if (opcion === moneda) return
+                  setMoneda(opcion)
+                  setMonto('')
+                }}
+              >
+                {opcion === 'ars' ? 'Pesos' : 'Dólares'}
+              </button>
+            ))}
+          </div>
+        ) : null}
       </div>
+
+      {tipo === 'egreso' ? (
+        <div className="flex flex-col gap-1.5">
+          <p className="text-[11.5px] text-ink-faint">¿De qué semana del mes es este gasto?</p>
+          <div className="idea-destinos" role="group" aria-label="Semana del mes">
+            {([1, 2, 3, 4] as const).map((numero) => {
+              const activa = fecha.startsWith(mesEnCurso) && semanaDelMes(fecha) === numero
+              return (
+                <button
+                  key={numero}
+                  type="button"
+                  className="idea-destino"
+                  aria-pressed={activa}
+                  style={activa ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
+                  onClick={() => {
+                    const { desde } = rangoSemana(mesEnCurso, numero)
+                    setFecha(`${mesEnCurso}-${String(desde).padStart(2, '0')}`)
+                  }}
+                >
+                  Semana {numero} · {etiquetaSemana(mesEnCurso, numero)}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      ) : null}
 
       <button type="submit" disabled={!esValido || guardando} className="accion-primaria self-start px-3.5 py-2 text-[13.5px] disabled:opacity-40">
         Guardar

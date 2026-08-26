@@ -140,7 +140,7 @@ function PeriodoBlock({
   }
 
   return (
-    <li className="flex flex-col gap-2">
+    <li className="finanzas-tarjeta flex flex-col gap-2">
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-col items-start gap-0.5">
           <span className="font-mono text-[11px] uppercase tracking-wide text-accent">Semana {numeroDeSemana(periodo, periodos)}</span>
@@ -246,7 +246,7 @@ export function EntroDetalle({
         ‹ Finanzas
       </button>
 
-      <section className="flex flex-col items-center gap-1">
+      <section className="finanzas-tarjeta flex flex-col items-center gap-1">
         <p className="font-mono text-[11px] uppercase tracking-wide text-accent">Ingresos</p>
         <p className="font-mono text-[26px] text-good">{formatearMonto(totalArs, 'ars')}</p>
         {totalUsd !== 0 ? <p className="font-mono text-[18px] text-good">{formatearMonto(totalUsd, 'usd')}</p> : null}
@@ -272,7 +272,7 @@ export function EntroDetalle({
       </button>
 
       {sinPeriodo.length > 0 ? (
-        <section className="flex flex-col gap-2">
+        <section className="finanzas-tarjeta flex flex-col gap-2">
           <h2 className="font-mono text-[11px] uppercase tracking-wide text-accent">Sin período</h2>
           <p className="text-[12.5px] text-ink-faint">Tocá un ingreso y editalo para asignarle un período.</p>
           <ul className="flex flex-col">

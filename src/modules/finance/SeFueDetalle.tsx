@@ -58,12 +58,12 @@ export function SeFueDetalle({
         <button type="button" className="idea-destino self-start" onClick={() => setCategoria(null)}>
           ‹ Categorías
         </button>
-        <section className="flex flex-col items-center gap-1">
+        <section className="finanzas-tarjeta flex flex-col items-center gap-1">
           <p className="font-mono text-[11px] text-ink-faint">{periodoLabel}</p>
           <p className="font-mono text-[11px] uppercase tracking-wide text-accent">{CATEGORIA_LABEL[categoria]}</p>
           <p className="font-mono text-[28px] text-critical">{formatearMonto(totalCategoria, moneda)}</p>
         </section>
-        <ul className="flex flex-col">
+        <ul className="finanzas-tarjeta flex flex-col">
           {deLaCategoria.map((movimiento) => (
             <MovimientoRow
               key={movimiento.id}
@@ -84,7 +84,7 @@ export function SeFueDetalle({
       <button type="button" className="idea-destino self-start" onClick={onCerrar}>
         ‹ Finanzas
       </button>
-      <section className="flex flex-col items-center gap-1">
+      <section className="finanzas-tarjeta flex flex-col items-center gap-1">
         <p className="font-mono text-[11px] text-ink-faint">{periodoLabel}</p>
         <p className="font-mono text-[11px] uppercase tracking-wide text-accent">Total gastado</p>
         <p className="font-mono text-[28px] text-critical">{formatearMonto(total, moneda)}</p>
@@ -92,7 +92,7 @@ export function SeFueDetalle({
       {grupos.length === 0 ? (
         <p className="text-center text-[14px] text-ink-faint">No se fue dinero en este período.</p>
       ) : (
-        <ul className="flex flex-col gap-1">
+        <ul className="finanzas-tarjeta flex flex-col gap-1">
           {grupos.map((grupo) => (
             <li key={grupo.categoria}>
               <button
