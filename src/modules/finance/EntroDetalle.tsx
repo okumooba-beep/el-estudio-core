@@ -22,8 +22,8 @@ interface EntroDetalleProps {
   onEditar: (movimiento: FinanceMovimiento, patch: PatchMovimiento) => void
   /** Borra un ingreso individual. Un ingreso mal cargado se borra, no se le busca categoría. */
   onEliminar: (movimiento: FinanceMovimiento) => void
-  /** Abre "+ Movimiento" con tipo ingreso y `periodoId` ya fijado a este período. */
-  onAgregarIngreso: (periodoId: string) => void
+  /** Sprint 039 — abre "+ Agregar ingreso" como acción global: el usuario elige la semana dentro del formulario, no hay un botón por semana. */
+  onAgregarIngreso: () => void
   /** "+ Semana de cobro": crea (o reabre, si ya existe) la semana real que contiene la fecha elegida. */
   onCrearPeriodo: (input: NuevoPeriodoInput) => void
   /** Borra un período. Esta pantalla solo lo ofrece cuando ya no tiene ningún ingreso asignado. */
@@ -93,7 +93,6 @@ interface PeriodoBlockProps {
   periodos: readonly FinanceIncomePeriod[]
   onEditar: (movimiento: FinanceMovimiento, patch: PatchMovimiento) => void
   onEliminar: (movimiento: FinanceMovimiento) => void
-  onAgregarIngreso: (periodoId: string) => void
   onEliminarPeriodo: (periodoId: string) => void
 }
 
@@ -101,8 +100,10 @@ interface PeriodoBlockProps {
  * Sprint 037 — un bloque de semana de cobro: header con la fecha real
  * (nunca editable — la fecha es la identidad de la semana, cambiarla
  * sería otra semana), totales propios por moneda y medio (nunca
- * sumados entre sí), sus ingresos, y "+ Agregar ingreso" ya asociado a
- * esta semana. Solo se puede borrar una semana vacía.
+ * sumados entre sí), y sus ingresos. Solo se puede borrar una semana
+ * vacía. Sprint 039 — ya no tiene su propio "+ Agregar ingreso": ese
+ * botón pasó a ser único y global (ver `EntroDetalle`), para dejar de
+ * repetirse una vez por semana.
  */
 function PeriodoBlock({
   periodo,
@@ -110,7 +111,6 @@ function PeriodoBlock({
   periodos,
   onEditar,
   onEliminar,
-  onAgregarIngreso,
   onEliminarPeriodo,
 }: PeriodoBlockProps) {
   const [confirmandoBorrado, setConfirmandoBorrado] = useState(false)
@@ -170,9 +170,6 @@ function PeriodoBlock({
       ) : (
         <p className="text-[13px] text-ink-faint">Sin ingresos en este período.</p>
       )}
-      <button type="button" className="idea-destino self-start" onClick={() => onAgregarIngreso(periodo.id)}>
-        + Agregar ingreso
-      </button>
     </li>
   )
 }
@@ -237,11 +234,15 @@ export function EntroDetalle({
             periodos={periodos}
             onEditar={onEditar}
             onEliminar={onEliminar}
-            onAgregarIngreso={onAgregarIngreso}
             onEliminarPeriodo={onEliminarPeriodo}
           />
         ))}
       </ul>
+
+      {/* Sprint 039 — un solo "+ Agregar ingreso" global: adentro el usuario elige a qué semana pertenece, en vez de un botón repetido por semana. */}
+      <button type="button" className="idea-destino self-center" onClick={onAgregarIngreso}>
+        + Agregar ingreso
+      </button>
 
       {sinPeriodo.length > 0 ? (
         <section className="flex flex-col gap-2">

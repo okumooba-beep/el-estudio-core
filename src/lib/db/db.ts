@@ -411,6 +411,50 @@ class LifeosDB extends Dexie {
           .filter((movimiento) => movimiento.tipo === 'ingreso')
           .delete()
       })
+
+    /**
+     * Sprint 040 — "Reset completo de Finanzas". Decisión explícita del
+     * usuario: dejar de reparar/migrar los datos actuales de Ingresos.
+     * Tras los Sprints 037-039, la base real seguía teniendo una mezcla de
+     * movimientos de prueba (cargados a mano mientras se verificaban
+     * reportes de sprints anteriores) y capturas reales del Umbral con
+     * historial inconsistente entre sí — el usuario prefiere arrancar
+     * Finanzas en cero y volver a cargar todo a mano antes que seguir
+     * corrigiendo caso por caso.
+     *
+     * Alcance exacto, verificado contra el esquema de esta clase antes de
+     * escribir esta migración (no se asumió ningún nombre de tabla): las
+     * únicas cuatro tablas que pertenecen exclusivamente a Finanzas son
+     * `financeAccounts`, `financeMovimientos` (acá viven ingresos, egresos,
+     * "Por revisar" y cuotas — son la misma tabla, distinguidos solo por
+     * `tipo`/`categoria`/`compraId`, nunca tablas separadas) y `financeGoals`
+     * (Sprint 8, sin store propio de "Metas" en la UI actual, pero igual
+     * exclusivas del dominio Finanzas) y `financeIncomePeriods` (Sprint 036).
+     * Se vacían las cuatro por completo. Ninguna otra tabla se toca:
+     * `ideas` (Umbral/Cuaderno/Diario/Misiones/Biblioteca), `operaciones`
+     * (Trading), `habitChecks` (Hábitos), `agendaEventos`/`agendaBloques`
+     * (Agenda), `auditRupturas`/`auditPremortems`/`auditCorrecciones`/
+     * `auditConfig` (Auditoría) y `notas` (legacy, en desuso) quedan
+     * exactamente como estaban.
+     *
+     * Ningún índice cambia — el modelo de semana de cobro de Sprint
+     * 037-039 ya es correcto; lo que estaba mal eran los datos arrastrados,
+     * no el esquema — así que no hace falta redeclarar ningún `.stores()`
+     * más que el vacío. `.clear()` sobre una tabla ya vacía no hace nada
+     * (idempotente), y Dexie solo corre el `.upgrade()` de cada versión una
+     * única vez por base — correr la app de nuevo tras el reset no repite
+     * este borrado.
+     */
+    this.version(18)
+      .stores({})
+      .upgrade(async (tx) => {
+        await Promise.all([
+          tx.table('financeAccounts').clear(),
+          tx.table('financeMovimientos').clear(),
+          tx.table('financeGoals').clear(),
+          tx.table('financeIncomePeriods').clear(),
+        ])
+      })
   }
 }
 

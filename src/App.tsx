@@ -10,7 +10,6 @@ import { HabitosScreen } from '@modules/habits/HabitosScreen'
 import { TradingScreen } from '@modules/trading/TradingScreen'
 import { DiarioScreen } from '@modules/journal/DiarioScreen'
 import { FinanceScreen } from '@modules/finance/FinanceScreen'
-import { AuditoriaIngresosTemp } from '@modules/finance/AuditoriaIngresosTemp'
 import { AgendaScreen } from '@modules/agenda/AgendaScreen'
 import { AuditoriaScreen } from '@modules/auditoria/AuditoriaScreen'
 import { FrasesScreen } from '@modules/frases/public'
@@ -61,8 +60,6 @@ function App() {
           <Route path="diario" element={<DiarioScreen />} />
           <Route path="frases" element={<FrasesScreen />} />
           <Route path="finanzas" element={<FinanceScreen />} />
-          {/* Sprint 039 — herramienta temporal de solo lectura, se retira al cerrar la auditoría de Ingresos. */}
-          <Route path="finanzas/auditoria-temporal" element={<AuditoriaIngresosTemp />} />
           <Route path="agenda" element={<AgendaScreen />} />
           <Route path="auditoria" element={<AuditoriaScreen />} />
           <Route path="espacios" element={<EspaciosScreen />} />

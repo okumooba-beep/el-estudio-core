@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { useIdeas } from '@modules/work-table/public'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useFinance } from './useFinance'
@@ -70,6 +69,7 @@ export function FinanceScreen() {
     updateMovimiento,
     deleteMovimiento,
     addPeriodo,
+    obtenerOCrearPeriodo,
     deletePeriodo,
   } = useFinance()
   const { ideas, moveSheet } = useIdeas()
@@ -79,12 +79,13 @@ export function FinanceScreen() {
   const [detalle, setDetalle] = useState<Detalle>(null)
   const [categoriaDetalle, setCategoriaDetalle] = useState<FinanceCategoria | null>(null)
   /**
-   * Sprint 036 — período desde el que se abrió "+ Agregar ingreso", para
-   * volver a Ingresos (no a Finanzas) al guardar o cancelar, y para que
-   * el ingreso nuevo nazca ya asociado a ese período. `null` cuando el
-   * formulario se abrió desde "+ Movimiento" general.
+   * Sprint 036 — `true` cuando "+ Agregar ingreso" se abrió desde
+   * Ingresos, para volver ahí (no a Finanzas) al guardar o cancelar.
+   * Sprint 039 — ya no guarda un `periodoId` puntual: la acción es
+   * global, así que el período se elige adentro del formulario (ver
+   * `periodos` que se le pasa a `NuevoMovimiento` más abajo).
    */
-  const [nuevoIngresoPeriodoId, setNuevoIngresoPeriodoId] = useState<string | null>(null)
+  const [abriendoIngresoGlobal, setAbriendoIngresoGlobal] = useState(false)
 
   const convertidas = useMemo(
     () => new Set(movimientos.map((movimiento) => movimiento.ideaId).filter(Boolean)),
@@ -120,39 +121,58 @@ export function FinanceScreen() {
       const extraido = extraerMovimiento(idea.texto)
       if (extraido.montos.length === 0) continue
       enConversion.current.add(idea.id)
-      for (const montoExtraido of extraido.montos) {
-        // Sprint 028: "Gasté 87k en Ropa - 3 cuotas" es una compra en
-        // cuotas, no un movimiento por el total — mismo `addCompra` que
-        // usa "+ Movimiento" (§13: una sola lógica para las dos puertas).
-        // Mini Sprint 029.2 (§9): el medio de ESTE monto si la frase lo
-        // dice cerca ("820K en efectivo + 400K transferencias"), y si no
-        // lo dice, el medio global de toda la captura — mismo criterio
-        // que ya regía antes de este mini-sprint.
-        const medio = montoExtraido.medio ?? extraido.medio
-        if (extraido.cuotas) {
-          void addCompra({
-            concepto: idea.texto,
-            montoTotal: montoExtraido.monto,
-            cantidadCuotas: extraido.cuotas,
-            categoria: extraido.categoriaSegura ? extraido.categoria : null,
-            moneda: montoExtraido.moneda,
-            medio,
-            ideaId: idea.id,
-            fecha: idea.fecha,
-          })
-        } else {
-          void addMovimiento({
-            tipo: extraido.tipo,
-            monto: montoExtraido.monto,
-            moneda: montoExtraido.moneda,
-            medio,
-            concepto: idea.texto,
-            categoria: extraido.categoriaSegura ? extraido.categoria : null,
-            ideaId: idea.id,
-            fecha: idea.fecha,
-          })
+      void (async () => {
+        /**
+         * Sprint 039 — auditoría real de producción encontró ingresos
+         * capturados por el Umbral (con `ideaId`) que nunca llegaban a
+         * ninguna semana: `periodoId` quedaba `undefined` para siempre,
+         * cayendo en el bucket "Sin período" de EntroDetalle en vez de
+         * bajo la semana que le correspondía por fecha. Se resuelve acá,
+         * una sola vez por idea (todos sus montos son de la misma
+         * captura, misma fecha, misma semana) — `obtenerOCrearPeriodo` es
+         * find-or-create por `fechaInicio` (Sprint 037), así que reabre la
+         * semana existente si ya estaba creada y nunca la duplica. Los
+         * egresos y las cuotas siguen sin `periodoId`: nunca lo usaron.
+         */
+        const periodoId =
+          extraido.tipo === 'ingreso' && !extraido.cuotas
+            ? (await obtenerOCrearPeriodo({ fechaCualquiera: idea.fecha })).id
+            : undefined
+        for (const montoExtraido of extraido.montos) {
+          // Sprint 028: "Gasté 87k en Ropa - 3 cuotas" es una compra en
+          // cuotas, no un movimiento por el total — mismo `addCompra` que
+          // usa "+ Movimiento" (§13: una sola lógica para las dos puertas).
+          // Mini Sprint 029.2 (§9): el medio de ESTE monto si la frase lo
+          // dice cerca ("820K en efectivo + 400K transferencias"), y si no
+          // lo dice, el medio global de toda la captura — mismo criterio
+          // que ya regía antes de este mini-sprint.
+          const medio = montoExtraido.medio ?? extraido.medio
+          if (extraido.cuotas) {
+            void addCompra({
+              concepto: idea.texto,
+              montoTotal: montoExtraido.monto,
+              cantidadCuotas: extraido.cuotas,
+              categoria: extraido.categoriaSegura ? extraido.categoria : null,
+              moneda: montoExtraido.moneda,
+              medio,
+              ideaId: idea.id,
+              fecha: idea.fecha,
+            })
+          } else {
+            void addMovimiento({
+              tipo: extraido.tipo,
+              monto: montoExtraido.monto,
+              moneda: montoExtraido.moneda,
+              medio,
+              concepto: idea.texto,
+              categoria: extraido.categoriaSegura ? extraido.categoria : null,
+              ideaId: idea.id,
+              fecha: idea.fecha,
+              ...(periodoId ? { periodoId } : {}),
+            })
+          }
         }
-      }
+      })()
     }
     // Se re-ejecuta cuando cambian ideas o movimientos: cada alta reduce
     // `pendientes` en el próximo render, hasta que solo quedan las que
@@ -232,9 +252,9 @@ export function FinanceScreen() {
     if (patch.moneda !== moneda) setMoneda(patch.moneda)
   }
 
-  /** Sprint 036 — abre "+ Movimiento" desde un período puntual de Ingresos: tipo fijo, ya asociado a ese período. */
-  function abrirNuevoIngreso(periodoId: string) {
-    setNuevoIngresoPeriodoId(periodoId)
+  /** Sprint 039 — abre "+ Agregar ingreso" como acción global desde Ingresos: tipo fijo, el período se elige adentro del formulario. */
+  function abrirNuevoIngreso() {
+    setAbriendoIngresoGlobal(true)
     setDetalle('nuevo')
   }
 
@@ -250,10 +270,10 @@ export function FinanceScreen() {
     setCategoriaDetalle(null)
   }
 
-  /** Sprint 036 — cierra "+ Movimiento": si vino de un período de Ingresos vuelve ahí, no a Finanzas. */
+  /** Sprint 036 — cierra "+ Movimiento": si vino de Ingresos vuelve ahí, no a Finanzas. */
   function cerrarNuevo() {
-    if (nuevoIngresoPeriodoId !== null) {
-      setNuevoIngresoPeriodoId(null)
+    if (abriendoIngresoGlobal) {
+      setAbriendoIngresoGlobal(false)
       setDetalle('entro')
     } else {
       cerrarDetalle()
@@ -278,15 +298,11 @@ export function FinanceScreen() {
   }
 
   if (detalle === 'nuevo') {
-    const periodoActivo = nuevoIngresoPeriodoId !== null ? periodos.find((p) => p.id === nuevoIngresoPeriodoId) : undefined
-    /** exactOptionalPropertyTypes: `tipoFijo`/`fechaDefault`/`periodoIdFijo`/`fechaMin`/`fechaMax` son opcionales de verdad — solo entran en el spread cuando hay período, nunca como `undefined` explícito. */
-    const propsDePeriodo = periodoActivo
+    /** exactOptionalPropertyTypes: `tipoFijo`/`periodos` son opcionales de verdad — solo entran en el spread cuando se abrió desde Ingresos, nunca como `undefined` explícito. */
+    const propsDePeriodo = abriendoIngresoGlobal
       ? {
           tipoFijo: 'ingreso' as const,
-          fechaDefault: periodoActivo.fechaInicio,
-          periodoIdFijo: periodoActivo.id,
-          fechaMin: periodoActivo.fechaInicio,
-          fechaMax: periodoActivo.fechaFin,
+          periodos,
         }
       : {}
     return (
@@ -551,13 +567,6 @@ export function FinanceScreen() {
         <button type="button" className="idea-destino" onClick={() => setDetalle('nuevo')}>
           + Movimiento
         </button>
-      </section>
-
-      {/* Sprint 039 — link temporal a la herramienta de auditoría de solo lectura; se retira al cerrar el sprint. */}
-      <section className="flex justify-center pb-2 pt-1">
-        <Link to="/finanzas/auditoria-temporal" className="font-mono text-[11px] text-ink-faint underline underline-offset-2">
-          Auditoría temporal (solo lectura)
-        </Link>
       </section>
     </div>
   )

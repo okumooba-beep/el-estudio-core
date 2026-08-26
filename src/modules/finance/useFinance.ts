@@ -98,6 +98,22 @@ export function useFinance() {
     setPeriodos((current) => [...current, created])
   }
 
+  /**
+   * Sprint 039 — misma alta que `addPeriodo`, pero devuelve el período
+   * (nuevo o ya existente para esa semana) para poder usar su `id` de
+   * inmediato. La necesita la conversión automática Umbral→Finanzas: un
+   * ingreso capturado por texto tiene `fecha` pero no sabe a qué semana
+   * de cobro pertenece hasta que alguien se lo resuelve. `financeIncomePeriodRepository.add`
+   * ya es find-or-create por `fechaInicio` (nunca duplica la semana), así
+   * que acá solo hace falta no duplicar tampoco el estado local cuando
+   * devuelve un período que ya estaba en `periodos`.
+   */
+  async function obtenerOCrearPeriodo(input: NuevoFinanceIncomePeriod): Promise<FinanceIncomePeriod> {
+    const periodo = await financeIncomePeriodRepository.add(input)
+    setPeriodos((current) => (current.some((p) => p.id === periodo.id) ? current : [...current, periodo]))
+    return periodo
+  }
+
   /** Sprint 036 — borra un período. La UI solo lo ofrece cuando ya no tiene ingresos asignados. */
   async function deletePeriodo(id: string): Promise<void> {
     await financeIncomePeriodRepository.delete(id)
@@ -119,6 +135,7 @@ export function useFinance() {
     addGoal,
     updateGoal,
     addPeriodo,
+    obtenerOCrearPeriodo,
     deletePeriodo,
   }
 }

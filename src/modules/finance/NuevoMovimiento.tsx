@@ -3,7 +3,7 @@ import { CATEGORIAS, CATEGORIA_LABEL, type FinanceCategoria } from './categorias
 import { dividirEnCuotas, parsearMontoManual, type Medio, type Moneda } from './extraccion'
 import type { NuevaCompraEnCuotas, NuevaFinanceMovimiento } from './financeRepository'
 import { formatearMonto } from './mes'
-import type { FinanceMovimientoTipo } from '@/types/finance'
+import type { FinanceIncomePeriod, FinanceMovimientoTipo } from '@/types/finance'
 
 interface NuevoMovimientoProps {
   /** Arranca en la moneda que ya se está mirando en Finanzas — no inventa un tercer estado de moneda. */
@@ -14,6 +14,14 @@ interface NuevoMovimientoProps {
   fechaDefault?: string
   /** Sprint 036 — cuando "+ Agregar ingreso" se abre desde un período puntual, el ingreso nace ya asociado a ese período, sin que el usuario tenga que elegirlo. */
   periodoIdFijo?: string
+  /**
+   * Sprint 039 — cuando "+ Agregar ingreso" se abre como acción global (no
+   * desde una semana puntual), no hay `periodoIdFijo`: en su lugar se pasa
+   * la lista completa de semanas para que el usuario elija a cuál pertenece
+   * este ingreso. Si se pasa junto con `periodoIdFijo`, gana `periodoIdFijo`
+   * (el selector no se muestra) — nunca coexisten en la práctica.
+   */
+  periodos?: readonly FinanceIncomePeriod[]
   /** Sprint 037 — cuando viene de una semana de cobro puntual, la fecha del ingreso no puede salirse de esa semana (lunes de `fechaMin` a domingo de `fechaMax`). */
   fechaMin?: string
   fechaMax?: string
@@ -45,6 +53,7 @@ export function NuevoMovimiento({
   tipoFijo,
   fechaDefault,
   periodoIdFijo,
+  periodos,
   fechaMin,
   fechaMax,
   onGuardar,
@@ -60,17 +69,32 @@ export function NuevoMovimiento({
   const [medio, setMedio] = useState<Medio>('transferencia')
   const [cuotas, setCuotas] = useState('1')
   const [guardando, setGuardando] = useState(false)
+  /** Sprint 039 — solo se usa cuando hay `periodos` y no hay `periodoIdFijo` (acción global "+ Agregar ingreso"). */
+  const [periodoElegidoId, setPeriodoElegidoId] = useState<string | undefined>(() => periodos?.[0]?.id)
+
+  const mostrarSelectorPeriodo = tipo === 'ingreso' && !periodoIdFijo && periodos !== undefined
+  const periodoElegido = mostrarSelectorPeriodo ? periodos?.find((p) => p.id === periodoElegidoId) : undefined
+  /** El selector manda su propio rango de fechas (el de la semana elegida) por sobre cualquier `fechaMin`/`fechaMax` fijo — no coexisten en la práctica, pero si lo hicieran, la semana elegida por el usuario es la fuente de verdad. */
+  const fechaMinEfectiva = mostrarSelectorPeriodo ? periodoElegido?.fechaInicio : fechaMin
+  const fechaMaxEfectiva = mostrarSelectorPeriodo ? periodoElegido?.fechaFin : fechaMax
+
+  function elegirPeriodo(periodo: FinanceIncomePeriod) {
+    setPeriodoElegidoId(periodo.id)
+    setFecha(periodo.fechaInicio)
+  }
 
   const montoNumero = parsearMontoManual(monto) ?? NaN
   const cuotasNumero = Number(cuotas)
   const esCompraEnCuotas = tipo === 'egreso' && Number.isFinite(cuotasNumero) && cuotasNumero >= 2
   /** Mini Sprint 032 (§3) — el concepto es opcional para un ingreso: no todo ingreso tiene algo que contar más allá de cuánto entró. */
-  const fechaEnRango = (fechaMin === undefined || fecha >= fechaMin) && (fechaMax === undefined || fecha <= fechaMax)
+  const fechaEnRango =
+    (fechaMinEfectiva === undefined || fecha >= fechaMinEfectiva) && (fechaMaxEfectiva === undefined || fecha <= fechaMaxEfectiva)
   const esValido =
     (tipo === 'ingreso' || concepto.trim().length > 0) &&
     Number.isFinite(montoNumero) &&
     montoNumero > 0 &&
-    fechaEnRango
+    fechaEnRango &&
+    (!mostrarSelectorPeriodo || periodoElegidoId !== undefined)
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
@@ -97,6 +121,7 @@ export function NuevoMovimiento({
         medio,
         fecha,
         ...(tipo === 'ingreso' && periodoIdFijo ? { periodoId: periodoIdFijo } : {}),
+        ...(tipo === 'ingreso' && !periodoIdFijo && periodoElegidoId ? { periodoId: periodoElegidoId } : {}),
       })
     }
   }
@@ -169,6 +194,29 @@ export function NuevoMovimiento({
         </div>
       ) : null}
 
+      {mostrarSelectorPeriodo ? (
+        periodos && periodos.length > 0 ? (
+          <div className="idea-destinos" role="group" aria-label="Semana de cobro">
+            {periodos.map((periodo) => (
+              <button
+                key={periodo.id}
+                type="button"
+                className="idea-destino"
+                aria-pressed={periodoElegidoId === periodo.id}
+                style={periodoElegidoId === periodo.id ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
+                onClick={() => elegirPeriodo(periodo)}
+              >
+                {periodo.nombre}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="text-[13px] text-ink-faint">
+            Todavía no hay ninguna semana de cobro. Cerrá este formulario y creá una con "+ Semana de cobro".
+          </p>
+        )
+      ) : null}
+
       {tipo === 'egreso' ? (
         <div className="idea-destinos" role="group" aria-label="Categoría">
           {CATEGORIAS.map((opcion) => (
@@ -212,8 +260,8 @@ export function NuevoMovimiento({
           type="date"
           value={fecha}
           onChange={(event) => setFecha(event.target.value)}
-          min={fechaMin}
-          max={fechaMax}
+          min={fechaMinEfectiva}
+          max={fechaMaxEfectiva}
           aria-label="Fecha"
           className="border-b border-border/60 bg-transparent px-1 py-2 font-mono text-[13.5px] text-ink outline-none"
         />
