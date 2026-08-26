@@ -1384,11 +1384,12 @@ html[data-route='hoy'] .room-layer-window::after {
 }
 
 /*
-  Sprint 005 — Asuntos. Qué/de-quién son texto simple editable en
-  línea (mismo patrón que .habito-nombre): sin card, sin post-it, sin
-  formulario. El placeholder de "de quién" usa el truco :empty/::before
-  en vez de un input controlado — sigue siendo el mismo <span>
-  contentEditable que ya guarda con blur/Enter.
+  Sprint 005 — Asuntos. Sprint "Redefinir y reconstruir UX de Asuntos"
+  reemplaza los <span> contentEditable siempre visibles por texto
+  estático (la edición real vive en el form oculto de AsuntoRow,
+  destapado por tap — mismo patrón que MovimientoRow en Finanzas), pero
+  mantiene las clases tal cual: mismo lenguaje visual, ninguna surface
+  nueva.
 */
 .asunto-que {
   display: block;
@@ -1406,18 +1407,9 @@ html[data-route='hoy'] .room-layer-window::after {
 
 .asunto-contraparte {
   display: block;
-  min-height: 1em;
   font-family: var(--font-mono);
   font-size: 12.5px;
   color: var(--ink-faint);
-  cursor: text;
-  outline: none;
-  caret-color: var(--accent);
-}
-
-.asunto-contraparte:empty::before {
-  content: attr(data-placeholder);
-  opacity: 0.6;
 }
 
 /* Único control de prioridad: dos niveles, nunca una etiqueta de color por hábito/categoría. */

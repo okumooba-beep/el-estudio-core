@@ -14,6 +14,8 @@ export interface AddOptions {
 export interface IdeaRepository extends Repository<Idea> {
   add(texto: string, options?: AddOptions): Promise<Idea>
   update(id: string, patch: Partial<Omit<Idea, 'id' | 'createdAt'>>): Promise<Idea>
+  /** Sprint Asuntos ("Redefinir y reconstruir UX") — borrado real, no un cambio de estado. Mismo patrón que `financeRepository.delete`. */
+  delete(id: string): Promise<void>
 }
 
 /**
@@ -60,6 +62,10 @@ class DexieIdeaRepository implements IdeaRepository {
     const updated = await db.ideas.get(id)
     if (!updated) throw new Error(`Idea ${id} no encontrada`)
     return updated
+  }
+
+  async delete(id: string): Promise<void> {
+    await db.ideas.delete(id)
   }
 }
 

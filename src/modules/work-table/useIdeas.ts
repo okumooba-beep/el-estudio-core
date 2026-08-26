@@ -81,5 +81,11 @@ export function useIdeas() {
     return ideaRepository.update(id, patch).then(() => undefined)
   }, [])
 
-  return { ideas, ready, add, moveSheet, update }
+  /** Sprint Asuntos ("Redefinir y reconstruir UX") — borrado real, optimista igual que `update`. */
+  const remove = useCallback((id: string): Promise<void> => {
+    setCache(cache.filter((idea) => idea.id !== id))
+    return ideaRepository.delete(id)
+  }, [])
+
+  return { ideas, ready, add, moveSheet, update, remove }
 }
