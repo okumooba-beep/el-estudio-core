@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { CATEGORIAS, CATEGORIA_LABEL, type FinanceCategoria } from './categorias'
 import { etiquetaDia, formatearMonto } from './mes'
 import { parsearMontoManual } from './extraccion'
+import { numeroDeSemana } from './semanaCobro'
 import type { FinanceMovimiento, FinanceIncomePeriod } from '@/types/finance'
 import type { Medio, Moneda } from './extraccion'
 
@@ -121,11 +122,16 @@ export function MovimientoRow({
     setFormAbierto(true)
   }
 
+  const haySelectorPeriodo = Boolean(periodos && periodos.length > 0)
+  /** Cuando hay semana elegida, su lunes ES la fecha del movimiento — el input de fecha se oculta en ese caso (mismo criterio que NuevoMovimiento), así nunca compiten dos fechas por decir "cuándo es esto". */
+  const periodoSeleccionado = haySelectorPeriodo ? periodos?.find((p) => p.id === periodoEditado) : undefined
+  const fechaEditadaEfectiva = haySelectorPeriodo ? (periodoSeleccionado?.fechaInicio ?? fechaTexto) : fechaTexto
+
   function guardarEdicion() {
     if (!onEditar || montoEditado === null) return
     onEditar({
       monto: montoEditado,
-      fecha: fechaTexto,
+      fecha: fechaEditadaEfectiva,
       moneda: monedaEditada,
       medio: medioEditado,
       concepto: conceptoTexto.trim(),
@@ -231,13 +237,15 @@ export function MovimientoRow({
               aria-label="Monto"
               className="min-w-0 flex-1 border-b border-border/60 bg-transparent px-1 py-1.5 font-mono text-[14px] text-ink outline-none"
             />
-            <input
-              type="date"
-              value={fechaTexto}
-              onChange={(event) => setFechaTexto(event.target.value)}
-              aria-label="Fecha"
-              className="shrink-0 border-b border-border/60 bg-transparent px-1 py-1.5 font-mono text-[13px] text-ink outline-none"
-            />
+            {haySelectorPeriodo ? null : (
+              <input
+                type="date"
+                value={fechaTexto}
+                onChange={(event) => setFechaTexto(event.target.value)}
+                aria-label="Fecha"
+                className="shrink-0 border-b border-border/60 bg-transparent px-1 py-1.5 font-mono text-[13px] text-ink outline-none"
+              />
+            )}
           </div>
           <div className="idea-destinos" role="group" aria-label="Moneda">
             {(['ars', 'usd'] as const).map((opcion) => (
@@ -275,7 +283,7 @@ export function MovimientoRow({
               </button>
             ))}
           </div>
-          {periodos && periodos.length > 0 ? (
+          {haySelectorPeriodo && periodos ? (
             <div className="idea-destinos" role="group" aria-label="Período">
               {periodos.map((periodo) => (
                 <button
@@ -286,7 +294,7 @@ export function MovimientoRow({
                   style={periodoEditado === periodo.id ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
                   onClick={() => setPeriodoEditado(periodo.id)}
                 >
-                  {periodo.nombre}
+                  Semana {numeroDeSemana(periodo, periodos)} · {periodo.nombre}
                 </button>
               ))}
             </div>

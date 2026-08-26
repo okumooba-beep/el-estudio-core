@@ -79,3 +79,21 @@ export function etiquetaSemanaCobro(fechaInicio: string, fechaFin: string): stri
 export function fechaEnSemana(fechaISO: string, fechaInicio: string, fechaFin: string): boolean {
   return fechaISO >= fechaInicio && fechaISO <= fechaFin
 }
+
+/**
+ * "Semana 1", "Semana 2"... — posición cronológica de `periodo` dentro de
+ * `periodos` (por `fechaInicio`, luego `orden`). Nunca se persiste ni se
+ * guarda en la semana: se recalcula en cada render a partir de la lista
+ * completa, así que agregar o borrar una semana corre el número de las
+ * que siguen sin que nadie lo edite a mano. La identidad real de la
+ * semana sigue siendo su fecha (Sprint 037) — esto es solo una etiqueta
+ * de UI derivada, para que la pantalla no obligue a leer un rango de
+ * fechas para saber "cuál semana es esta".
+ */
+export function numeroDeSemana(
+  periodo: { id: string; fechaInicio: string; orden: number },
+  periodos: readonly { id: string; fechaInicio: string; orden: number }[],
+): number {
+  const ordenados = periodos.slice().sort((a, b) => a.fechaInicio.localeCompare(b.fechaInicio) || a.orden - b.orden)
+  return ordenados.findIndex((p) => p.id === periodo.id) + 1
+}

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { MovimientoRow, type PatchMovimiento } from './MovimientoRow'
 import { formatearMonto } from './mes'
+import { numeroDeSemana } from './semanaCobro'
 import type { FinanceMovimiento, FinanceIncomePeriod } from '@/types/finance'
 
 export interface NuevoPeriodoInput {
@@ -115,11 +116,35 @@ function PeriodoBlock({
 }: PeriodoBlockProps) {
   const [confirmandoBorrado, setConfirmandoBorrado] = useState(false)
 
+  const movimientosArs = movimientos.filter((m) => m.moneda !== 'usd')
+  const movimientosUsd = movimientos.filter((m) => m.moneda === 'usd')
+  /** ARS y USD solo se rotulan por separado cuando la semana de verdad mezcla las dos monedas — en el caso común (una sola moneda) rotular igual sería ruido, no claridad. */
+  const monedasMixtas = movimientosArs.length > 0 && movimientosUsd.length > 0
+
+  function ordenarPorFecha(lista: readonly FinanceMovimiento[]) {
+    return lista.slice().sort((a, b) => a.fecha.localeCompare(b.fecha))
+  }
+
+  function filaDe(movimiento: FinanceMovimiento) {
+    return (
+      <MovimientoRow
+        key={movimiento.id}
+        movimiento={movimiento}
+        moneda={movimiento.moneda}
+        signo="+"
+        periodos={periodos}
+        onEditar={movimiento.compraId ? undefined : (patch) => onEditar(movimiento, patch)}
+        onEliminar={movimiento.compraId ? undefined : () => onEliminar(movimiento)}
+      />
+    )
+  }
+
   return (
     <li className="flex flex-col gap-2">
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-col items-start gap-0.5">
-          <span className="text-[14px] text-ink">{periodo.nombre}</span>
+          <span className="font-mono text-[11px] uppercase tracking-wide text-accent">Semana {numeroDeSemana(periodo, periodos)}</span>
+          <span className="text-[13px] text-ink-faint">{periodo.nombre}</span>
           {movimientos.length === 0 ? (
             <button
               type="button"
@@ -151,22 +176,24 @@ function PeriodoBlock({
       ) : null}
 
       {movimientos.length > 0 ? (
-        <ul className="flex flex-col">
-          {movimientos
-            .slice()
-            .sort((a, b) => a.fecha.localeCompare(b.fecha))
-            .map((movimiento) => (
-              <MovimientoRow
-                key={movimiento.id}
-                movimiento={movimiento}
-                moneda={movimiento.moneda}
-                signo="+"
-                periodos={periodos}
-                onEditar={movimiento.compraId ? undefined : (patch) => onEditar(movimiento, patch)}
-                onEliminar={movimiento.compraId ? undefined : () => onEliminar(movimiento)}
-              />
-            ))}
-        </ul>
+        monedasMixtas ? (
+          <div className="flex flex-col gap-3">
+            {movimientosArs.length > 0 ? (
+              <div className="flex flex-col gap-0.5">
+                <p className="text-[10.5px] uppercase tracking-wide text-ink-faint">ARS</p>
+                <ul className="flex flex-col">{ordenarPorFecha(movimientosArs).map(filaDe)}</ul>
+              </div>
+            ) : null}
+            {movimientosUsd.length > 0 ? (
+              <div className="flex flex-col gap-0.5">
+                <p className="text-[10.5px] uppercase tracking-wide text-ink-faint">USD</p>
+                <ul className="flex flex-col">{ordenarPorFecha(movimientosUsd).map(filaDe)}</ul>
+              </div>
+            ) : null}
+          </div>
+        ) : (
+          <ul className="flex flex-col">{ordenarPorFecha(movimientos).map(filaDe)}</ul>
+        )
       ) : (
         <p className="text-[13px] text-ink-faint">Sin ingresos en este período.</p>
       )}
@@ -274,12 +301,12 @@ export function EntroDetalle({
       {creandoPeriodo ? (
         <section className="flex flex-col gap-2 border-t border-border/40 pt-4">
           <p className="font-mono text-[11px] uppercase tracking-wide text-accent">Semana de cobro</p>
-          <p className="text-[12.5px] text-ink-faint">Elegí cualquier día de la semana que querés abrir.</p>
+          <p className="text-[12.5px] text-ink-faint">Elegí una fecha de referencia — el sistema arma la semana lunes a domingo que la contiene.</p>
           <input
             type="date"
             value={fechaNueva}
             onChange={(event) => setFechaNueva(event.target.value)}
-            aria-label="Cualquier día de la semana"
+            aria-label="Elegir fecha de referencia"
             className="border-b border-border/60 bg-transparent px-1 py-1.5 font-mono text-[13px] text-ink outline-none"
           />
           <div className="flex gap-3">
