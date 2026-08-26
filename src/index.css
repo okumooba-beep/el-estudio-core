@@ -4008,20 +4008,22 @@ html[data-route='finanzas'] .room-layer {
 */
 .finanzas-tarjeta {
   position: relative;
-  --paper-ink: #3c3327;
-  --paper-ink-faint: #7d6e56;
-  --paper-border: rgba(60, 51, 39, 0.16);
-  --ink: var(--paper-ink);
-  --ink-dim: var(--paper-ink);
-  --ink-faint: var(--paper-ink-faint);
-  --accent: #8a5a2a;
+  --finanzas-tarjeta-bg: #211c15;
+  --finanzas-tarjeta-borde: #3a3225;
+  --finanzas-texto: #ede6d8;
+  --finanzas-texto-suave: #a69a85;
+  --finanzas-oro: #c99a4a;
+  --finanzas-verde: #8fae7a;
+  --finanzas-terracota: #c97a5a;
+  --ink: var(--finanzas-texto);
+  --ink-dim: var(--finanzas-texto-suave);
+  --ink-faint: var(--finanzas-texto-suave);
+  --accent: var(--finanzas-oro);
+  --good: var(--finanzas-verde);
+  --critical: var(--finanzas-terracota);
   border-radius: var(--radius-md);
-  border: 1px solid var(--paper-border, rgba(60, 51, 39, 0.35));
+  border: 1px solid var(--finanzas-tarjeta-borde);
   box-shadow: 0 10px 22px -16px rgba(0, 0, 0, 0.45);
   padding: 1.1rem 1.25rem;
-  background:
-    radial-gradient(38% 30% at 22% 18%, rgba(255, 255, 255, 0.5), transparent 65%),
-    radial-gradient(30% 26% at 78% 84%, rgba(0, 0, 0, 0.05), transparent 65%),
-    linear-gradient(155deg, rgba(255, 255, 255, 0.3), transparent 60%),
-    #e5d9c0;
+  background: var(--finanzas-tarjeta-bg);
 }

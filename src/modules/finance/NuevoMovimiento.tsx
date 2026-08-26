@@ -57,7 +57,7 @@ export function NuevoMovimiento({
   const [categoria, setCategoria] = useState<FinanceCategoria | null>(null)
   const [fecha, setFecha] = useState(() => new Date().toISOString().slice(0, 10))
   const [moneda, setMoneda] = useState<Moneda>(monedaDefault)
-  const [medio] = useState<Medio>('transferencia')
+  const [medio, setMedio] = useState<Medio>('transferencia')
   const [cuotas, setCuotas] = useState('1')
   const [guardando, setGuardando] = useState(false)
   /** Sprint 039 — solo se usa cuando hay `periodos` (acción global "+ Agregar ingreso"). */
@@ -236,6 +236,23 @@ export function NuevoMovimiento({
           className="border-b border-border/60 bg-transparent px-1 py-2 font-mono text-[15px] text-ink outline-none placeholder:text-ink-dim"
         />
       )}
+
+      {tipo === 'egreso' ? (
+        <div className="idea-destinos" role="group" aria-label="Medio">
+          {(['efectivo', 'transferencia'] as const).map((opcion) => (
+            <button
+              key={opcion}
+              type="button"
+              className="idea-destino"
+              aria-pressed={medio === opcion}
+              style={medio === opcion ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
+              onClick={() => setMedio(opcion)}
+            >
+              {opcion === 'efectivo' ? 'Efectivo' : 'Transferencia'}
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       {mostrarSelectorPeriodo ? (
         periodos && periodos.length > 0 ? (

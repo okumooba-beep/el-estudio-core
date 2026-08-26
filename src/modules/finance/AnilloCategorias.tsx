@@ -46,6 +46,7 @@ export function AnilloCategorias({ grupos, total }: { grupos: readonly GrupoCate
           />
         )
       })}
+      <circle cx="70" cy="70" r={RADIO - GROSOR / 2 - 1} fill="var(--finanzas-tarjeta-bg, var(--surface, #211c15))" />
       <text
         x="70"
         y="70"
