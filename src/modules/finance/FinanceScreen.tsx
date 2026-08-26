@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useIdeas } from '@modules/work-table/public'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useFinance } from './useFinance'
@@ -550,6 +551,13 @@ export function FinanceScreen() {
         <button type="button" className="idea-destino" onClick={() => setDetalle('nuevo')}>
           + Movimiento
         </button>
+      </section>
+
+      {/* Sprint 039 — link temporal a la herramienta de auditoría de solo lectura; se retira al cerrar el sprint. */}
+      <section className="flex justify-center pb-2 pt-1">
+        <Link to="/finanzas/auditoria-temporal" className="font-mono text-[11px] text-ink-faint underline underline-offset-2">
+          Auditoría temporal (solo lectura)
+        </Link>
       </section>
     </div>
   )
