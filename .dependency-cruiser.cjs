@@ -80,8 +80,18 @@ module.exports = {
       name: 'module-no-cross-module-import',
       severity: 'error',
       comment: 'un módulo nunca importa el interior de otro módulo — solo su public.ts o el bus de eventos. `today` puede importar el public.ts de cualquier módulo, como orquestador declarado (ARCHITECTURE_RATIFIED.md §7; renombrado de `hoy` en F16). Excepción adicional explícita (misma cláusula de §7: "cualquier módulo futuro que pida el mismo privilegio requiere una entrada nueva"): cualquier módulo de contenido puede importar `work-table/public.ts` — work-table es la infraestructura compartida de enrutamiento de ideas que todo destino de contenido consume por diseño (ver `IdeaDestino` en src/types/idea.ts), sancionado explícitamente por el roadmap F15 (`actualizar habitos, diario, misiones para importar solo desde public.ts`). `auditoria` queda excluido de esta regla general porque tiene su propia regla dedicada (auditoria-boundaries, más abajo): su privilegio es más angosto que el de `today` (dos public.ts puntuales, no cualquiera).',
-      from: { path: '^src/modules/(?!today/|auditoria/)([^/]+)/' },
+      from: { path: '^src/modules/(?!today/|auditoria/|settings/)([^/]+)/' },
       to: { path: '^src/modules/(?!$1/)[^/]+/', pathNot: '^src/modules/work-table/public\\.ts$' },
+    },
+    {
+      name: 'settings-boundaries',
+      severity: 'error',
+      comment: 'Módulo Ajustes — pantalla de utilidades (exportar datos, actualizar la PWA), nunca un panel que reimplementa la lógica de otros módulos. Ejerce el mismo privilegio angosto que auditoria-boundaries: solo puede importar `finance/public.ts` (necesita `obtenerDatosParaExportar` para el backup de Finanzas) — nunca el interior de ese módulo, y nunca el public.ts de ningún otro.',
+      from: { path: '^src/modules/settings/' },
+      to: {
+        path: '^src/modules/(?!settings/)[^/]+/',
+        pathNot: '^src/modules/finance/public\\.ts$',
+      },
     },
     {
       name: 'auditoria-boundaries',

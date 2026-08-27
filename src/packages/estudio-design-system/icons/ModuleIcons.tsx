@@ -144,6 +144,16 @@ export function AuditoriaIcon(props: IconProps) {
   )
 }
 
+/** Ajustes — un engranaje simple, el lenguaje universal de "utilidades del dispositivo". */
+export function AjustesIcon(props: IconProps) {
+  return (
+    <svg {...BASE} {...props}>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 4.5v2M12 17.5v2M19.5 12h-2M6.5 12h-2M17.4 6.6l-1.4 1.4M8 14.6l-1.4 1.4M17.4 17.4l-1.4-1.4M8 9.4L6.6 8" />
+    </svg>
+  )
+}
+
 /**
  * Espacios (Sprint 015.4 — "Navegación global de El Estudio Core"): la
  * planta del Estudio, mismo lenguaje arquitectónico que el vano de
@@ -175,5 +185,6 @@ export const MODULE_ICONS: Record<string, ComponentType<IconProps>> = {
   '/frases': BibliotecaIcon,
   '/agenda': AgendaIcon,
   '/auditoria': AuditoriaIcon,
+  '/ajustes': AjustesIcon,
   '/espacios': EspaciosIcon,
 }

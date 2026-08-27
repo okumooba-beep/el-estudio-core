@@ -12,6 +12,7 @@ import { DiarioScreen } from '@modules/journal/DiarioScreen'
 import { FinanceScreen } from '@modules/finance/FinanceScreen'
 import { AgendaScreen } from '@modules/agenda/AgendaScreen'
 import { AuditoriaScreen } from '@modules/auditoria/AuditoriaScreen'
+import { AjustesScreen } from '@modules/settings/AjustesScreen'
 import { FrasesScreen } from '@modules/frases/public'
 import { MaterialInspector } from '@/dev-tools/material-inspector/MaterialInspector'
 import { DesignSystemGallery } from '@/features/dev/DesignSystemGallery'
@@ -62,6 +63,7 @@ function App() {
           <Route path="finanzas" element={<FinanceScreen />} />
           <Route path="agenda" element={<AgendaScreen />} />
           <Route path="auditoria" element={<AuditoriaScreen />} />
+          <Route path="ajustes" element={<AjustesScreen />} />
           <Route path="espacios" element={<EspaciosScreen />} />
         </Route>
         {/* Material Inspector (Sprint 2.4, punto 07): fuera de AppShell a propósito — no es un lugar del Estudio, es una herramienta de desarrollo. Nunca existe en producción. */}

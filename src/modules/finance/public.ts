@@ -1,5 +1,12 @@
 import { useFinance } from './useFinance'
 import { categoriaDe } from './mes'
+import {
+  financeAccountRepository,
+  financeMovimientoRepository,
+  financeGoalRepository,
+  financeIncomePeriodRepository,
+} from './financeRepository'
+import type { FinanceAccount, FinanceMovimiento, FinanceGoal, FinanceIncomePeriod } from '@/types/finance'
 
 /**
  * Superficie pública del módulo Finanzas. `finanzas` ya existía
@@ -26,4 +33,28 @@ export function useAttentionSignal(): { destino: 'finanzas'; mensaje: string } |
   const { movimientos } = useFinance()
   const hayPorRevisar = movimientos.some((movimiento) => movimiento.tipo === 'egreso' && categoriaDe(movimiento) === null)
   return hayPorRevisar ? { destino: 'finanzas', mensaje: 'Finanzas tiene un movimiento por revisar' } : null
+}
+
+/**
+ * Ajustes — "Exportar datos": una foto de solo lectura de las cuatro
+ * tablas de Finanzas, para que Ajustes arme un backup en JSON sin tocar
+ * el interior del módulo (dependency-cruiser, `settings-boundaries`).
+ * Nunca escribe nada — mismo motivo por el que expone una función
+ * puntual y no `useFinance` completo (que trae altas/bajas).
+ */
+export interface FinanzasExport {
+  movimientos: FinanceMovimiento[]
+  periodos: FinanceIncomePeriod[]
+  accounts: FinanceAccount[]
+  goals: FinanceGoal[]
+}
+
+export async function obtenerDatosParaExportar(): Promise<FinanzasExport> {
+  const [movimientos, periodos, accounts, goals] = await Promise.all([
+    financeMovimientoRepository.list(),
+    financeIncomePeriodRepository.list(),
+    financeAccountRepository.list(),
+    financeGoalRepository.list(),
+  ])
+  return { movimientos, periodos, accounts, goals }
 }

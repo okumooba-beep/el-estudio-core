@@ -302,6 +302,15 @@ export function FinanceScreen() {
    */
   async function guardarMovimiento(input: NuevaFinanceMovimiento) {
     await addMovimiento(input)
+    /**
+     * Mismo caso que `editarMovimiento` (línea de arriba, Mini Sprint
+     * 029.1/035): "Se fue"/resumen/semanal están filtrados por la moneda
+     * que esta pantalla tiene seleccionada. Un gasto nuevo en la OTRA
+     * moneda se persiste bien pero queda invisible en la vista actual
+     * hasta seguirlo — sin esto, un egreso en USD (vista por defecto en
+     * 'ars') parece "no haberse guardado".
+     */
+    if (input.tipo === 'egreso' && input.moneda !== moneda) setMoneda(input.moneda)
     cerrarNuevo()
   }
 
@@ -362,7 +371,17 @@ export function FinanceScreen() {
   const nombreMes = new Date(`${mes}-02`).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
   /** Sprint 016.1, punto 15: mismo texto que ya arma el header acá abajo, para que Entró/Se fue nunca pierdan de vista qué período están mostrando al entrar en un detalle. */
   const periodoLabel = vista === 'semana' ? `Semana ${semanaActual} · ${etiquetaSemana(mes, semanaActual)}` : nombreMes
-  const sinNada = resumen.movimientos.length === 0 && sinMonto.length === 0
+  /**
+   * Mini Sprint 035 ya dejó documentado (ver comentario de `editarMovimiento`
+   * más arriba) que `resumen` está filtrado por la moneda de la vista — pero
+   * este gate decidía "¿la app está vacía?" mirando ESE mismo `resumen`
+   * filtrado, así que un usuario cuyo único movimiento fuera en USD (p. ej.
+   * recién guardado, o después de recargar con `moneda` de vuelta en su
+   * default 'ars') caía en el EmptyState "Todavía no se movió un peso" — la
+   * pantalla entera, sin ni siquiera el toggle Pesos/Dólares para poder salir
+   * de ahí. `movimientos` (sin filtrar por moneda) es la pregunta real.
+   */
+  const sinNada = movimientos.length === 0 && sinMonto.length === 0
 
   if (sinNada) {
     return (
