@@ -258,9 +258,23 @@ export function FinanceScreen() {
     setDetalle('nuevo')
   }
 
-  /** Mini Sprint 029.1 (§7). */
+  /**
+   * Mini Sprint 029.1 (§7). Si el movimiento vino de una captura del
+   * Umbral (`ideaId`), borrar solo el movimiento no alcanza: esa Idea
+   * sigue viva con `destino === 'finanzas'`, así que `pendientes` (más
+   * arriba) la vuelve a ver como "todavía no convertida" en el próximo
+   * render y el efecto de auto-conversión la vuelve a convertir — el
+   * ingreso "eliminado" reaparecía como uno nuevo (mismo texto, otro id)
+   * al toque y, peor, otra vez después de recargar. Mismo `moveSheet(...,
+   * 'archivador')` que ya usa "Descartar" en "Sin monto" más abajo: saca
+   * la Idea de 'finanzas' sin borrar el texto que el usuario escribió.
+   */
   function eliminarMovimiento(movimiento: FinanceMovimiento) {
     void deleteMovimiento(movimiento.id)
+    if (movimiento.ideaId) {
+      const idea = ideas.find((i) => i.id === movimiento.ideaId)
+      if (idea) void moveSheet(idea, 'archivador')
+    }
   }
 
   if (!ready) return null
