@@ -4104,7 +4104,61 @@ html[data-route='finanzas'] .room-layer {
   --critical: var(--finanzas-terracota);
   border-radius: var(--radius-md);
   border: 1px solid var(--finanzas-tarjeta-borde);
-  box-shadow: 0 10px 22px -16px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
   padding: 1.1rem 1.25rem;
   background: var(--finanzas-tarjeta-bg);
+}
+
+/*
+  Chips de categoría (fix: opciones antes eran texto plano de
+  .idea-destino sin separación visual). Se agregan clases propias de
+  Finanzas en vez de tocar .idea-destino/.idea-destinos, que son
+  compartidas por Misiones, Umbral, y los toggles de vista/moneda de
+  esta misma pantalla.
+*/
+.finanzas-categorias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.finanzas-categoria-chip {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 999px;
+  padding: 9px 14px;
+  font-size: 12.5px;
+  color: var(--ink-faint);
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.finanzas-categoria-chip[aria-pressed='true'] {
+  background: var(--finanzas-oro);
+  border-color: var(--finanzas-oro);
+  color: #211c15;
+}
+
+/*
+  Aviso de ingreso semanal pendiente: vive dentro de .finanzas-tarjeta
+  (resumen), por eso hereda --ink-faint/--accent ya remapeados arriba
+  a --finanzas-texto-suave/--finanzas-oro. Fondo y borde en dorado
+  tenue, puramente informativo — no participa de ningún cálculo.
+*/
+.finanzas-aviso-semana {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--radius-sm);
+  background: rgba(201, 154, 74, 0.1);
+  border: 1px solid rgba(201, 154, 74, 0.28);
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--ink-faint);
+}
+
+.finanzas-aviso-semana strong {
+  color: var(--accent);
+  font-weight: 600;
 }

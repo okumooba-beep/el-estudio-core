@@ -20,7 +20,7 @@ import {
   resumirSemana,
   semanaDelMes,
 } from './mes'
-import { fechaEnSemana, semanaActual as semanaCobroActual } from './semanaCobro'
+import { etiquetaSemanaCobro, fechaEnSemana, semanaActual as semanaCobroActual } from './semanaCobro'
 import type { FinanceMovimiento } from '@/types/finance'
 import type { NuevaCompraEnCuotas, NuevaFinanceMovimiento } from './financeRepository'
 import type { PatchMovimiento } from './MovimientoRow'
@@ -207,6 +207,11 @@ export function FinanceScreen() {
       )
       .reduce((total, movimiento) => total + movimiento.monto, 0)
   }, [movimientos, moneda])
+  /** Etiqueta de la semana de cobro real de hoy, solo para el aviso de ingreso pendiente — misma fuente que `entroSemanaReal`, ninguna semana nueva. */
+  const etiquetaSemanaActual = useMemo(() => {
+    const { fechaInicio, fechaFin } = semanaCobroActual()
+    return etiquetaSemanaCobro(fechaInicio, fechaFin)
+  }, [])
   const ahorroPct = resumen.ingresado > 0 ? Math.round((resumen.balance / resumen.ingresado) * 100) : 0
 
   /** El selector de moneda solo aparece si de verdad hay dólares: nada sobra por si acaso. */
@@ -500,6 +505,14 @@ export function FinanceScreen() {
           </span>
         </div>
         {registradoHastaHoy ? <p className="text-right text-[12px] text-ink-faint">Registrado hasta hoy</p> : null}
+        {entroSemanaReal === 0 ? (
+          <div className="finanzas-aviso-semana" role="note">
+            <span aria-hidden="true">⚠</span>
+            <p>
+              Semana {etiquetaSemanaActual} sin ingreso registrado — <strong>este número no incluye el cobro que todavía no cargaste</strong>.
+            </p>
+          </div>
+        ) : null}
       </section>
 
       {vista === 'mes' && resumen.grupos.length > 0 ? (

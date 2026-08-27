@@ -281,14 +281,13 @@ export function NuevoMovimiento({
       ) : null}
 
       {tipo === 'egreso' ? (
-        <div className="idea-destinos" role="group" aria-label="Categoría">
+        <div className="finanzas-categorias" role="group" aria-label="Categoría">
           {CATEGORIAS.map((opcion) => (
             <button
               key={opcion}
               type="button"
-              className="idea-destino"
+              className="finanzas-categoria-chip"
               aria-pressed={categoria === opcion}
-              style={categoria === opcion ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
               onClick={() => setCategoria((actual) => (actual === opcion ? null : opcion))}
             >
               {CATEGORIA_LABEL[opcion]}
