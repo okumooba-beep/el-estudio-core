@@ -150,7 +150,7 @@ export function NuevoMovimiento({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+    <form onSubmit={handleSubmit} className="finanzas-tarjeta flex flex-col gap-6">
       <button type="button" className="idea-destino self-start" onClick={onCerrar}>
         ‹ Finanzas
       </button>

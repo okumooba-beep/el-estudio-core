@@ -494,7 +494,8 @@ export function FinanceScreen() {
         </button>
         <div className="mt-1 flex items-baseline justify-between gap-3 border-t border-border/40 pt-2">
           <span className="text-[15px] text-ink">Te quedó</span>
-          <span className={`font-mono text-[17px] ${teQuedo >= 0 ? 'text-good' : 'text-critical'}`}>
+          {/* "Te quedó" es el saldo/ahorro del período, no una alerta — usa siempre el mismo verde positivo que Ingresos, nunca el color crítico de Se fue (a pedido explícito: no debe leerse como advertencia aunque el número baje). */}
+          <span className="font-mono text-[17px] text-good">
             {formatearMonto(teQuedo, moneda)}
           </span>
         </div>

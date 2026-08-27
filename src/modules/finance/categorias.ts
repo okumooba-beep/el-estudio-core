@@ -20,10 +20,15 @@ export type FinanceCategoria =
   | 'ocio'
   | 'inversion'
   | 'ahorro'
+  | 'envio_familia'
+  | 'trading'
+  | 'tarjeta_credito'
+  | 'otros'
 
 export const CATEGORIAS: readonly FinanceCategoria[] = [
   'comida', 'auto', 'salud', 'servicios', 'suscripciones',
   'alquiler', 'ropa', 'ocio', 'inversion', 'ahorro',
+  'envio_familia', 'trading', 'tarjeta_credito', 'otros',
 ]
 
 export const CATEGORIA_LABEL: Record<FinanceCategoria, string> = {
@@ -37,6 +42,10 @@ export const CATEGORIA_LABEL: Record<FinanceCategoria, string> = {
   ocio: 'Ocio',
   inversion: 'Inversión',
   ahorro: 'Ahorro',
+  envio_familia: 'Envío a familia',
+  trading: 'Trading',
+  tarjeta_credito: 'Pago de tarjeta de crédito',
+  otros: 'Otros',
 }
 
 /**
@@ -48,15 +57,19 @@ export const CATEGORIA_LABEL: Record<FinanceCategoria, string> = {
  */
 export const CATEGORIA_COLOR: Record<FinanceCategoria, string> = {
   comida: '#D8A24A',
-  auto: '#A8763C',
-  salud: '#C97A73',
+  auto: '#7A5233',
+  salud: '#C6798E',
   servicios: '#8A7F70',
-  suscripciones: '#7E6A8F',
-  alquiler: '#8C5F4A',
+  suscripciones: '#8B6FA0',
+  alquiler: '#B5563A',
   ropa: '#6F8299',
-  ocio: '#C99A55',
+  ocio: '#E8C179',
   inversion: '#6FAE85',
-  ahorro: '#5C8C7A',
+  ahorro: '#8A9A5B',
+  envio_familia: '#D98B5F',
+  trading: '#B8863B',
+  tarjeta_credito: '#556074',
+  otros: '#9C9284',
 }
 
 /**
@@ -92,4 +105,12 @@ export const CATEGORIA_LEXICO: Record<FinanceCategoria, readonly string[]> = {
   inversion: ['inversión', 'inversion', 'invertí', 'inverti', 'acciones', 'bono', 'cedear', 'cripto',
     'bitcoin', 'broker', 'plazo fijo'],
   ahorro: ['ahorro', 'ahorré', 'ahorre', 'guardé', 'guarde', 'reserva'],
+  envio_familia: ['envío a la familia', 'envio a la familia', 'envío a mi familia', 'envio a mi familia',
+    'remesa', 'giro familiar'],
+  trading: ['fondeo', 'fondear', 'cuenta fondeada', 'mentor', 'mentoría', 'mentoria', 'sala de trading',
+    'prop firm'],
+  tarjeta_credito: ['tarjeta de crédito', 'tarjeta de credito', 'pago de la tarjeta', 'resumen de tarjeta',
+    'resumen de la tarjeta'],
+  /** "Otros" es un catch-all de selección manual — nunca se auto-detecta, así que su léxico queda vacío a propósito (`.some()` sobre `[]` siempre da `false`): lo que el texto no reconoce sigue cayendo en "Por revisar", como siempre. */
+  otros: [],
 }
