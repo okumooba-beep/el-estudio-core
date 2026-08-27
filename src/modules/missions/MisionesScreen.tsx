@@ -4,6 +4,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { MUEBLES } from '@world/studio/muebles'
 import { interpretarMision } from './extraccionFecha'
 import { MAX_PRINCIPALES, seleccionarActivas, seleccionarPrincipales, seleccionarSecundarias } from './seleccionarPrincipales'
+import { MisionDetalle } from './MisionDetalle'
 import { etiquetaFecha, formatearHora12 } from '@shared-kernel/text/interpretarTexto'
 import type { Idea } from '@/types/idea'
 
@@ -51,6 +52,8 @@ export function MisionesScreen() {
   const [draftTexto, setDraftTexto] = useState<string | null>(null)
   /** Sprint 016.2, punto 6: misión que el usuario intenta hacer Principal habiendo ya cinco — nunca se auto-decide. */
   const [intentoPrincipal, setIntentoPrincipal] = useState<Idea | null>(null)
+  /** Rediseño Misiones: id de la misión cuyo detalle (sub-tareas) está abierto — null = lista. */
+  const [detalleId, setDetalleId] = useState<string | null>(null)
 
   /** Sprint 014, punto 3: vista previa silenciosa mientras se escribe — nunca abre diálogos. */
   const previaDraft = useMemo(() => {
@@ -120,18 +123,49 @@ export function MisionesScreen() {
 
   function renderFila(mision: Idea) {
     const esPrincipal = mision.misionPrincipal === true
+    const subtareas = mision.subtareas ?? []
+    const totalSubtareas = subtareas.length
+    const hechasSubtareas = subtareas.filter((subtarea) => subtarea.completada).length
+    const porcentaje = totalSubtareas > 0 ? Math.round((hechasSubtareas / totalSubtareas) * 100) : 0
     return (
       <li key={mision.id} className="mision-fila">
         <button type="button" className="mision-check" aria-label="Completar" onClick={() => handleCompletar(mision)}>
-          <span className="mision-check-circulo" aria-hidden="true" />
+          <span
+            className="mision-check-circulo"
+            aria-hidden="true"
+            style={
+              totalSubtareas > 0
+                ? {
+                    background: `conic-gradient(var(--accent) ${porcentaje}%, color-mix(in srgb, var(--ink-faint) 30%, transparent) 0)`,
+                    borderColor: 'transparent',
+                  }
+                : undefined
+            }
+          />
         </button>
-        <span className="mision-contenido">
+        {/* Rediseño Misiones: tocar acá abre el detalle. El texto sigue siendo contentEditable para el rename inline existente, que corta la propagación del click para no abrir el detalle sin querer. */}
+        <span
+          className="mision-contenido"
+          role="button"
+          tabIndex={0}
+          onClick={() => setDetalleId(mision.id)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault()
+              setDetalleId(mision.id)
+            }
+          }}
+        >
           <span
             className="mision-texto"
             contentEditable
             suppressContentEditableWarning
+            onClick={(event) => event.stopPropagation()}
             onBlur={(event) => handleTextoBlur(mision, event)}
-            onKeyDown={handleTextoKeyDown}
+            onKeyDown={(event) => {
+              event.stopPropagation()
+              handleTextoKeyDown(event)
+            }}
           >
             {mision.texto}
           </span>
@@ -139,6 +173,11 @@ export function MisionesScreen() {
             <span className="mision-fecha">
               {etiquetaFecha(mision.programadaFecha)}
               {mision.programadaHora ? ` · ${formatearHora12(mision.programadaHora)}` : ''}
+            </span>
+          )}
+          {totalSubtareas > 0 && (
+            <span className="mision-progreso-texto">
+              {hechasSubtareas}/{totalSubtareas}
             </span>
           )}
         </span>
@@ -157,13 +196,27 @@ export function MisionesScreen() {
 
   if (!ready) return null
 
+  const misionDetalle = detalleId ? (activas.find((mision) => mision.id === detalleId) ?? null) : null
+
+  if (misionDetalle) {
+    return (
+      <div className="mx-auto flex max-w-xl flex-col gap-6 pb-10" data-mueble={MUEBLES.misiones}>
+        <MisionDetalle
+          mision={misionDetalle}
+          onCerrar={() => setDetalleId(null)}
+          onActualizarSubtareas={(subtareas) => void update(misionDetalle.id, { subtareas })}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-6 pb-10" data-mueble={MUEBLES.misiones}>
       {activas.length === 0 ? (
         <EmptyState title="Nada que hacer todavía." description="Agregá lo primero que dependa solo de vos." />
       ) : (
         <>
-          <div className="flex flex-col gap-2">
+          <div className="mision-bloque mision-bloque--principales flex flex-col gap-2">
             <h2 className="mision-grupo-titulo">Misiones principales</h2>
             {principales.length > 0 ? (
               <ul className="mision-lista">{principales.map(renderFila)}</ul>
@@ -191,7 +244,7 @@ export function MisionesScreen() {
             )}
           </div>
           {secundarias.length > 0 && (
-            <div className="flex flex-col gap-2">
+            <div className="mision-bloque mision-bloque--secundarias flex flex-col gap-2">
               <h2 className="mision-grupo-titulo">Misiones secundarias</h2>
               <ul className="mision-lista">{secundarias.map(renderFila)}</ul>
             </div>

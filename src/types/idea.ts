@@ -14,6 +14,13 @@
  */
 import type { FurnitureId, HistoryEntry } from '@world/studio/furniture'
 
+/** Rediseño Misiones — una sub-tarea propia de una misión, dentro de la misma Idea (ver `Idea.subtareas`). */
+export interface Subtarea {
+  id: string
+  texto: string
+  completada: boolean
+}
+
 export type IdeaDestino =
   | 'hoy'
   | 'misiones'
@@ -77,6 +84,13 @@ export interface Idea {
    * pendiente como cualquier otra).
    */
   misionPrincipal?: boolean
+  /**
+   * Rediseño Misiones: checklist propio de una misión (ver `Subtarea`
+   * arriba). Ausente o vacío = sin sub-tareas. El progreso (X/Y, círculo
+   * con relleno proporcional) siempre se calcula a partir de esta lista
+   * al leerla — nunca se persiste un porcentaje aparte.
+   */
+  subtareas?: Subtarea[]
   /**
    * Dónde vive físicamente esta hoja ahora (Sprint 3.6, ver
    * src/packages/world/studio/furniture.ts). No reemplaza a `destino`: destino es

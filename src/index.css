@@ -1501,6 +1501,29 @@ html[data-route='hoy'] .room-layer-window::after {
 }
 
 /*
+  Rediseño Misiones (filas compactas + contraste por bloque): antes cada
+  grupo (Principales/Secundarias) vivía directo sobre la foto del Room,
+  sin ningún plano detrás — .mision-bloque es ese plano, uno por grupo,
+  nunca una tarjeta por fila (eso repetiría la metáfora de card pesada
+  que este mismo archivo ya retiró, ver comentario arriba). Más oscuro
+  arriba, se disuelve hacia abajo, sin borde: atenúa la foto lo justo
+  para leer el texto, nunca la reemplaza ni compite con ella.
+*/
+.mision-bloque {
+  position: relative;
+  border-radius: var(--radius-md, 14px);
+  padding: 0.85rem 1rem 1rem;
+}
+
+.mision-bloque--principales {
+  background: linear-gradient(180deg, rgba(58, 40, 18, 0.6) 0%, rgba(58, 40, 18, 0.3) 60%, rgba(58, 40, 18, 0) 100%);
+}
+
+.mision-bloque--secundarias {
+  background: linear-gradient(180deg, rgba(18, 16, 14, 0.52) 0%, rgba(18, 16, 14, 0.24) 60%, rgba(18, 16, 14, 0) 100%);
+}
+
+/*
   Sprint 013, punto 6: rótulo silencioso — no compite con el texto de la
   misión. Sprint 029 (§8): usaba --muted-foreground, una variable que
   nunca se define en este archivo — color, al ser heredado, caía en lo
@@ -1520,9 +1543,9 @@ html[data-route='hoy'] .room-layer-window::after {
 .mision-fila {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.6rem 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+  gap: 0.65rem;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 20%, transparent);
 }
 
 .mision-fila:last-child {
@@ -1606,19 +1629,40 @@ html[data-route='hoy'] .room-layer-window::after {
   padding-left: 2px;
 }
 
-/* Sprint 016.2: envuelve texto + fecha para que el toggle de Principal quede afuera, alineado con el check. */
+/*
+  Sprint 016.2: envuelve texto + fecha para que el toggle de Principal
+  quede afuera, alineado con el check. Rediseño Misiones: además es el
+  área que abre el detalle (tocar la fila) — el texto sigue siendo
+  contentEditable para el rename inline existente, que corta la
+  propagación del click para no abrir el detalle sin querer (ver
+  MisionesScreen.tsx, renderFila).
+*/
 .mision-contenido {
   display: flex;
   flex: 1;
   min-width: 0;
   flex-direction: column;
   gap: 0.1rem;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.mision-contenido:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 /* Sprint 016.2, punto 8: la fecha de una misión programada nunca desaparece al pasar a Secundaria. */
 .mision-fecha {
   font-size: 0.7rem;
   color: var(--ink-faint);
+}
+
+/* Rediseño Misiones: X/Y automático bajo el título — nunca un porcentaje escrito a mano, siempre derivado de Idea.subtareas. */
+.mision-progreso-texto {
+  font-size: 0.68rem;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
 }
 
 /*
@@ -1652,6 +1696,37 @@ html[data-route='hoy'] .room-layer-window::after {
 
 .mision-principal-toggle[aria-pressed='true'] {
   color: var(--accent);
+}
+
+/* Rediseño Misiones: detalle de una misión (sub-tareas) — reusa .mision-fila/.mision-check/.mision-texto/.mision-nuevo-*, solo agrega cabecera + barra. */
+.mision-detalle-cabecera {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.mision-detalle-titulo {
+  font-size: 17px;
+  line-height: 1.4;
+  color: var(--ink);
+}
+
+.mision-detalle-contador {
+  font-size: 0.72rem;
+  color: var(--ink-faint);
+}
+
+.mision-detalle-barra {
+  height: 5px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ink-faint) 25%, transparent);
+  overflow: hidden;
+}
+
+.mision-detalle-barra-relleno {
+  height: 100%;
+  background: var(--accent);
+  transition: width 200ms ease;
 }
 
 .idea-destino {
