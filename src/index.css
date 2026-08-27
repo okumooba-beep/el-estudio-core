@@ -1516,11 +1516,11 @@ html[data-route='hoy'] .room-layer-window::after {
 }
 
 .mision-bloque--principales {
-  background: linear-gradient(180deg, rgba(58, 40, 18, 0.6) 0%, rgba(58, 40, 18, 0.3) 60%, rgba(58, 40, 18, 0) 100%);
+  background: linear-gradient(180deg, rgba(58, 40, 18, 0.8) 0%, rgba(58, 40, 18, 0.5) 60%, rgba(58, 40, 18, 0) 100%);
 }
 
 .mision-bloque--secundarias {
-  background: linear-gradient(180deg, rgba(18, 16, 14, 0.52) 0%, rgba(18, 16, 14, 0.24) 60%, rgba(18, 16, 14, 0) 100%);
+  background: linear-gradient(180deg, rgba(18, 16, 14, 0.72) 0%, rgba(18, 16, 14, 0.42) 60%, rgba(18, 16, 14, 0) 100%);
 }
 
 /*
@@ -1550,6 +1550,13 @@ html[data-route='hoy'] .room-layer-window::after {
 
 .mision-fila:last-child {
   border-bottom: none;
+}
+
+/* Rediseño Misiones: panel inline (menú de acciones / confirmaciones) que aparece
+   bajo una fila tras long-press. Sin tarjeta ni borde propio: se lee como
+   continuación de la fila que lo abrió. */
+.mision-fila-acciones {
+  padding: 0.15rem 0 0.55rem;
 }
 
 .mision-check {

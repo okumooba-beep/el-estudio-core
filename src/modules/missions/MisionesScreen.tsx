@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useIdeas } from '@modules/work-table/public'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { MUEBLES } from '@world/studio/muebles'
@@ -48,12 +48,23 @@ import type { Idea } from '@/types/idea'
  * porque ese paso era opcional) no debe aparecer como pendiente.
  */
 export function MisionesScreen() {
-  const { ideas, ready, add, update, moveSheet } = useIdeas()
+  const { ideas, ready, add, update, moveSheet, remove } = useIdeas()
   const [draftTexto, setDraftTexto] = useState<string | null>(null)
   /** Sprint 016.2, punto 6: misión que el usuario intenta hacer Principal habiendo ya cinco — nunca se auto-decide. */
   const [intentoPrincipal, setIntentoPrincipal] = useState<Idea | null>(null)
   /** Rediseño Misiones: id de la misión cuyo detalle (sub-tareas) está abierto — null = lista. */
   const [detalleId, setDetalleId] = useState<string | null>(null)
+  /** Sprint "Legibilidad Misiones": si el detalle se abrió desde "Agregar sub-tarea" del menú de long-press, arranca con el input de nueva sub-tarea ya abierto. */
+  const [abrirNuevaSubtarea, setAbrirNuevaSubtarea] = useState(false)
+  /** id de la misión cuyo menú de acciones (long-press) está abierto — reemplaza la esquina chiquita que abría el detalle para agregar sub-tareas. */
+  const [accionesId, setAccionesId] = useState<string | null>(null)
+  /** id de la misión pendiente de confirmar "completar" — el toque del círculo ya no completa al instante. */
+  const [confirmarCompletarId, setConfirmarCompletarId] = useState<string | null>(null)
+  /** id de la misión pendiente de confirmar eliminación (borrado real, vía `remove`). */
+  const [confirmarEliminarId, setConfirmarEliminarId] = useState<string | null>(null)
+  /** Long-press sobre la fila: temporizador + bandera para suprimir el click sintético que el navegador dispara al soltar. */
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const suprimirClick = useRef(false)
 
   /** Sprint 014, punto 3: vista previa silenciosa mientras se escribe — nunca abre diálogos. */
   const previaDraft = useMemo(() => {
@@ -70,6 +81,36 @@ export function MisionesScreen() {
   function handleCompletar(mision: Idea) {
     if (intentoPrincipal?.id === mision.id) setIntentoPrincipal(null)
     void moveSheet(mision, 'archivador')
+  }
+
+  function handleEliminar(mision: Idea) {
+    if (intentoPrincipal?.id === mision.id) setIntentoPrincipal(null)
+    void remove(mision.id)
+  }
+
+  const LONG_PRESS_MS = 500
+
+  function handleFilaPointerDown(mision: Idea) {
+    if (longPressTimer.current) clearTimeout(longPressTimer.current)
+    longPressTimer.current = setTimeout(() => {
+      suprimirClick.current = true
+      setAccionesId(mision.id)
+    }, LONG_PRESS_MS)
+  }
+
+  function handleFilaPointerCancel() {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
+  }
+
+  function handleFilaClickCapture(event: React.MouseEvent) {
+    if (suprimirClick.current) {
+      event.preventDefault()
+      event.stopPropagation()
+      suprimirClick.current = false
+    }
   }
 
   function handleTogglePrincipal(mision: Idea) {
@@ -128,8 +169,23 @@ export function MisionesScreen() {
     const hechasSubtareas = subtareas.filter((subtarea) => subtarea.completada).length
     const porcentaje = totalSubtareas > 0 ? Math.round((hechasSubtareas / totalSubtareas) * 100) : 0
     return (
-      <li key={mision.id} className="mision-fila">
-        <button type="button" className="mision-check" aria-label="Completar" onClick={() => handleCompletar(mision)}>
+      <>
+      <li
+        key={mision.id}
+        className="mision-fila"
+        onPointerDown={() => handleFilaPointerDown(mision)}
+        onPointerUp={handleFilaPointerCancel}
+        onPointerLeave={handleFilaPointerCancel}
+        onPointerCancel={handleFilaPointerCancel}
+        onClickCapture={handleFilaClickCapture}
+        onContextMenu={(event) => event.preventDefault()}
+      >
+        <button
+          type="button"
+          className="mision-check"
+          aria-label="Completar"
+          onClick={() => setConfirmarCompletarId(mision.id)}
+        >
           <span
             className="mision-check-circulo"
             aria-hidden="true"
@@ -191,6 +247,81 @@ export function MisionesScreen() {
           {esPrincipal ? '★' : '☆'}
         </button>
       </li>
+      {accionesId === mision.id && (
+        <li className="mision-fila-acciones">
+          <div className="idea-destinos" role="group" aria-label="Acciones de la misión">
+            <button
+              type="button"
+              className="idea-destino"
+              onClick={() => {
+                setAccionesId(null)
+                setAbrirNuevaSubtarea(true)
+                setDetalleId(mision.id)
+              }}
+            >
+              Agregar sub-tarea
+            </button>
+            <button
+              type="button"
+              className="idea-destino"
+              onClick={() => {
+                setAccionesId(null)
+                setConfirmarEliminarId(mision.id)
+              }}
+            >
+              Eliminar misión
+            </button>
+            <button type="button" className="idea-destino" onClick={() => setAccionesId(null)}>
+              Cancelar
+            </button>
+          </div>
+        </li>
+      )}
+      {confirmarCompletarId === mision.id && (
+        <li className="mision-fila-acciones">
+          <div className="flex flex-col gap-1">
+            <p className="mision-previa">¿Marcar como cumplida?</p>
+            <div className="idea-destinos" role="group" aria-label="Confirmar completar">
+              <button
+                type="button"
+                className="idea-destino"
+                onClick={() => {
+                  handleCompletar(mision)
+                  setConfirmarCompletarId(null)
+                }}
+              >
+                Confirmar
+              </button>
+              <button type="button" className="idea-destino" onClick={() => setConfirmarCompletarId(null)}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </li>
+      )}
+      {confirmarEliminarId === mision.id && (
+        <li className="mision-fila-acciones">
+          <div className="flex flex-col gap-1">
+            <p className="mision-previa">¿Eliminar misión?</p>
+            <div className="idea-destinos" role="group" aria-label="Confirmar eliminación">
+              <button
+                type="button"
+                className="idea-destino"
+                onClick={() => {
+                  handleEliminar(mision)
+                  setConfirmarEliminarId(null)
+                }}
+              >
+                Eliminar
+              </button>
+              <button type="button" className="idea-destino" onClick={() => setConfirmarEliminarId(null)}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </li>
+      )}
+      </>
     )
   }
 
@@ -203,7 +334,11 @@ export function MisionesScreen() {
       <div className="mx-auto flex max-w-xl flex-col gap-6 pb-10" data-mueble={MUEBLES.misiones}>
         <MisionDetalle
           mision={misionDetalle}
-          onCerrar={() => setDetalleId(null)}
+          abrirNuevo={abrirNuevaSubtarea}
+          onCerrar={() => {
+            setDetalleId(null)
+            setAbrirNuevaSubtarea(false)
+          }}
           onActualizarSubtareas={(subtareas) => void update(misionDetalle.id, { subtareas })}
         />
       </div>

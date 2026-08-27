@@ -16,12 +16,14 @@ export function MisionDetalle({
   mision,
   onCerrar,
   onActualizarSubtareas,
+  abrirNuevo,
 }: {
   mision: Idea
   onCerrar: () => void
   onActualizarSubtareas: (subtareas: Subtarea[]) => void
+  abrirNuevo?: boolean
 }) {
-  const [draftTexto, setDraftTexto] = useState<string | null>(null)
+  const [draftTexto, setDraftTexto] = useState<string | null>(abrirNuevo ? '' : null)
   const subtareas = mision.subtareas ?? []
   const total = subtareas.length
   const hechas = subtareas.filter((subtarea) => subtarea.completada).length
