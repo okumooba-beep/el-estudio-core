@@ -4243,3 +4243,73 @@ html[data-route='notas'] .room-layer {
   color: var(--accent);
   font-weight: 600;
 }
+
+/* NuevoMovimiento — toggle Se fue/Ingresos: bloques grandes con fondo
+   tenue + borde + texto en el tono real de cada tipo (mismo terracota/verde
+   fijo de Finanzas), para que el estado activo se sienta activo sin
+   depender solo del color de texto. */
+.finanzas-tipo-toggle {
+  display: flex;
+  gap: 0.6rem;
+  width: 100%;
+}
+
+.finanzas-tipo-boton {
+  flex: 1;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-md, 14px);
+  border: 1px solid color-mix(in srgb, var(--ink-faint) 25%, transparent);
+  background: transparent;
+  color: var(--ink-faint);
+  font-size: 14.5px;
+  font-weight: 500;
+  text-align: center;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.finanzas-tipo-boton--activo-egreso {
+  background: color-mix(in srgb, var(--critical) 16%, transparent);
+  border-color: color-mix(in srgb, var(--critical) 45%, transparent);
+  color: var(--critical);
+}
+
+.finanzas-tipo-boton--activo-ingreso {
+  background: color-mix(in srgb, var(--good) 16%, transparent);
+  border-color: color-mix(in srgb, var(--good) 45%, transparent);
+  color: var(--good);
+}
+
+/* Label pequeño de cada bloque del formulario ("Qué gasté" / "Cómo" /
+   "Cuándo"), mismo tratamiento uppercase-tenue que .mision-grupo-titulo. */
+.finanzas-form-bloque-titulo {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--finanzas-texto-suave, var(--ink-faint));
+}
+
+/* Monto del movimiento: dato financiero principal del formulario, sin la
+   línea inferior que tenía como input común. */
+.finanzas-monto-destacado {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+/* Guardar en NuevoMovimiento: la acción principal necesita más peso que el
+   resto de .accion-primaria (fondo tenue) — mismo dorado sólido que ya usa
+   .finanzas-categoria-chip[aria-pressed='true'], no un sistema nuevo. */
+.finanzas-guardar-boton {
+  padding: 0.95rem 1.75rem;
+  background: var(--finanzas-oro, var(--accent));
+  border-color: var(--finanzas-oro, var(--accent));
+  color: #211c15;
+  font-weight: 700;
+  font-size: 15px;
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--finanzas-oro, var(--accent)) 45%, transparent);
+}
+
+.finanzas-guardar-boton:hover {
+  background: color-mix(in srgb, var(--finanzas-oro, var(--accent)) 88%, white);
+}

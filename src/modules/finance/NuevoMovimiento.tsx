@@ -160,14 +160,17 @@ export function NuevoMovimiento({
           {tipoFijo === 'ingreso' ? '+ Agregar ingreso' : '+ Movimiento'}
         </p>
         {tipoFijo ? null : (
-          <div className="idea-destinos" role="group" aria-label="Tipo">
+          <div className="finanzas-tipo-toggle" role="group" aria-label="Tipo">
             {(['egreso', 'ingreso'] as const).map((opcion) => (
               <button
                 key={opcion}
                 type="button"
-                className="idea-destino"
+                className={
+                  tipo === opcion
+                    ? `finanzas-tipo-boton ${opcion === 'egreso' ? 'finanzas-tipo-boton--activo-egreso' : 'finanzas-tipo-boton--activo-ingreso'}`
+                    : 'finanzas-tipo-boton'
+                }
                 aria-pressed={tipo === opcion}
-                style={tipo === opcion ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
                 onClick={() => setTipo(opcion)}
               >
                 {opcion === 'ingreso' ? 'Ingresos' : 'Se fue'}
@@ -177,205 +180,225 @@ export function NuevoMovimiento({
         )}
       </section>
 
-      <input
-        type="text"
-        value={concepto}
-        onChange={(event) => setConcepto(event.target.value)}
-        placeholder={tipo === 'ingreso' ? 'Concepto (opcional)' : 'Concepto'}
-        aria-label="Concepto"
-        className="border-b border-border/60 bg-transparent px-1 py-2 text-[15px] text-ink outline-none placeholder:text-ink-dim"
-      />
+      {/* Bloque 1 — Qué gasté: Concepto + Monto (o los tres baldes de ingreso), misma lógica de siempre. */}
+      <div className="finanzas-tarjeta flex flex-col gap-3">
+        <p className="finanzas-form-bloque-titulo">Qué gasté</p>
 
-      {tipo === 'ingreso' ? (
-        <div className="flex flex-col gap-3">
-          <label className="flex flex-col gap-1">
-            <span className="text-[12.5px] text-ink-faint">Efectivo (ARS)</span>
-            <input
-              type="text"
-              inputMode="decimal"
-              value={montoEfectivoArs}
-              onChange={(event) => setMontoEfectivoArs(event.target.value)}
-              placeholder="0"
-              aria-label="Efectivo (ARS)"
-              className="border-b border-border/60 bg-transparent px-1 py-2 font-mono text-[15px] text-ink outline-none placeholder:text-ink-dim"
-            />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-[12.5px] text-ink-faint">Dólares (USD)</span>
-            <input
-              type="text"
-              inputMode="decimal"
-              value={montoDolares}
-              onChange={(event) => setMontoDolares(event.target.value)}
-              placeholder="0"
-              aria-label="Dólares (USD)"
-              className="border-b border-border/60 bg-transparent px-1 py-2 font-mono text-[15px] text-ink outline-none placeholder:text-ink-dim"
-            />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-[12.5px] text-ink-faint">Transferencia (ARS)</span>
-            <input
-              type="text"
-              inputMode="decimal"
-              value={montoTransferenciaArs}
-              onChange={(event) => setMontoTransferenciaArs(event.target.value)}
-              placeholder="0"
-              aria-label="Transferencia (ARS)"
-              className="border-b border-border/60 bg-transparent px-1 py-2 font-mono text-[15px] text-ink outline-none placeholder:text-ink-dim"
-            />
-          </label>
-        </div>
-      ) : (
         <input
           type="text"
-          inputMode="decimal"
-          value={monto}
-          onChange={(event) => setMonto(event.target.value)}
-          placeholder="Monto (100.000)"
-          aria-label="Monto"
-          className="border-b border-border/60 bg-transparent px-1 py-2 font-mono text-[15px] text-ink outline-none placeholder:text-ink-dim"
+          value={concepto}
+          onChange={(event) => setConcepto(event.target.value)}
+          placeholder={tipo === 'ingreso' ? 'Concepto (opcional)' : 'Concepto'}
+          aria-label="Concepto"
+          className="border-b border-border/60 bg-transparent px-1 py-2 text-[15px] text-ink outline-none placeholder:text-ink-dim"
         />
-      )}
 
-      {tipo === 'egreso' ? (
-        <div className="idea-destinos" role="group" aria-label="Medio">
-          {(['efectivo', 'transferencia'] as const).map((opcion) => (
-            <button
-              key={opcion}
-              type="button"
-              className="idea-destino"
-              aria-pressed={medio === opcion}
-              style={medio === opcion ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
-              onClick={() => setMedio(opcion)}
-            >
-              {opcion === 'efectivo' ? 'Efectivo' : 'Transferencia'}
-            </button>
-          ))}
-        </div>
-      ) : null}
-
-      {mostrarSelectorPeriodo ? (
-        periodos && periodos.length > 0 ? (
-          <div className="flex flex-col gap-1.5">
-            <p className="text-[11.5px] text-ink-faint">¿A qué semana pertenece este ingreso?</p>
-            <div className="idea-destinos" role="group" aria-label="Semana de cobro">
-              {periodos.map((periodo) => (
-                <button
-                  key={periodo.id}
-                  type="button"
-                  className="idea-destino"
-                  aria-pressed={periodoElegidoId === periodo.id}
-                  style={periodoElegidoId === periodo.id ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
-                  onClick={() => setPeriodoElegidoId(periodo.id)}
-                >
-                  Semana {numeroDeSemana(periodo, periodos)} · {periodo.nombre}
-                </button>
-              ))}
-            </div>
+        {tipo === 'ingreso' ? (
+          <div className="flex flex-col gap-3">
+            <label className="flex flex-col gap-1">
+              <span className="text-[12.5px] text-ink-faint">Efectivo (ARS)</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={montoEfectivoArs}
+                onChange={(event) => setMontoEfectivoArs(event.target.value)}
+                placeholder="0"
+                aria-label="Efectivo (ARS)"
+                className="border-b border-border/60 bg-transparent px-1 py-2 font-mono text-[15px] text-ink outline-none placeholder:text-ink-dim"
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-[12.5px] text-ink-faint">Dólares (USD)</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={montoDolares}
+                onChange={(event) => setMontoDolares(event.target.value)}
+                placeholder="0"
+                aria-label="Dólares (USD)"
+                className="border-b border-border/60 bg-transparent px-1 py-2 font-mono text-[15px] text-ink outline-none placeholder:text-ink-dim"
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-[12.5px] text-ink-faint">Transferencia (ARS)</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={montoTransferenciaArs}
+                onChange={(event) => setMontoTransferenciaArs(event.target.value)}
+                placeholder="0"
+                aria-label="Transferencia (ARS)"
+                className="border-b border-border/60 bg-transparent px-1 py-2 font-mono text-[15px] text-ink outline-none placeholder:text-ink-dim"
+              />
+            </label>
           </div>
         ) : (
-          <p className="text-[13px] text-ink-faint">
-            Todavía no hay ninguna semana de cobro. Cerrá este formulario y creá una con "+ Semana de cobro".
-          </p>
-        )
-      ) : null}
-
-      {tipo === 'egreso' ? (
-        <div className="finanzas-categorias" role="group" aria-label="Categoría">
-          {CATEGORIAS.map((opcion) => (
-            <button
-              key={opcion}
-              type="button"
-              className="finanzas-categoria-chip"
-              aria-pressed={categoria === opcion}
-              onClick={() => setCategoria((actual) => (actual === opcion ? null : opcion))}
-            >
-              {CATEGORIA_LABEL[opcion]}
-            </button>
-          ))}
-        </div>
-      ) : null}
-
-      {tipo === 'egreso' ? (
-        <div className="flex items-center justify-between gap-3">
           <input
-            type="number"
-            step="1"
-            min="1"
-            inputMode="numeric"
-            value={cuotas}
-            onChange={(event) => setCuotas(event.target.value)}
-            placeholder="Cuotas"
-            aria-label="Cuotas"
-            className="w-20 border-b border-border/60 bg-transparent px-1 py-2 font-mono text-[15px] text-ink outline-none placeholder:text-ink-dim"
-          />
-          {esCompraEnCuotas && Number.isFinite(montoNumero) && montoNumero > 0 ? (
-            <p className="font-mono text-[12.5px] text-ink-faint">
-              {cuotasNumero} cuotas de {formatearMonto(dividirEnCuotas(montoNumero, cuotasNumero)[0] ?? 0, moneda)}
-            </p>
-          ) : null}
-        </div>
-      ) : null}
-
-      <div className="flex items-center justify-between gap-3">
-        {mostrarSelectorPeriodo ? null : (
-          <input
-            type="date"
-            value={fecha}
-            onChange={(event) => setFecha(event.target.value)}
-            aria-label="Fecha"
-            className="border-b border-border/60 bg-transparent px-1 py-2 font-mono text-[13.5px] text-ink outline-none"
+            type="text"
+            inputMode="decimal"
+            value={monto}
+            onChange={(event) => setMonto(event.target.value)}
+            placeholder="Monto (100.000)"
+            aria-label="Monto"
+            className="finanzas-monto-destacado bg-transparent px-1 py-1 font-mono outline-none placeholder:text-ink-dim"
+            style={{ color: 'var(--critical)' }}
           />
         )}
-        {tipo === 'egreso' ? (
-          <div className="idea-destinos" role="group" aria-label="Moneda">
-            {(['ars', 'usd'] as const).map((opcion) => (
+      </div>
+
+      {/* Bloque 2 — Cómo: Medio + Categoría + Cuota, solo aplica a egresos (mismos campos y condiciones de siempre). */}
+      {tipo === 'egreso' ? (
+        <div className="finanzas-tarjeta flex flex-col gap-3">
+          <p className="finanzas-form-bloque-titulo">Cómo</p>
+
+          <div className="idea-destinos" role="group" aria-label="Medio">
+            {(['efectivo', 'transferencia'] as const).map((opcion) => (
               <button
                 key={opcion}
                 type="button"
                 className="idea-destino"
-                aria-pressed={moneda === opcion}
-                style={moneda === opcion ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
-                onClick={() => {
-                  if (opcion === moneda) return
-                  setMoneda(opcion)
-                  setMonto('')
-                }}
+                aria-pressed={medio === opcion}
+                style={medio === opcion ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
+                onClick={() => setMedio(opcion)}
               >
-                {opcion === 'ars' ? 'Pesos' : 'Dólares'}
+                {opcion === 'efectivo' ? 'Efectivo' : 'Transferencia'}
               </button>
             ))}
           </div>
-        ) : null}
-      </div>
 
-      {tipo === 'egreso' ? (
-        <div className="flex flex-col gap-1.5">
-          <p className="text-[11.5px] text-ink-faint">¿De qué semana del mes es este gasto?</p>
-          <div className="idea-destinos" role="group" aria-label="Semana del mes">
-            {([1, 2, 3, 4] as const).map((numero) => {
-              const activa = fecha.startsWith(mesEnCurso) && semanaDelMes(fecha) === numero
-              return (
-                <button
-                  key={numero}
-                  type="button"
-                  className="idea-destino"
-                  aria-pressed={activa}
-                  style={activa ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
-                  onClick={() => {
-                    const { desde } = rangoSemana(mesEnCurso, numero)
-                    setFecha(`${mesEnCurso}-${String(desde).padStart(2, '0')}`)
-                  }}
-                >
-                  Semana {numero} · {etiquetaSemana(mesEnCurso, numero)}
-                </button>
-              )
-            })}
+          <div className="finanzas-categorias" role="group" aria-label="Categoría">
+            {CATEGORIAS.map((opcion) => (
+              <button
+                key={opcion}
+                type="button"
+                className="finanzas-categoria-chip"
+                aria-pressed={categoria === opcion}
+                onClick={() => setCategoria((actual) => (actual === opcion ? null : opcion))}
+              >
+                {CATEGORIA_LABEL[opcion]}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <span className="finanzas-form-bloque-titulo">Cuota actual</span>
+            <div className="flex items-center justify-between gap-3">
+              <input
+                type="number"
+                step="1"
+                min="1"
+                inputMode="numeric"
+                value={cuotas}
+                onChange={(event) => setCuotas(event.target.value)}
+                placeholder="Cuotas"
+                aria-label="Cuotas"
+                className="w-20 border-b border-border/60 bg-transparent px-1 py-2 font-mono text-[15px] text-ink outline-none placeholder:text-ink-dim"
+              />
+              {esCompraEnCuotas && Number.isFinite(montoNumero) && montoNumero > 0 ? (
+                <p className="font-mono text-[12.5px] text-ink-faint">
+                  {cuotasNumero} cuotas de {formatearMonto(dividirEnCuotas(montoNumero, cuotasNumero)[0] ?? 0, moneda)}
+                </p>
+              ) : null}
+            </div>
+            <span className="text-[11.5px] text-ink-faint">¿En qué cuota va este pago?</span>
           </div>
         </div>
       ) : null}
 
-      <button type="submit" disabled={!esValido || guardando} className="accion-primaria self-start px-3.5 py-2 text-[13.5px] disabled:opacity-40">
+      {/* Bloque 3 — Cuándo: Fecha (o selector de semana de cobro) + Semana del mes, misma lógica de siempre. */}
+      <div className="finanzas-tarjeta flex flex-col gap-3">
+        <p className="finanzas-form-bloque-titulo">Cuándo</p>
+
+        {mostrarSelectorPeriodo ? (
+          periodos && periodos.length > 0 ? (
+            <div className="flex flex-col gap-1.5">
+              <p className="text-[11.5px] text-ink-faint">¿A qué semana pertenece este ingreso?</p>
+              <div className="idea-destinos" role="group" aria-label="Semana de cobro">
+                {periodos.map((periodo) => (
+                  <button
+                    key={periodo.id}
+                    type="button"
+                    className="idea-destino"
+                    aria-pressed={periodoElegidoId === periodo.id}
+                    style={periodoElegidoId === periodo.id ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
+                    onClick={() => setPeriodoElegidoId(periodo.id)}
+                  >
+                    Semana {numeroDeSemana(periodo, periodos)} · {periodo.nombre}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="text-[13px] text-ink-faint">
+              Todavía no hay ninguna semana de cobro. Cerrá este formulario y creá una con "+ Semana de cobro".
+            </p>
+          )
+        ) : null}
+
+        <div className="flex items-center justify-between gap-3">
+          {mostrarSelectorPeriodo ? null : (
+            <input
+              type="date"
+              value={fecha}
+              onChange={(event) => setFecha(event.target.value)}
+              aria-label="Fecha"
+              className="border-b border-border/60 bg-transparent px-1 py-2 font-mono text-[13.5px] text-ink outline-none"
+            />
+          )}
+          {tipo === 'egreso' ? (
+            <div className="idea-destinos" role="group" aria-label="Moneda">
+              {(['ars', 'usd'] as const).map((opcion) => (
+                <button
+                  key={opcion}
+                  type="button"
+                  className="idea-destino"
+                  aria-pressed={moneda === opcion}
+                  style={moneda === opcion ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
+                  onClick={() => {
+                    if (opcion === moneda) return
+                    setMoneda(opcion)
+                    setMonto('')
+                  }}
+                >
+                  {opcion === 'ars' ? 'Pesos' : 'Dólares'}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
+
+        {tipo === 'egreso' ? (
+          <div className="flex flex-col gap-1.5">
+            <p className="text-[11.5px] text-ink-faint">¿De qué semana del mes es este gasto?</p>
+            <div className="idea-destinos" role="group" aria-label="Semana del mes">
+              {([1, 2, 3, 4] as const).map((numero) => {
+                const activa = fecha.startsWith(mesEnCurso) && semanaDelMes(fecha) === numero
+                return (
+                  <button
+                    key={numero}
+                    type="button"
+                    className="idea-destino"
+                    aria-pressed={activa}
+                    style={activa ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
+                    onClick={() => {
+                      const { desde } = rangoSemana(mesEnCurso, numero)
+                      setFecha(`${mesEnCurso}-${String(desde).padStart(2, '0')}`)
+                    }}
+                  >
+                    Semana {numero} · {etiquetaSemana(mesEnCurso, numero)}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        ) : null}
+      </div>
+
+      <button
+        type="submit"
+        disabled={!esValido || guardando}
+        className="accion-primaria finanzas-guardar-boton self-start disabled:opacity-40"
+      >
         Guardar
       </button>
     </form>
