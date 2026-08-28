@@ -194,6 +194,23 @@ html.light-boot *::after {
 }
 
 /*
+  iOS Safari/PWA hace zoom automático (no es viewport de teclado, es zoom
+  nativo del SO) al enfocar cualquier input/textarea/contentEditable con
+  font-size computado menor a 16px. El tamaño real de estos campos se fija
+  por componente vía clases de Tailwind (text-[15px], etc.), dispersas en
+  ~14 archivos — en vez de tocar cada uno, se fuerza acá el mínimo una sola
+  vez. !important es necesario: un selector de elemento tiene menos
+  especificidad que cualquier clase de utilidad y perdería la cascada sin él.
+  [contenteditable="true"] (no el atributo desnudo) para no afectar nunca
+  un contenteditable="false" de solo lectura.
+*/
+input,
+textarea,
+[contenteditable="true"] {
+  font-size: 16px !important;
+}
+
+/*
   El input de captura ya tiene su propio foco sutil (borde inferior
   madera vía focus-within en el <form>, IdeaCapture.tsx) — el anillo
   naranja de :focus-visible de arriba se le superponía encima, así que
