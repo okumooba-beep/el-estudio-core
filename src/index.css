@@ -1541,6 +1541,20 @@ html[data-route='hoy'] .room-layer-window::after {
 }
 
 /*
+  Asuntos — mismo mecanismo que .mision-bloque--secundarias: el texto
+  (pendientes, "+ Nuevo asunto", "Resueltos · N · Ver historial") vivía
+  directo sobre la foto del Room sin ningún plano detrás. Un solo bloque
+  (Asuntos no tiene grupos tipo Principales/Secundarias) más oscuro
+  arriba, disuelto hacia abajo, sin borde duro ni tarjeta grande.
+*/
+.asunto-bloque {
+  position: relative;
+  border-radius: var(--radius-md, 14px);
+  padding: 0.85rem 1rem 1rem;
+  background: linear-gradient(180deg, rgba(18, 16, 14, 0.72) 0%, rgba(18, 16, 14, 0.42) 60%, rgba(18, 16, 14, 0) 100%);
+}
+
+/*
   Sprint 013, punto 6: rótulo silencioso — no compite con el texto de la
   misión. Sprint 029 (§8): usaba --muted-foreground, una variable que
   nunca se define en este archivo — color, al ser heredado, caía en lo

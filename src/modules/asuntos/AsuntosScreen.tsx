@@ -110,7 +110,7 @@ export function AsuntosScreen() {
   if (!ready) return null
 
   return (
-    <div className="mx-auto flex max-w-xl flex-col gap-6 pb-10">
+    <div className="asunto-bloque mx-auto flex max-w-xl flex-col gap-6 pb-10">
       {pendientes.length > 0 ? (
         <ul className="flex flex-col">
           {pendientes.map((asunto) => (
