@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { MODULES } from '@/app/modules'
 import { ESPACIOS_MODULE } from '@modules/today/public'
@@ -12,6 +13,42 @@ function linkClass(isActive: boolean): string {
 
 const TOP_LEVEL_PATHS = new Set(MODULES.map((mod) => mod.path))
 
+/**
+ * iOS Safari: al abrir el teclado, `visualViewport` se achica pero
+ * `position: fixed` sigue anclado al layout viewport completo (el que
+ * incluye el área tapada por el teclado) — la barra inferior queda
+ * desplazada hacia arriba con un espacio vacío debajo, en vez de pegada
+ * al borde inferior real y visible. Se corrige empujándola con
+ * `transform` la diferencia exacta entre ambos viewports, recalculada
+ * en cada resize/scroll de `visualViewport` (Safari dispara `scroll`
+ * ahí, no en `window`, cuando el teclado sube/baja).
+ */
+function useNavAncladaAlViewportVisual<T extends HTMLElement>() {
+  const ref = useRef<T>(null)
+
+  useEffect(() => {
+    const visualViewport = window.visualViewport
+    if (!visualViewport) return
+
+    function reanclar() {
+      const nav = ref.current
+      if (!nav || !visualViewport) return
+      const tapadoPorTeclado = window.innerHeight - visualViewport.height - visualViewport.offsetTop
+      nav.style.transform = tapadoPorTeclado > 0 ? `translateY(-${tapadoPorTeclado}px)` : ''
+    }
+
+    reanclar()
+    visualViewport.addEventListener('resize', reanclar)
+    visualViewport.addEventListener('scroll', reanclar)
+    return () => {
+      visualViewport.removeEventListener('resize', reanclar)
+      visualViewport.removeEventListener('scroll', reanclar)
+    }
+  }, [])
+
+  return ref
+}
+
 export function AppShell() {
   // Sprint 036: rutas como /auditoria viven dentro de Espacios pero no
   // tienen ítem propio en el nav — cualquier ruta que no sea de primer
@@ -20,6 +57,7 @@ export function AppShell() {
   // booleano local duplicado.
   const { pathname } = useLocation()
   const espaciosAbsorbeRuta = pathname !== '/' && !TOP_LEVEL_PATHS.has(pathname)
+  const navInferiorRef = useNavAncladaAlViewportVisual<HTMLElement>()
 
   function isModuleActive(mod: (typeof MODULES)[number], routerActive: boolean): boolean {
     if (mod.path === ESPACIOS_MODULE.path && espaciosAbsorbeRuta) return true
@@ -66,7 +104,10 @@ export function AppShell() {
         <Outlet />
       </main>
 
-      <nav className="nav-inferior fixed inset-x-0 bottom-0 z-10 flex items-stretch justify-around pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] md:hidden">
+      <nav
+        ref={navInferiorRef}
+        className="nav-inferior fixed inset-x-0 bottom-0 z-10 flex items-stretch justify-around pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] md:hidden"
+      >
         {MODULES.map((mod) => {
           const Icon = MODULE_ICONS[mod.path]
           return (
