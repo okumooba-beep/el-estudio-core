@@ -5,6 +5,7 @@ import type { HabitCheck } from '@/types/habitCheck'
 import type { FinanceAccount, FinanceMovimiento, FinanceGoal, FinanceIncomePeriod } from '@/types/finance'
 import type { AgendaEvento, AgendaBloque } from '@/types/agenda'
 import type { AuditRuptura, AuditPremortem, AuditCorreccionSemanal, AuditConfig } from '@/types/auditoria'
+import type { NotesFolder, NotesNote } from '@/types/notes'
 import { extraerCategoria } from '@modules/finance/extraccion'
 
 interface LegacyNota {
@@ -45,6 +46,8 @@ class LifeosDB extends Dexie {
   auditPremortems!: EntityTable<AuditPremortem, 'id'>
   auditCorrecciones!: EntityTable<AuditCorreccionSemanal, 'id'>
   auditConfig!: EntityTable<AuditConfig, 'id'>
+  notesFolders!: EntityTable<NotesFolder, 'id'>
+  notesNotes!: EntityTable<NotesNote, 'id'>
 
   constructor() {
     super('lifeos')
@@ -455,6 +458,17 @@ class LifeosDB extends Dexie {
           tx.table('financeIncomePeriods').clear(),
         ])
       })
+
+    /**
+     * Módulo Notas — carpetas de texto libre (direcciones, claves,
+     * contactos), aisladas de `ideas` y de cualquier otra tabla. Dos
+     * tablas nuevas y mínimas, ambas vacías: no hay dato previo que
+     * migrar. `notesNotes` indexa `folderId` para listar por carpeta.
+     */
+    this.version(19).stores({
+      notesFolders: 'id, createdAt',
+      notesNotes: 'id, folderId, createdAt',
+    })
   }
 }
 

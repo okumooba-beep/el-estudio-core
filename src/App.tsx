@@ -12,6 +12,7 @@ import { DiarioScreen } from '@modules/journal/DiarioScreen'
 import { FinanceScreen } from '@modules/finance/FinanceScreen'
 import { AgendaScreen } from '@modules/agenda/AgendaScreen'
 import { AuditoriaScreen } from '@modules/auditoria/AuditoriaScreen'
+import { NotesScreen } from '@modules/notes/NotesScreen'
 import { AjustesScreen } from '@modules/settings/AjustesScreen'
 import { FrasesScreen } from '@modules/frases/public'
 import { MaterialInspector } from '@/dev-tools/material-inspector/MaterialInspector'
@@ -63,6 +64,7 @@ function App() {
           <Route path="finanzas" element={<FinanceScreen />} />
           <Route path="agenda" element={<AgendaScreen />} />
           <Route path="auditoria" element={<AuditoriaScreen />} />
+          <Route path="notas" element={<NotesScreen />} />
           <Route path="ajustes" element={<AjustesScreen />} />
           <Route path="espacios" element={<EspaciosScreen />} />
         </Route>

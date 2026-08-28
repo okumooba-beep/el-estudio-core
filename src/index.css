@@ -4088,7 +4088,9 @@ html[data-route='hoy'] .room-layer-window::after {
   otra ruta toca `.room-layer-*` ni recibe `.finanzas-tarjeta`.
 */
 html[data-route='finanzas'] .room-layer-photo,
-html[data-route='finanzas'] .room-layer {
+html[data-route='finanzas'] .room-layer,
+html[data-route='notas'] .room-layer-photo,
+html[data-route='notas'] .room-layer {
   position: fixed;
 }
 
@@ -4119,6 +4121,35 @@ html[data-route='finanzas'] .room-layer {
   mejor ahí de todos modos.
 */
 .finanzas-tarjeta {
+  position: relative;
+  --finanzas-tarjeta-bg: #211c15;
+  --finanzas-tarjeta-borde: #3a3225;
+  --finanzas-texto: #ede6d8;
+  --finanzas-texto-suave: #a69a85;
+  --finanzas-oro: #c99a4a;
+  --finanzas-verde: #8fae7a;
+  --finanzas-terracota: #c97a5a;
+  --ink: var(--finanzas-texto);
+  --ink-dim: var(--finanzas-texto-suave);
+  --ink-faint: var(--finanzas-texto-suave);
+  --accent: var(--finanzas-oro);
+  --good: var(--finanzas-verde);
+  --critical: var(--finanzas-terracota);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--finanzas-tarjeta-borde);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
+  padding: 1.1rem 1.25rem;
+  background: var(--finanzas-tarjeta-bg);
+}
+
+/*
+  Módulo Notas: mismo patrón visual que .finanzas-tarjeta (única tarjeta
+  opaca que existe en la app hasta ahora) — misma superficie, mismo
+  degradado de tinta, para no inventar un estilo nuevo. Clase propia
+  (no se reutiliza el nombre "finanzas-tarjeta" en el markup de otro
+  módulo) siguiendo la convención existente de una clase por módulo.
+*/
+.notas-tarjeta {
   position: relative;
   --finanzas-tarjeta-bg: #211c15;
   --finanzas-tarjeta-borde: #3a3225;

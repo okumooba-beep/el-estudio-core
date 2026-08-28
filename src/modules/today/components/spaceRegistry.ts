@@ -8,6 +8,7 @@ import { MODULE as agenda } from '@modules/agenda/public'
 import { MODULE as auditoria } from '@modules/auditoria/public'
 import { MODULE as ajustes } from '@modules/settings/public'
 import { MODULE as biblioteca } from '@modules/frases/public'
+import { MODULE as notas } from '@modules/notes/public'
 import type { IdeaDestino } from '@/types/idea'
 
 export interface Space {
@@ -76,6 +77,12 @@ export const SPACES: readonly Space[] = [
     path: biblioteca.path,
     label: biblioteca.label,
     proposito: 'Todo lo que aprendiste.',
+  },
+  {
+    destino: null,
+    path: notas.path,
+    label: notas.label,
+    proposito: 'Lo que no es asunto ni misión.',
   },
 ]
 
