@@ -1994,6 +1994,41 @@ html[data-route='hoy'] .room-layer-window::after {
 }
 
 /*
+  El Escritorio del Umbral desentonaba: .material-paper es una hoja
+  clara a propósito, pero ahí es la única superficie del Estudio que
+  queda sobre el fondo oscuro general de la app. En vez de tocar
+  .material-paper (la comparten el Tablero de Corcho, la Mesa de
+  Análisis y el Cuaderno), se repite acá el mismo tratamiento oscuro de
+  .finanzas-tarjeta, escopeado a .desk-paper-stack — la única superficie
+  que usa DeskPaperStack, exclusiva del Escritorio.
+*/
+.desk-paper-stack .material-paper {
+  --paper-ink: #ede6d8;
+  --paper-ink-faint: #a69a85;
+  border: 1px solid #3a3225;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
+  background: #211c15;
+}
+
+.desk-paper-stack .material-paper::after {
+  opacity: 0;
+}
+
+.desk-paper-stack .material-paper .idea-hoja-descartar,
+.desk-paper-stack .material-paper .idea-hoja-eliminar {
+  color: #c99a4a;
+  opacity: 0.75;
+}
+
+.desk-paper-stack .material-paper .idea-hoja-descartar:hover,
+.desk-paper-stack .material-paper .idea-hoja-descartar:focus-visible,
+.desk-paper-stack .material-paper .idea-hoja-eliminar:hover,
+.desk-paper-stack .material-paper .idea-hoja-eliminar:focus-visible {
+  opacity: 1;
+  color: #c99a4a;
+}
+
+/*
   Madera (punto 04): callada a propósito — sin barniz, sin brillo
   direccional fuerte, nada que la haga sentir "bonita". La veta se
   arma con dos técnicas nunca usadas juntas antes en esta biblioteca:
@@ -4277,6 +4312,26 @@ html[data-route='notas'] .room-layer {
   background: color-mix(in srgb, var(--good) 16%, transparent);
   border-color: color-mix(in srgb, var(--good) 45%, transparent);
   color: var(--good);
+}
+
+/*
+  Toggle Normal/Alarma en Agenda: mismo patrón de chip con fondo que
+  .finanzas-tipo-boton de arriba, pero clase propia — .idea-destino
+  nace sin fondo ni borde a propósito (así la necesitan Umbral,
+  Misiones, Notas y el Diario) y acá quedaba directamente sobre la foto
+  de fondo del cuarto, sin separación visual.
+*/
+.agenda-alarma-chip {
+  padding: 0.3rem 0.65rem;
+  border-radius: var(--radius-sm, 10px);
+  border: 1px solid color-mix(in srgb, var(--ink-faint) 25%, transparent);
+  background: color-mix(in srgb, var(--ink-faint) 12%, transparent);
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.agenda-alarma-chip[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
 /* Label pequeño de cada bloque del formulario ("Qué gasté" / "Cómo" /

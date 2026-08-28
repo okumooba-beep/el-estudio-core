@@ -561,7 +561,7 @@ function Seccion({
             {item.tipo !== 'mision' ? (
               <button
                 type="button"
-                className="idea-destino shrink-0"
+                className="idea-destino agenda-alarma-chip shrink-0"
                 aria-pressed={item.item.alarma}
                 style={item.item.alarma ? { color: 'var(--accent)' } : undefined}
                 onClick={() => onAlarma(item)}
