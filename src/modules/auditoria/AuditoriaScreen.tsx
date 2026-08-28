@@ -207,7 +207,7 @@ export function AuditoriaScreen() {
   }
 
   return (
-    <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10">
+    <div className="auditoria-pantalla mx-auto flex max-w-xl flex-col gap-8 pb-10">
       <div className="flex items-center justify-between">
         <p className="font-mono text-[11px] uppercase tracking-wide text-accent">Auditoría</p>
       </div>

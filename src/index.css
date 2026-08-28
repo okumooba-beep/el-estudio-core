@@ -4093,6 +4093,20 @@ html[data-route='finanzas'] .room-layer {
 }
 
 /*
+  Sprint "Contraste de texto en Agenda/Auditoría": a diferencia de
+  Finanzas/Misiones, acá no se quiere tarjeta ni superficie opaca — el
+  texto sigue flotando directo sobre la foto del cuarto, solo que ahora
+  con text-shadow para que se lea en las zonas claras de la foto. Cero
+  fondo, cero borde, cero cambio de estructura: .agenda-pantalla y
+  .auditoria-pantalla son clases nuevas y locales (agregadas solo al
+  div raíz de cada pantalla), no clases compartidas con otro módulo.
+*/
+.agenda-pantalla :where(h1, h2, p, span, li, label, button),
+.auditoria-pantalla :where(h1, h2, p, span, li, label, button) {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6), 0 1px 12px rgba(0, 0, 0, 0.4);
+}
+
+/*
   Misma superficie que ya usa el Cuaderno (.material-paper + .diario-
   pagina): reutiliza el papel opaco cálido en vez de inventar un cuarto
   material. Se agrega borde propio + sombra sutil (pedido explícito del

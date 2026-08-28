@@ -235,7 +235,7 @@ export function AgendaScreen() {
 
   if (modo === 'planificacion') {
     return (
-      <div className="mx-auto flex max-w-xl flex-col gap-6 pb-10">
+      <div className="agenda-pantalla mx-auto flex max-w-xl flex-col gap-6 pb-10">
         <button type="button" className="idea-destino self-start" onClick={() => setModo('diaria')}>
           ← Volver a la vista diaria
         </button>
@@ -460,7 +460,7 @@ export function AgendaScreen() {
   const sinNada = buckets.ahora.length === 0 && buckets.atrasado.length === 0 && !proximo && !proximamente
 
   return (
-    <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10">
+    <div className="agenda-pantalla mx-auto flex max-w-xl flex-col gap-8 pb-10">
       <div className="flex items-center justify-between">
         <p className="font-mono text-[11px] uppercase tracking-wide text-accent">Agenda</p>
         <button type="button" className="idea-destino" onClick={() => setModo('planificacion')}>
