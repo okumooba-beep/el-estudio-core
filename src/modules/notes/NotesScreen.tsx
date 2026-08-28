@@ -370,7 +370,11 @@ function NoteRow({ nota, folder, notes }: NoteRowProps) {
         <>
           <button type="button" className="w-full appearance-none border-0 bg-transparent p-0 text-left" onClick={alternarInteraccion} aria-expanded={interactuando}>
             <span className="block text-[15px] text-ink">{nota.titulo || '(sin título)'}</span>
-            {nota.contenido ? <span className="mt-1 block whitespace-pre-wrap text-[13.5px] text-ink-faint">{nota.contenido}</span> : null}
+            {nota.contenido ? (
+              <span className="mt-1 block max-h-[280px] overflow-y-auto whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-[13.5px] text-ink-faint">
+                {nota.contenido}
+              </span>
+            ) : null}
           </button>
 
           {interactuando ? (

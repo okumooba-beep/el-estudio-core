@@ -86,6 +86,7 @@ export function FinanceScreen() {
    * `periodos` que se le pasa a `NuevoMovimiento` más abajo).
    */
   const [abriendoIngresoGlobal, setAbriendoIngresoGlobal] = useState(false)
+  const [avisoSemanaExpandido, setAvisoSemanaExpandido] = useState(false)
 
   const convertidas = useMemo(
     () => new Set(movimientos.map((movimiento) => movimiento.ideaId).filter(Boolean)),
@@ -506,12 +507,21 @@ export function FinanceScreen() {
         </div>
         {registradoHastaHoy ? <p className="text-right text-[12px] text-ink-faint">Registrado hasta hoy</p> : null}
         {entroSemanaReal === 0 ? (
-          <div className="finanzas-aviso-semana" role="note">
+          <button
+            type="button"
+            className="finanzas-aviso-semana"
+            aria-expanded={avisoSemanaExpandido}
+            onClick={() => setAvisoSemanaExpandido((actual) => !actual)}
+          >
             <span aria-hidden="true">⚠</span>
-            <p>
-              Semana {etiquetaSemanaActual} sin ingreso registrado — <strong>este número no incluye el cobro que todavía no cargaste</strong>.
-            </p>
-          </div>
+            {avisoSemanaExpandido ? (
+              <p>
+                Semana {etiquetaSemanaActual} sin ingreso registrado — <strong>este número no incluye el cobro que todavía no cargaste</strong>.
+              </p>
+            ) : (
+              <p>Semana {etiquetaSemanaActual} sin ingreso registrado.</p>
+            )}
+          </button>
         ) : null}
       </section>
 

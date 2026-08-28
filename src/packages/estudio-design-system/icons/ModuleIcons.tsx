@@ -155,6 +155,21 @@ export function AjustesIcon(props: IconProps) {
 }
 
 /**
+ * Notas — una nota con la esquina doblada: a diferencia de CuadernoIcon
+ * (libreta encuadernada) o BibliotecaIcon (dos lomos), acá es una hoja
+ * suelta, la forma más simple de "algo que anotaste y guardaste aparte".
+ */
+export function NotasIcon(props: IconProps) {
+  return (
+    <svg {...BASE} {...props}>
+      <path d="M6.5 4.5h8l3 3v11.5a1 1 0 0 1-1 1h-10a1 1 0 0 1-1-1V5.5a1 1 0 0 1 1-1Z" />
+      <path d="M14.5 4.5v3h3" />
+      <path d="M8.5 12h7M8.5 15.3h4.5" />
+    </svg>
+  )
+}
+
+/**
  * Espacios (Sprint 015.4 — "Navegación global de El Estudio Core"): la
  * planta del Estudio, mismo lenguaje arquitectónico que el vano de
  * `HoyIcon` — un plano dividido en varios cuartos, nunca la grilla de
@@ -187,4 +202,5 @@ export const MODULE_ICONS: Record<string, ComponentType<IconProps>> = {
   '/auditoria': AuditoriaIcon,
   '/ajustes': AjustesIcon,
   '/espacios': EspaciosIcon,
+  '/notas': NotasIcon,
 }
