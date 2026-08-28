@@ -238,7 +238,7 @@ export function NuevoMovimiento({
             inputMode="decimal"
             value={monto}
             onChange={(event) => setMonto(event.target.value)}
-            placeholder="Monto (100.000)"
+            placeholder="0"
             aria-label="Monto"
             className="finanzas-monto-destacado bg-transparent px-1 py-1 font-mono outline-none placeholder:text-ink-dim"
             style={{ color: 'var(--critical)' }}
