@@ -4290,9 +4290,11 @@ html[data-route='notas'] .room-layer {
 }
 
 /* Monto del movimiento: dato financiero principal del formulario, sin la
-   línea inferior que tenía como input común. */
+   línea inferior que tenía como input común. !important porque la regla
+   global input{font-size:16px !important} (anti-zoom de iOS, línea ~210)
+   gana por especificidad de otro modo. */
 .finanzas-monto-destacado {
-  font-size: 32px;
+  font-size: 32px !important;
   font-weight: 700;
   line-height: 1.15;
 }
