@@ -129,7 +129,7 @@ export interface FinanceMovimientoRepository extends Repository<FinanceMovimient
 
 class DexieFinanceMovimientoRepository implements FinanceMovimientoRepository {
   async list(): Promise<FinanceMovimiento[]> {
-    const movimientos = await db.financeMovimientos.toArray()
+    const movimientos = await db.financeMovimientos.toCollection().filter((m) => !m.deletedAt).toArray()
     return movimientos.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
   }
 
@@ -201,8 +201,16 @@ class DexieFinanceMovimientoRepository implements FinanceMovimientoRepository {
     return [updated, ...hermanas]
   }
 
+  /**
+   * Fase 1 (sync Supabase) — borrado lógico: Supabase no tiene un
+   * camino de DELETE en el mecanismo de sync (solo upsert), así que un
+   * borrado físico acá sería invisible para el servidor. `deletedAt`
+   * viaja como un campo más y `list()` ya lo filtra — sin cambio de
+   * comportamiento para quien llama.
+   */
   async delete(id: string): Promise<void> {
-    await db.financeMovimientos.delete(id)
+    const now = new Date().toISOString()
+    await db.financeMovimientos.update(id, { deletedAt: now, updatedAt: now, pendingSync: true })
   }
 }
 
@@ -268,7 +276,7 @@ export interface FinanceIncomePeriodRepository extends Repository<FinanceIncomeP
 
 class DexieFinanceIncomePeriodRepository implements FinanceIncomePeriodRepository {
   async list(): Promise<FinanceIncomePeriod[]> {
-    const periodos = await db.financeIncomePeriods.toArray()
+    const periodos = await db.financeIncomePeriods.toCollection().filter((p) => !p.deletedAt).toArray()
     return periodos.sort((a, b) => a.fechaInicio.localeCompare(b.fechaInicio) || a.orden - b.orden)
   }
 
@@ -281,7 +289,20 @@ class DexieFinanceIncomePeriodRepository implements FinanceIncomePeriodRepositor
   async add(input: NuevoFinanceIncomePeriod): Promise<FinanceIncomePeriod> {
     const { fechaInicio, fechaFin } = normalizarSemana(input.fechaCualquiera)
     const existente = await db.financeIncomePeriods.where('fechaInicio').equals(fechaInicio).first()
-    if (existente) return existente
+    if (existente && !existente.deletedAt) return existente
+    if (existente) {
+      // Fase 1 (sync Supabase) — la semana ya existía pero estaba borrada
+      // (tombstone): revivirla conserva su identidad (mismo id) en vez de
+      // crear un duplicado con el mismo `fechaInicio`.
+      const { deletedAt: _deletedAt, ...vivo } = existente
+      const revivida: FinanceIncomePeriod = {
+        ...vivo,
+        updatedAt: new Date().toISOString(),
+        pendingSync: true,
+      }
+      await db.financeIncomePeriods.put(revivida)
+      return revivida
+    }
 
     const now = new Date().toISOString()
     const orden = await db.financeIncomePeriods.count()
@@ -299,8 +320,10 @@ class DexieFinanceIncomePeriodRepository implements FinanceIncomePeriodRepositor
     return periodo
   }
 
+  /** Fase 1 (sync Supabase) — borrado lógico, mismo motivo que financeMovimientos.delete(). */
   async delete(id: string): Promise<void> {
-    await db.financeIncomePeriods.delete(id)
+    const now = new Date().toISOString()
+    await db.financeIncomePeriods.update(id, { deletedAt: now, updatedAt: now, pendingSync: true })
   }
 }
 

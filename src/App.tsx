@@ -17,6 +17,12 @@ import { AjustesScreen } from '@modules/settings/AjustesScreen'
 import { FrasesScreen } from '@modules/frases/public'
 import { MaterialInspector } from '@/dev-tools/material-inspector/MaterialInspector'
 import { DesignSystemGallery } from '@/features/dev/DesignSystemGallery'
+import { LoginScreen } from '@/features/auth/LoginScreen'
+import { RegisterScreen } from '@/features/auth/RegisterScreen'
+import { ForgotPasswordScreen } from '@/features/auth/ForgotPasswordScreen'
+import { ResetPasswordScreen } from '@/features/auth/ResetPasswordScreen'
+import { RequireAuth } from '@/lib/auth/RequireAuth'
+import { useAuth } from '@/lib/auth/AuthContext'
 import { useAmbientLight } from '@world/light/useAmbientLight'
 
 /**
@@ -48,25 +54,35 @@ function useRouteAttribute() {
 function App() {
   useAmbientLight()
   useRouteAttribute()
+  const { user, signOut } = useAuth()
 
   return (
     <>
       <RoomBackground />
       <Routes>
-        <Route element={<AppShell />}>
-          <Route index element={<HoyScreen />} />
-          <Route path="misiones" element={<MisionesScreen />} />
-          <Route path="asuntos" element={<AsuntosScreen />} />
-          <Route path="habitos" element={<HabitosScreen />} />
-          <Route path="trading" element={<TradingScreen />} />
-          <Route path="diario" element={<DiarioScreen />} />
-          <Route path="frases" element={<FrasesScreen />} />
-          <Route path="finanzas" element={<FinanceScreen />} />
-          <Route path="agenda" element={<AgendaScreen />} />
-          <Route path="auditoria" element={<AuditoriaScreen />} />
-          <Route path="notas" element={<NotesScreen />} />
-          <Route path="ajustes" element={<AjustesScreen />} />
-          <Route path="espacios" element={<EspaciosScreen />} />
+        <Route path="login" element={<LoginScreen />} />
+        <Route path="registro" element={<RegisterScreen />} />
+        <Route path="olvide-password" element={<ForgotPasswordScreen />} />
+        <Route path="restablecer-password" element={<ResetPasswordScreen />} />
+        <Route element={<RequireAuth />}>
+          <Route element={<AppShell />}>
+            <Route index element={<HoyScreen />} />
+            <Route path="misiones" element={<MisionesScreen />} />
+            <Route path="asuntos" element={<AsuntosScreen />} />
+            <Route path="habitos" element={<HabitosScreen />} />
+            <Route path="trading" element={<TradingScreen />} />
+            <Route path="diario" element={<DiarioScreen />} />
+            <Route path="frases" element={<FrasesScreen />} />
+            <Route path="finanzas" element={<FinanceScreen />} />
+            <Route path="agenda" element={<AgendaScreen />} />
+            <Route path="auditoria" element={<AuditoriaScreen />} />
+            <Route path="notas" element={<NotesScreen />} />
+            <Route
+              path="ajustes"
+              element={<AjustesScreen accountEmail={user?.email ?? null} onSignOut={signOut} />}
+            />
+            <Route path="espacios" element={<EspaciosScreen />} />
+          </Route>
         </Route>
         {/* Material Inspector (Sprint 2.4, punto 07): fuera de AppShell a propósito — no es un lugar del Estudio, es una herramienta de desarrollo. Nunca existe en producción. */}
         {import.meta.env.DEV ? <Route path="dev/materiales" element={<MaterialInspector />} /> : null}

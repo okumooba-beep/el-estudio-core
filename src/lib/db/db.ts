@@ -19,6 +19,20 @@ interface LegacyNota {
 }
 
 /**
+ * Fase 1 (sync Supabase) — fila única (`id: 'sync'`) con el progreso de
+ * la primera migración Dexie→Supabase. `migratedTables` registra qué
+ * tablas de Finanzas ya confirmaron su subida inicial; `migratedAt` solo
+ * se escribe cuando las cuatro lo hicieron. Ningún otro módulo la usa
+ * todavía — Finanzas es el único piloto de sync (ver src/lib/sync/).
+ */
+export interface SyncMeta {
+  id: 'sync'
+  userId: string
+  migratedAt: string | null
+  migratedTables: string[]
+}
+
+/**
  * La base local del proyecto (Implementación 08). IndexedDB vía Dexie,
  * nunca localStorage: sobrevive reinicios, no tiene el límite de ~5MB
  * de localStorage, y es lo que Safari trata de forma más duradera en
@@ -48,6 +62,7 @@ class LifeosDB extends Dexie {
   auditConfig!: EntityTable<AuditConfig, 'id'>
   notesFolders!: EntityTable<NotesFolder, 'id'>
   notesNotes!: EntityTable<NotesNote, 'id'>
+  syncMeta!: EntityTable<SyncMeta, 'id'>
 
   constructor() {
     super('lifeos')
@@ -468,6 +483,19 @@ class LifeosDB extends Dexie {
     this.version(19).stores({
       notesFolders: 'id, createdAt',
       notesNotes: 'id, folderId, createdAt',
+    })
+
+    /**
+     * Fase 1 (sync Supabase) — infraestructura de sync, sin tocar ningún
+     * dato existente. `syncMeta` nace vacía (nadie migró todavía). Los
+     * campos `deletedAt` de FinanceMovimiento/FinanceIncomePeriod (ver
+     * src/types/finance.ts) no se declaran acá: no están indexados, y
+     * Dexie no necesita `.stores()` para campos sin índice — las filas
+     * viejas simplemente no lo tienen (`undefined` = vivo), mismo patrón
+     * que `misionPrincipal?` en Idea (ver v12 más arriba).
+     */
+    this.version(20).stores({
+      syncMeta: 'id',
     })
   }
 }

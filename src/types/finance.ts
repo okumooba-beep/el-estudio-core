@@ -67,6 +67,15 @@ export interface FinanceMovimiento {
   updatedAt: string
   pendingSync: boolean
   /**
+   * Fase 1 (sync Supabase) — tombstone de borrado lógico. `undefined`
+   * = vivo. Reemplaza el `db.table.delete(id)` físico que tenía este
+   * repositorio: sin esto, un borrado no tiene forma de viajar a
+   * Supabase (no hay DELETE en el mecanismo de sync, solo upsert).
+   * `list()` sigue ocultando toda fila con `deletedAt` — cero cambio
+   * de comportamiento visible.
+   */
+  deletedAt?: string
+  /**
    * Sprint 028 — "Sistema de cuotas": una compra financiada no se
    * guarda como un solo movimiento por el total, se guarda como una
    * cuota por mes (§1/§2 del brief). Estos cuatro campos son la única
@@ -113,6 +122,8 @@ export interface FinanceIncomePeriod {
   createdAt: string
   updatedAt: string
   pendingSync: boolean
+  /** Fase 1 (sync Supabase) — mismo tombstone que FinanceMovimiento.deletedAt. */
+  deletedAt?: string
 }
 
 export interface FinanceGoal {

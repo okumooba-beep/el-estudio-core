@@ -14,7 +14,12 @@ type EstadoActualizar = 'idle' | 'buscando' | 'buscado' | 'sin-service-worker' |
  * (viven en el origen del navegador, nunca en la Cache Storage del
  * service worker — ninguna de las dos acciones de acá los toca).
  */
-export function AjustesScreen() {
+interface AjustesScreenProps {
+  accountEmail: string | null
+  onSignOut: () => void
+}
+
+export function AjustesScreen({ accountEmail, onSignOut }: AjustesScreenProps) {
   const [estadoExportar, setEstadoExportar] = useState<EstadoExportar>('idle')
   const [estadoActualizar, setEstadoActualizar] = useState<EstadoActualizar>('idle')
 
@@ -60,6 +65,14 @@ export function AjustesScreen() {
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10">
       <h1 className="font-mono text-[11px] uppercase tracking-wide text-accent">Ajustes</h1>
+
+      <section className="flex flex-col gap-2">
+        <h2 className="text-[15px] text-ink">Cuenta</h2>
+        {accountEmail && <p className="text-[13px] text-ink-dim">Sesión iniciada como {accountEmail}.</p>}
+        <button type="button" className="idea-destino self-start" onClick={onSignOut}>
+          Cerrar sesión
+        </button>
+      </section>
 
       <section className="flex flex-col gap-2">
         <h2 className="text-[15px] text-ink">Exportar datos</h2>
