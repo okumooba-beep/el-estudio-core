@@ -12,7 +12,7 @@ export interface NotesFolderRepository extends Repository<NotesFolder> {
 class DexieNotesFolderRepository implements NotesFolderRepository {
   async list(): Promise<NotesFolder[]> {
     const carpetas = await db.notesFolders.toArray()
-    return carpetas.sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+    return carpetas.filter((c) => !c.deletedAt).sort((a, b) => a.createdAt.localeCompare(b.createdAt))
   }
 
   async add(nombre: string): Promise<NotesFolder> {
@@ -36,10 +36,21 @@ class DexieNotesFolderRepository implements NotesFolderRepository {
     return updated
   }
 
-  /** Borra la carpeta y todas sus notas — es la única salida documentada si se olvida el PIN. */
+  /**
+   * Borra (soft-delete) la carpeta y todas sus notas — es la única salida
+   * documentada si se olvida el PIN. Fase 1 (sync Supabase): tombstone en
+   * vez de borrado físico, mismo patrón que financeMovimientos, para que
+   * el borrado se propague a Supabase y a otros dispositivos.
+   */
   async delete(id: string): Promise<void> {
-    await db.notesNotes.where('folderId').equals(id).delete()
-    await db.notesFolders.delete(id)
+    const now = new Date().toISOString()
+    const notas = await db.notesNotes.where('folderId').equals(id).toArray()
+    await Promise.all(
+      notas
+        .filter((n) => !n.deletedAt)
+        .map((n) => db.notesNotes.update(n.id, { deletedAt: now, updatedAt: now, pendingSync: true })),
+    )
+    await db.notesFolders.update(id, { deletedAt: now, updatedAt: now, pendingSync: true })
   }
 }
 
@@ -53,12 +64,12 @@ export interface NotesNoteRepository extends Repository<NotesNote> {
 class DexieNotesNoteRepository implements NotesNoteRepository {
   async list(): Promise<NotesNote[]> {
     const notas = await db.notesNotes.toArray()
-    return notas.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    return notas.filter((n) => !n.deletedAt).sort((a, b) => b.createdAt.localeCompare(a.createdAt))
   }
 
   async listByFolder(folderId: string): Promise<NotesNote[]> {
     const notas = await db.notesNotes.where('folderId').equals(folderId).toArray()
-    return notas.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    return notas.filter((n) => !n.deletedAt).sort((a, b) => b.createdAt.localeCompare(a.createdAt))
   }
 
   async add(input: { folderId: string; titulo: string; contenido: string }): Promise<NotesNote> {
@@ -83,8 +94,10 @@ class DexieNotesNoteRepository implements NotesNoteRepository {
     return updated
   }
 
+  /** Fase 1 (sync Supabase): soft-delete (tombstone), mismo patrón que financeMovimientos. */
   async delete(id: string): Promise<void> {
-    await db.notesNotes.delete(id)
+    const now = new Date().toISOString()
+    await db.notesNotes.update(id, { deletedAt: now, updatedAt: now, pendingSync: true })
   }
 }
 

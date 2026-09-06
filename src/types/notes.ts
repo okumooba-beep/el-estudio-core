@@ -12,6 +12,8 @@ export interface NotesFolder {
   createdAt: string
   updatedAt: string
   pendingSync: boolean
+  /** Fase 1 (sync Supabase) — tombstone. Ausente = viva, igual que FinanceMovimiento.deletedAt. */
+  deletedAt?: string
 }
 
 export interface NotesNote {
@@ -22,4 +24,6 @@ export interface NotesNote {
   createdAt: string
   updatedAt: string
   pendingSync: boolean
+  /** Fase 1 (sync Supabase) — tombstone. Ausente = viva, igual que FinanceMovimiento.deletedAt. */
+  deletedAt?: string
 }

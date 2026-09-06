@@ -26,7 +26,8 @@ interface LegacyNota {
  * todavía — Finanzas es el único piloto de sync (ver src/lib/sync/).
  */
 export interface SyncMeta {
-  id: 'sync'
+  /** 'sync' = Finanzas (piloto), 'notes-sync' = Notas — una fila propia por módulo sincronizado. */
+  id: 'sync' | 'notes-sync'
   userId: string
   migratedAt: string | null
   migratedTables: string[]

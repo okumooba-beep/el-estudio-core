@@ -5,18 +5,39 @@ import {
   migrateFinanceOnFirstLogin,
   pushFinancePending,
 } from './financeSync'
+import {
+  allNotesTablesEmpty,
+  hydrateNotesFromSupabase,
+  migrateNotesOnFirstLogin,
+  pushNotesPending,
+} from './notesSync'
 
 const PUSH_INTERVAL_MS = 20_000
 const FINANCE_TABLES = ['finance_accounts', 'finance_movimientos', 'finance_goals', 'finance_income_periods']
+const NOTES_TABLES = ['notes_folders', 'notes_notes']
 
 let pushIntervalId: ReturnType<typeof setInterval> | null = null
 let onlineListener: (() => void) | null = null
 let bootstrappedUserId: string | null = null
 
+let notesPushIntervalId: ReturnType<typeof setInterval> | null = null
+let notesOnlineListener: (() => void) | null = null
+let notesBootstrappedUserId: string | null = null
+
 async function markMigrated(userId: string, tablasConfirmadas: string[]): Promise<void> {
   const completo = FINANCE_TABLES.every((tabla) => tablasConfirmadas.includes(tabla))
   await db.syncMeta.put({
     id: 'sync',
+    userId,
+    migratedAt: completo ? new Date().toISOString() : null,
+    migratedTables: tablasConfirmadas,
+  })
+}
+
+async function markNotesMigrated(userId: string, tablasConfirmadas: string[]): Promise<void> {
+  const completo = NOTES_TABLES.every((tabla) => tablasConfirmadas.includes(tabla))
+  await db.syncMeta.put({
+    id: 'notes-sync',
     userId,
     migratedAt: completo ? new Date().toISOString() : null,
     migratedTables: tablasConfirmadas,
@@ -34,6 +55,17 @@ function startPushLoop(userId: string): void {
   push()
 }
 
+function startNotesPushLoop(userId: string): void {
+  stopNotesSync()
+  const push = () => {
+    void pushNotesPending(userId)
+  }
+  notesPushIntervalId = setInterval(push, PUSH_INTERVAL_MS)
+  notesOnlineListener = push
+  window.addEventListener('online', notesOnlineListener)
+  push()
+}
+
 /** Se llama al cerrar sesión: no tiene sentido seguir subiendo datos sin un usuario activo. */
 export function stopFinanceSync(): void {
   if (pushIntervalId) clearInterval(pushIntervalId)
@@ -41,6 +73,15 @@ export function stopFinanceSync(): void {
   pushIntervalId = null
   onlineListener = null
   bootstrappedUserId = null
+}
+
+/** Se llama al cerrar sesión: no tiene sentido seguir subiendo datos sin un usuario activo. */
+export function stopNotesSync(): void {
+  if (notesPushIntervalId) clearInterval(notesPushIntervalId)
+  if (notesOnlineListener) window.removeEventListener('online', notesOnlineListener)
+  notesPushIntervalId = null
+  notesOnlineListener = null
+  notesBootstrappedUserId = null
 }
 
 /**
@@ -78,4 +119,34 @@ export async function bootstrapFinanceSync(userId: string): Promise<void> {
 
   bootstrappedUserId = userId
   startPushLoop(userId)
+}
+
+/**
+ * Se llama una vez por sesión nueva (ver src/lib/auth/AuthContext.tsx),
+ * junto a bootstrapFinanceSync. Mismo mecanismo, fila propia en
+ * `syncMeta` (`id: 'notes-sync'`) para no pisar el progreso de
+ * migración de Finanzas.
+ */
+export async function bootstrapNotesSync(userId: string): Promise<void> {
+  if (notesBootstrappedUserId === userId) return
+
+  const meta = await db.syncMeta.get('notes-sync')
+  if (meta && meta.userId !== userId) {
+    console.warn('[sync] syncMeta (notas) pertenece a otro usuario — no se migra ni se hidrata automáticamente.')
+    return
+  }
+
+  if (!meta?.migratedAt) {
+    const vacia = await allNotesTablesEmpty()
+    if (vacia) {
+      await hydrateNotesFromSupabase(userId)
+      await markNotesMigrated(userId, NOTES_TABLES)
+    } else {
+      const tablasConfirmadas = await migrateNotesOnFirstLogin(userId)
+      await markNotesMigrated(userId, tablasConfirmadas)
+    }
+  }
+
+  notesBootstrappedUserId = userId
+  startNotesPushLoop(userId)
 }

@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
-import { bootstrapFinanceSync, stopFinanceSync } from '@/lib/sync/bootstrap'
+import { bootstrapFinanceSync, stopFinanceSync, bootstrapNotesSync, stopNotesSync } from '@/lib/sync/bootstrap'
 
 interface AuthResult {
   error: string | null
@@ -27,9 +27,10 @@ const AuthContext = createContext<AuthContextValue | null>(null)
  * Primer `React.createContext` del proyecto (no había ningún patrón previo
  * que imitar). Se suscribe a `supabase.auth.onAuthStateChange` y, cuando
  * aparece una sesión nueva (login/registro), dispara el bootstrap de sync
- * de Finanzas (hidratación o migración según corresponda) antes de
- * marcarse `loading: false` — así ninguna pantalla puede montarse con una
- * sesión activa pero los datos de Finanzas todavía sin resolver.
+ * de cada módulo sincronizado — Finanzas y Notas (hidratación o migración
+ * según corresponda) — antes de marcarse `loading: false` — así ninguna
+ * pantalla puede montarse con una sesión activa pero los datos todavía
+ * sin resolver.
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
@@ -54,6 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         bootstrapping.current = nextSession.user.id
         try {
           await bootstrapFinanceSync(nextSession.user.id)
+          await bootstrapNotesSync(nextSession.user.id)
         } catch (error) {
           console.error('[auth] bootstrap de sync falló:', error)
         }
@@ -61,6 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!nextSession) {
         bootstrapping.current = null
         stopFinanceSync()
+        stopNotesSync()
       }
       if (activo) setLoading(false)
     }
