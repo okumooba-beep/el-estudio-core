@@ -42,7 +42,10 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
-    bundleSizeBudget(200 * 1024),
+    // 230 KB: el auth de Supabase (auth-js + postgrest-js + realtime-js) ya es
+    // parte permanente del bundle real (217 KB medido) — el presupuesto anterior
+    // de 200 KB era de antes de esa feature.
+    bundleSizeBudget(230 * 1024),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg'],
