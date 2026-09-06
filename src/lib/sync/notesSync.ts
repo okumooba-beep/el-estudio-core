@@ -118,19 +118,29 @@ export async function pushNotesPending(userId: string): Promise<void> {
   }
 }
 
-/** Dispositivo nuevo / reinstalación: Dexie está vacía pero la cuenta puede tener datos reales en Supabase. */
-export async function hydrateNotesFromSupabase(userId: string): Promise<void> {
-  if (!supabase) return
+/**
+ * Dispositivo nuevo / reinstalación: Dexie está vacía pero la cuenta puede
+ * tener datos reales en Supabase. Devuelve solo las tablas que realmente
+ * confirmaron su lectura (mismo contrato que migrateNotesOnFirstLogin) —
+ * el llamador usa esto para saber si puede marcar la migración completa o
+ * si tiene que reintentar en el próximo inicio.
+ */
+export async function hydrateNotesFromSupabase(userId: string): Promise<string[]> {
+  if (!supabase) return []
+  const tablasConfirmadas: string[] = []
   for (const table of ALL_TABLES) {
     const { data, error } = await supabase.from(table.supabaseTable).select('*').eq('user_id', userId)
     if (error) {
       console.error(`[sync] hidratación falló en ${table.supabaseTable}:`, error.message)
       continue
     }
-    if (!data || data.length === 0) continue
-    const locales = data.map((row) => table.fromRow(row))
-    await table.dexieTable.bulkPut(locales)
+    if (data && data.length > 0) {
+      const locales = data.map((row) => table.fromRow(row))
+      await table.dexieTable.bulkPut(locales)
+    }
+    tablasConfirmadas.push(table.supabaseTable)
   }
+  return tablasConfirmadas
 }
 
 /** Primer login con datos locales previos (creados sin sesión): sube todo lo que ya existe en Dexie, tabla por tabla. */

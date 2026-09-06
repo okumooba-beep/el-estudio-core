@@ -23,6 +23,7 @@ import { ForgotPasswordScreen } from '@/features/auth/ForgotPasswordScreen'
 import { ResetPasswordScreen } from '@/features/auth/ResetPasswordScreen'
 import { RequireAuth } from '@/lib/auth/RequireAuth'
 import { useAuth } from '@/lib/auth/AuthContext'
+import { forceNotesResync } from '@/lib/sync/bootstrap'
 import { useAmbientLight } from '@world/light/useAmbientLight'
 
 /**
@@ -79,7 +80,13 @@ function App() {
             <Route path="notas" element={<NotesScreen />} />
             <Route
               path="ajustes"
-              element={<AjustesScreen accountEmail={user?.email ?? null} onSignOut={signOut} />}
+              element={
+                <AjustesScreen
+                  accountEmail={user?.email ?? null}
+                  onSignOut={signOut}
+                  onForceNotesResync={user ? () => forceNotesResync(user.id) : null}
+                />
+              }
             />
             <Route path="espacios" element={<EspaciosScreen />} />
           </Route>

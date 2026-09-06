@@ -109,8 +109,8 @@ export async function bootstrapFinanceSync(userId: string): Promise<void> {
   if (!meta?.migratedAt) {
     const vacia = await allFinanceTablesEmpty()
     if (vacia) {
-      await hydrateFinanceFromSupabase(userId)
-      await markMigrated(userId, FINANCE_TABLES)
+      const tablasConfirmadas = await hydrateFinanceFromSupabase(userId)
+      await markMigrated(userId, tablasConfirmadas)
     } else {
       const tablasConfirmadas = await migrateFinanceOnFirstLogin(userId)
       await markMigrated(userId, tablasConfirmadas)
@@ -139,8 +139,8 @@ export async function bootstrapNotesSync(userId: string): Promise<void> {
   if (!meta?.migratedAt) {
     const vacia = await allNotesTablesEmpty()
     if (vacia) {
-      await hydrateNotesFromSupabase(userId)
-      await markNotesMigrated(userId, NOTES_TABLES)
+      const tablasConfirmadas = await hydrateNotesFromSupabase(userId)
+      await markNotesMigrated(userId, tablasConfirmadas)
     } else {
       const tablasConfirmadas = await migrateNotesOnFirstLogin(userId)
       await markNotesMigrated(userId, tablasConfirmadas)
@@ -149,4 +149,18 @@ export async function bootstrapNotesSync(userId: string): Promise<void> {
 
   notesBootstrappedUserId = userId
   startNotesPushLoop(userId)
+}
+
+/**
+ * Botón temporal "Forzar re-sincronización de Notas" en Ajustes — recupera
+ * dispositivos que quedaron con `syncMeta.notes-sync.migratedAt` marcado
+ * como completo de forma incorrecta (p. ej. porque la tabla en Supabase
+ * todavía no existía cuando se corrió la hidratación/migración por primera
+ * vez). Borra ese estado local y vuelve a correr bootstrapNotesSync desde
+ * cero — si Dexie local sigue vacía, va a re-hidratar desde Supabase.
+ */
+export async function forceNotesResync(userId: string): Promise<void> {
+  await db.syncMeta.delete('notes-sync')
+  notesBootstrappedUserId = null
+  await bootstrapNotesSync(userId)
 }

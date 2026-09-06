@@ -3,6 +3,7 @@ import { obtenerDatosParaExportar } from '@modules/finance/public'
 
 type EstadoExportar = 'idle' | 'exportando' | 'exportado' | 'error'
 type EstadoActualizar = 'idle' | 'buscando' | 'buscado' | 'sin-service-worker' | 'error'
+type EstadoResyncNotas = 'idle' | 'procesando' | 'listo' | 'error'
 
 /**
  * Ajustes — pantalla de utilidades del dispositivo, no un panel de
@@ -17,11 +18,14 @@ type EstadoActualizar = 'idle' | 'buscando' | 'buscado' | 'sin-service-worker' |
 interface AjustesScreenProps {
   accountEmail: string | null
   onSignOut: () => void
+  /** `null` si no hay sesión activa — oculta la sección de re-sincronización de Notas. */
+  onForceNotesResync: (() => Promise<void>) | null
 }
 
-export function AjustesScreen({ accountEmail, onSignOut }: AjustesScreenProps) {
+export function AjustesScreen({ accountEmail, onSignOut, onForceNotesResync }: AjustesScreenProps) {
   const [estadoExportar, setEstadoExportar] = useState<EstadoExportar>('idle')
   const [estadoActualizar, setEstadoActualizar] = useState<EstadoActualizar>('idle')
+  const [estadoResyncNotas, setEstadoResyncNotas] = useState<EstadoResyncNotas>('idle')
 
   async function handleExportar() {
     setEstadoExportar('exportando')
@@ -59,6 +63,17 @@ export function AjustesScreen({ accountEmail, onSignOut }: AjustesScreenProps) {
       setEstadoActualizar('buscado')
     } catch {
       setEstadoActualizar('error')
+    }
+  }
+
+  async function handleResyncNotas() {
+    if (!onForceNotesResync) return
+    setEstadoResyncNotas('procesando')
+    try {
+      await onForceNotesResync()
+      setEstadoResyncNotas('listo')
+    } catch {
+      setEstadoResyncNotas('error')
     }
   }
 
@@ -121,6 +136,31 @@ export function AjustesScreen({ accountEmail, onSignOut }: AjustesScreenProps) {
           <p className="text-[13px] text-critical">No se pudo buscar una actualización. Probá de nuevo.</p>
         )}
       </section>
+
+      {onForceNotesResync && (
+        <section className="flex flex-col gap-2">
+          <h2 className="text-[15px] text-ink">Notas — forzar re-sincronización (temporal)</h2>
+          <p className="text-[13px] text-ink-dim">
+            Usalo solo si en este dispositivo Notas quedó vacío después de loguearte a pesar de tener carpetas o
+            notas en otro dispositivo. Borra el estado de sincronización de Notas guardado en este dispositivo y
+            vuelve a intentarlo — no borra ninguna carpeta ni nota, ni acá ni en el servidor.
+          </p>
+          <button
+            type="button"
+            className="idea-destino self-start"
+            onClick={() => void handleResyncNotas()}
+            disabled={estadoResyncNotas === 'procesando'}
+          >
+            {estadoResyncNotas === 'procesando' ? 'Sincronizando…' : 'Forzar re-sincronización de Notas'}
+          </button>
+          {estadoResyncNotas === 'listo' && (
+            <p className="text-[13px] text-ink-dim">Listo — revisá el módulo Notas.</p>
+          )}
+          {estadoResyncNotas === 'error' && (
+            <p className="text-[13px] text-critical">No se pudo re-sincronizar. Probá de nuevo.</p>
+          )}
+        </section>
+      )}
     </div>
   )
 }
