@@ -61,6 +61,14 @@ export function mesDe(fecha: Date): string {
   return fecha.toISOString().slice(0, 7)
 }
 
+/** Desplaza un mes (YYYY-MM) `delta` meses hacia adelante (o atrás, si es negativo) — para la navegación "‹ mes ›" de "Este mes". */
+export function sumarMeses(mes: string, delta: number): string {
+  const anio = Number(mes.slice(0, 4))
+  const mesNum = Number(mes.slice(5, 7))
+  const fecha = new Date(anio, mesNum - 1 + delta, 1)
+  return `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`
+}
+
 /**
  * El mes agrupado (Sprint de Producto 004). Es la vista que
  * EL_ESTUDIO_CORE.md pide palabra por palabra: "Al finalizar la semana

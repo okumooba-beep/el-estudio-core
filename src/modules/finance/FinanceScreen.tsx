@@ -19,6 +19,7 @@ import {
   resumirMes,
   resumirSemana,
   semanaDelMes,
+  sumarMeses,
 } from './mes'
 import { etiquetaSemanaCobro, fechaEnSemana, semanaActual as semanaCobroActual } from './semanaCobro'
 import type { FinanceMovimiento } from '@/types/finance'
@@ -73,7 +74,10 @@ export function FinanceScreen() {
     deletePeriodo,
   } = useFinance()
   const { ideas, moveSheet } = useIdeas()
-  const [mes] = useState(() => mesDe(new Date()))
+  /** El mes real de hoy — fijo, nunca navega. "Esta semana" y el detector de dólares del header dependen de este, no del seleccionado. */
+  const [mesActual] = useState(() => mesDe(new Date()))
+  /** El mes que "Este mes" está mostrando — navega con `‹ ›`, nunca más allá de `mesActual`. */
+  const [mesSeleccionado, setMesSeleccionado] = useState(mesActual)
   const [moneda, setMoneda] = useState<Moneda>('ars')
   const [vista, setVista] = useState<Vista>('semana')
   const [detalle, setDetalle] = useState<Detalle>(null)
@@ -182,10 +186,14 @@ export function FinanceScreen() {
   }, [ready, ideas, movimientos])
 
   const semanaActual = useMemo(() => semanaDelMes(new Date().toISOString().slice(0, 10)), [])
-  const resumen = useMemo(() => resumirMes(movimientos, mes, moneda), [movimientos, mes, moneda])
+  const resumen = useMemo(
+    () => resumirMes(movimientos, mesSeleccionado, moneda),
+    [movimientos, mesSeleccionado, moneda],
+  )
+  /** Siempre `mesActual`, no `mesSeleccionado`: "Esta semana" no navega, sea cual sea el mes que "Este mes" esté mostrando. */
   const semanal = useMemo(
-    () => resumirSemana(movimientos, mes, semanaActual, moneda),
-    [movimientos, mes, semanaActual, moneda],
+    () => resumirSemana(movimientos, mesActual, semanaActual, moneda),
+    [movimientos, mesActual, semanaActual, moneda],
   )
   /**
    * Sprint 037 — "Esta semana" para Ingresos ya no puede usar
@@ -215,10 +223,16 @@ export function FinanceScreen() {
   }, [])
   const ahorroPct = resumen.ingresado > 0 ? Math.round((resumen.balance / resumen.ingresado) * 100) : 0
 
-  /** El selector de moneda solo aparece si de verdad hay dólares: nada sobra por si acaso. */
+  /**
+   * El selector de moneda solo aparece si de verdad hay dólares: nada sobra
+   * por si acaso. Mira el mes que corresponda a la vista activa — el
+   * seleccionado en "Este mes" (para poder ver dólares de un mes anterior),
+   * el real de hoy en "Esta semana" (que no navega).
+   */
+  const mesParaDolares = vista === 'mes' ? mesSeleccionado : mesActual
   const hayDolares = useMemo(
-    () => movimientos.some((movimiento) => movimiento.fecha.startsWith(mes) && monedaDe(movimiento) === 'usd'),
-    [movimientos, mes],
+    () => movimientos.some((movimiento) => movimiento.fecha.startsWith(mesParaDolares) && monedaDe(movimiento) === 'usd'),
+    [movimientos, mesParaDolares],
   )
 
   function corregirCategoria(movimiento: FinanceMovimiento, categoria: FinanceCategoria) {
@@ -374,9 +388,9 @@ export function FinanceScreen() {
     )
   }
 
-  const nombreMes = new Date(`${mes}-02`).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
+  const nombreMes = new Date(`${mesSeleccionado}-02`).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
   /** Sprint 016.1, punto 15: mismo texto que ya arma el header acá abajo, para que Entró/Se fue nunca pierdan de vista qué período están mostrando al entrar en un detalle. */
-  const periodoLabel = vista === 'semana' ? `Semana ${semanaActual} · ${etiquetaSemana(mes, semanaActual)}` : nombreMes
+  const periodoLabel = vista === 'semana' ? `Semana ${semanaActual} · ${etiquetaSemana(mesActual, semanaActual)}` : nombreMes
   /**
    * Mini Sprint 035 ya dejó documentado (ver comentario de `editarMovimiento`
    * más arriba) que `resumen` está filtrado por la moneda de la vista — pero
@@ -413,7 +427,8 @@ export function FinanceScreen() {
   const teQuedo = vista === 'semana' ? entroSemanaReal - semanal.seFue : resumen.balance
   const movimientosDelPeriodo = vista === 'semana' ? semanal.movimientos : resumen.movimientos
   const gruposDelPeriodo = vista === 'semana' ? semanal.grupos : resumen.grupos
-  const registradoHastaHoy = estaEnCurso(mes)
+  /** "Esta semana" siempre es el real de hoy (`true`, como antes); "Este mes" solo si el mes seleccionado es el actual. */
+  const registradoHastaHoy = vista === 'semana' ? true : estaEnCurso(mesSeleccionado)
   /**
    * Sprint 034 (§19/§20) — "Movimientos recientes" responde "¿en qué se
    * fue?", no un timeline general: antes mostraba `movimientosDelPeriodo`
@@ -445,9 +460,32 @@ export function FinanceScreen() {
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10">
       <section className="flex flex-col items-center gap-3">
-        <p className="font-mono text-[11px] uppercase tracking-wide text-accent">{periodoLabel}</p>
+        {vista === 'mes' ? (
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              aria-label="Mes anterior"
+              className="font-mono text-[15px] text-accent"
+              onClick={() => setMesSeleccionado((actual) => sumarMeses(actual, -1))}
+            >
+              ‹
+            </button>
+            <p className="font-mono text-[11px] uppercase tracking-wide text-accent">{periodoLabel}</p>
+            <button
+              type="button"
+              aria-label="Mes siguiente"
+              className="font-mono text-[15px] text-accent disabled:pointer-events-none disabled:opacity-30"
+              disabled={estaEnCurso(mesSeleccionado)}
+              onClick={() => setMesSeleccionado((actual) => sumarMeses(actual, 1))}
+            >
+              ›
+            </button>
+          </div>
+        ) : (
+          <p className="font-mono text-[11px] uppercase tracking-wide text-accent">{periodoLabel}</p>
+        )}
         {vista === 'mes' && registradoHastaHoy ? (
-          <p className="font-mono text-[11px] text-ink-faint">{etiquetaMesEnCurso(mes)} · en curso</p>
+          <p className="font-mono text-[11px] text-ink-faint">{etiquetaMesEnCurso(mesSeleccionado)} · en curso</p>
         ) : null}
         <div className="idea-destinos" role="group" aria-label="Vista">
           {(['semana', 'mes'] as const).map((opcion) => (
