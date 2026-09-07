@@ -1,13 +1,53 @@
 import { db } from '@/lib/db/db'
 import { generateId } from '@shared-kernel/id'
+import { formatearHora12 } from '@shared-kernel/text/interpretarTexto'
 import type { Repository } from '@shared-kernel/persistence/Repository'
 import type { AgendaEvento, AgendaBloque, AgendaPrioridad } from '@/types/agenda'
+import { calcularDisparo, minutosDeAviso } from '@/lib/reminders/calcularDisparo'
+import { activarRecordatorio, cancelarRecordatorio } from '@/lib/reminders/recordatorios'
 
 /**
  * Mismo patrón que financeRepository.ts: una tabla Dexie por entidad,
  * mismo contrato Repository<T> (list), add/update con la forma real de
  * cada una.
+ *
+ * Fase 3 (push real): cada `add`/`update` de Evento o Bloque termina
+ * recalculando su recordatorio a partir del estado YA fusionado (nunca
+ * del patch parcial) — así cualquier combinación de campos que cambien
+ * en el mismo llamado (alarma, fecha, hora, aviso) queda resuelta con una
+ * sola regla, sin tener que acordarse de wirear cada handler de
+ * AgendaScreen.tsx por separado.
  */
+async function sincronizarRecordatorioEvento(evento: AgendaEvento): Promise<void> {
+  const dispararEn = evento.alarma ? calcularDisparo(evento.fecha, evento.hora, minutosDeAviso(evento.aviso)) : null
+  if (!dispararEn) {
+    await cancelarRecordatorio('agenda_evento', evento.id)
+    return
+  }
+  await activarRecordatorio({
+    origenTipo: 'agenda_evento',
+    origenId: evento.id,
+    titulo: evento.texto,
+    cuerpo: evento.hora ? `Agenda · ${formatearHora12(evento.hora)}` : 'Agenda',
+    dispararEn,
+  })
+}
+
+async function sincronizarRecordatorioBloque(bloque: AgendaBloque): Promise<void> {
+  const dispararEn = bloque.alarma ? calcularDisparo(bloque.dia, bloque.hora) : null
+  if (!dispararEn) {
+    await cancelarRecordatorio('agenda_bloque', bloque.id)
+    return
+  }
+  await activarRecordatorio({
+    origenTipo: 'agenda_bloque',
+    origenId: bloque.id,
+    titulo: bloque.texto,
+    cuerpo: bloque.hora ? `Bloque · ${formatearHora12(bloque.hora)}` : 'Bloque',
+    dispararEn,
+  })
+}
+
 export interface NuevoAgendaEvento {
   texto: string
   fecha: string
@@ -46,6 +86,7 @@ class DexieAgendaEventoRepository implements AgendaEventoRepository {
       pendingSync: true,
     }
     await db.agendaEventos.add(evento)
+    await sincronizarRecordatorioEvento(evento)
     return evento
   }
 
@@ -53,6 +94,7 @@ class DexieAgendaEventoRepository implements AgendaEventoRepository {
     await db.agendaEventos.update(id, { ...patch, updatedAt: new Date().toISOString(), pendingSync: true })
     const updated = await db.agendaEventos.get(id)
     if (!updated) throw new Error(`Evento ${id} no encontrado`)
+    await sincronizarRecordatorioEvento(updated)
     return updated
   }
 }
@@ -99,6 +141,7 @@ class DexieAgendaBloqueRepository implements AgendaBloqueRepository {
       pendingSync: true,
     }
     await db.agendaBloques.add(bloque)
+    await sincronizarRecordatorioBloque(bloque)
     return bloque
   }
 
@@ -106,11 +149,13 @@ class DexieAgendaBloqueRepository implements AgendaBloqueRepository {
     await db.agendaBloques.update(id, { ...patch, updatedAt: new Date().toISOString(), pendingSync: true })
     const updated = await db.agendaBloques.get(id)
     if (!updated) throw new Error(`Bloque ${id} no encontrado`)
+    await sincronizarRecordatorioBloque(updated)
     return updated
   }
 
   async remove(id: string): Promise<void> {
     await db.agendaBloques.update(id, { deletedAt: new Date().toISOString(), updatedAt: new Date().toISOString(), pendingSync: true })
+    await cancelarRecordatorio('agenda_bloque', id)
   }
 }
 

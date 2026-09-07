@@ -6,7 +6,7 @@
  * los recibe tal cual vienen de Supabase en la hidratación/migración
  * inicial, igual que cualquier otro campo de esta tabla.
  */
-export type RecordatorioOrigen = 'agenda_evento' | 'agenda_bloque' | 'manual'
+export type RecordatorioOrigen = 'agenda_evento' | 'agenda_bloque' | 'mision' | 'manual'
 
 export interface Recordatorio {
   id: string

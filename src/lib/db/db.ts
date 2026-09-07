@@ -527,6 +527,20 @@ class LifeosDB extends Dexie {
     this.version(21).stores({
       recordatorios: 'id, createdAt, dispararEn',
     })
+
+    /**
+     * Fase 3 (push real) — alarmas reales en Agenda (eventos/bloques) y
+     * Misiones crean/actualizan/cancelan su recordatorio buscándolo por
+     * (origenTipo, origenId) (ver src/lib/reminders/recordatorios.ts).
+     * Índice nuevo en `origenId` para no escanear toda la tabla en cada
+     * alta/edición — sin `.upgrade()`: las filas creadas en Fase 2 (el
+     * recordatorio de prueba manual) tienen `origenId: null`, que Dexie
+     * simplemente no indexa, y ese único caso no necesita encontrarse por
+     * origen.
+     */
+    this.version(22).stores({
+      recordatorios: 'id, createdAt, dispararEn, origenId',
+    })
   }
 }
 

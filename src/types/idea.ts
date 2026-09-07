@@ -91,6 +91,16 @@ export interface Idea {
    */
   misionPrincipal?: boolean
   /**
+   * Fase 3 (push real) — reservado para Misiones: `true` cuando el usuario
+   * activó la alarma de esta misión (solo posible con `programadaFecha` y
+   * `programadaHora` ya cargadas, ver MisionesScreen.tsx). Igual que
+   * `AgendaEvento.alarma`/`AgendaBloque.alarma` (ver types/agenda.ts): el
+   * booleano vive acá, pero quien lo dispara de verdad es la fila
+   * correspondiente en `recordatorios` (ver src/lib/reminders/recordatorios.ts).
+   * Ausente/`false` = sin alarma.
+   */
+  alarma?: boolean
+  /**
    * Rediseño Misiones: checklist propio de una misión (ver `Subtarea`
    * arriba). Ausente o vacío = sin sub-tareas. El progreso (X/Y, círculo
    * con relleno proporcional) siempre se calcula a partir de esta lista

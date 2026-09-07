@@ -6,6 +6,8 @@ import { interpretarMision } from './extraccionFecha'
 import { MAX_PRINCIPALES, seleccionarActivas, seleccionarPrincipales, seleccionarSecundarias } from './seleccionarPrincipales'
 import { MisionDetalle } from './MisionDetalle'
 import { etiquetaFecha, formatearHora12 } from '@shared-kernel/text/interpretarTexto'
+import { calcularDisparo } from '@/lib/reminders/calcularDisparo'
+import { activarRecordatorio, cancelarRecordatorio } from '@/lib/reminders/recordatorios'
 import type { Idea } from '@/types/idea'
 
 /**
@@ -89,6 +91,36 @@ export function MisionesScreen() {
       deletedAt: new Date().toISOString(),
       programadaFecha: null,
       programadaHora: null,
+      alarma: false,
+    })
+    void cancelarRecordatorio('mision', mision.id)
+  }
+
+  /**
+   * Fase 3 (push real): a diferencia de Agenda (donde el toggle ya existía
+   * y solo hacía falta conectarlo), acá no hay ningún flujo que edite
+   * `programadaFecha`/`programadaHora` después de creada la misión (ver
+   * handleDraftBlur) — por eso alcanza con calcular el disparo una sola
+   * vez, al activar, sin un `sincronizarRecordatorio` central como en
+   * agendaRepository.ts. Solo se puede llamar con ambos campos cargados
+   * (ver el botón condicionado más abajo).
+   */
+  function handleToggleAlarma(mision: Idea) {
+    const activar = !mision.alarma
+    void update(mision.id, { alarma: activar })
+    if (!activar) {
+      void cancelarRecordatorio('mision', mision.id)
+      return
+    }
+    if (!mision.programadaFecha || !mision.programadaHora) return
+    const dispararEn = calcularDisparo(mision.programadaFecha, mision.programadaHora)
+    if (!dispararEn) return
+    void activarRecordatorio({
+      origenTipo: 'mision',
+      origenId: mision.id,
+      titulo: mision.texto,
+      cuerpo: `Misión · ${formatearHora12(mision.programadaHora)}`,
+      dispararEn,
     })
   }
 
@@ -265,6 +297,18 @@ export function MisionesScreen() {
             >
               Agregar sub-tarea
             </button>
+            {mision.programadaFecha && mision.programadaHora && (
+              <button
+                type="button"
+                className="idea-destino"
+                onClick={() => {
+                  setAccionesId(null)
+                  handleToggleAlarma(mision)
+                }}
+              >
+                {mision.alarma ? 'Quitar alarma' : 'Activar alarma'}
+              </button>
+            )}
             <button
               type="button"
               className="idea-destino"

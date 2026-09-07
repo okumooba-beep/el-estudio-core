@@ -6,7 +6,10 @@
 create table if not exists recordatorios (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
-  origen_tipo text not null check (origen_tipo in ('agenda_evento', 'agenda_bloque', 'manual')),
+  -- Fase 3 agregó 'mision' vía ALTER en producción (alarma real de Misiones) —
+  -- este archivo se actualiza acá solo para que quede documentado, el ALTER
+  -- ya se corrió a mano en Supabase, no hace falta volver a correr esto.
+  origen_tipo text not null check (origen_tipo in ('agenda_evento', 'agenda_bloque', 'mision', 'manual')),
   origen_id uuid,
   titulo text not null,
   cuerpo text not null,
