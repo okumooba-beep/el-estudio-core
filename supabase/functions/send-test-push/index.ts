@@ -20,6 +20,16 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import webpush from 'npm:web-push@3.6.7'
 
+// supabase.functions.invoke() manda los headers Authorization/apikey, que no
+// son "simples" para CORS — el navegador siempre precede la llamada real con
+// un preflight OPTIONS. Sin esto, ese preflight nunca pasa y el POST real no
+// sale del navegador (patrón estándar de Supabase: ver
+// https://supabase.com/docs/guides/functions/cors).
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
 const VAPID_PUBLIC_KEY = Deno.env.get('VAPID_PUBLIC_KEY')!
@@ -35,9 +45,16 @@ interface PushSubscriptionRow {
 }
 
 Deno.serve(async (req: Request) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
   const authHeader = req.headers.get('Authorization')
   if (!authHeader) {
-    return new Response(JSON.stringify({ error: 'Falta el header Authorization.' }), { status: 401 })
+    return new Response(JSON.stringify({ error: 'Falta el header Authorization.' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
   }
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -46,7 +63,10 @@ Deno.serve(async (req: Request) => {
 
   const { data: userData, error: userError } = await supabase.auth.getUser()
   if (userError || !userData.user) {
-    return new Response(JSON.stringify({ error: 'Sesión inválida.' }), { status: 401 })
+    return new Response(JSON.stringify({ error: 'Sesión inválida.' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
   }
 
   const { data: subs, error: subsError } = await supabase
@@ -55,12 +75,15 @@ Deno.serve(async (req: Request) => {
     .eq('user_id', userData.user.id)
 
   if (subsError) {
-    return new Response(JSON.stringify({ error: subsError.message }), { status: 500 })
+    return new Response(JSON.stringify({ error: subsError.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
   }
   if (!subs || subs.length === 0) {
     return new Response(
       JSON.stringify({ error: 'No hay ninguna suscripción push guardada para este usuario.' }),
-      { status: 404 },
+      { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     )
   }
 
@@ -95,6 +118,6 @@ Deno.serve(async (req: Request) => {
 
   return new Response(JSON.stringify({ enviados, fallidos }), {
     status: 200,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   })
 })
