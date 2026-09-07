@@ -10,9 +10,9 @@ import type { Idea } from '@/types/idea'
  * la haya clasificado antes.
  */
 export function FrasesScreen() {
-  const { ideas, ready, add, update, remove } = useIdeas()
+  const { ideas, ready, add, update } = useIdeas()
   const [draft, setDraft] = useState<Idea | null>(null)
-  const frases = ideas.filter((idea) => idea.destino === 'biblioteca')
+  const frases = ideas.filter((idea) => idea.destino === 'biblioteca' && !idea.deletedAt)
 
   function handleNuevaFrase() {
     setDraft(draftIdea('biblioteca'))
@@ -32,7 +32,7 @@ export function FrasesScreen() {
   }
 
   function handleEliminar(frase: Idea) {
-    void remove(frase.id)
+    void update(frase.id, { deletedAt: new Date().toISOString() })
   }
 
   if (!ready) return null

@@ -53,6 +53,11 @@ export interface NuevoAuditPremortem {
 export interface AuditPremortemRepository extends Repository<AuditPremortem> {
   add(input: NuevoAuditPremortem): Promise<AuditPremortem>
   update(id: string, patch: Partial<Omit<AuditPremortem, 'id' | 'createdAt'>>): Promise<AuditPremortem>
+  /**
+   * Fase 4 (sync Supabase): soft-delete vía `deletedAt`, no un borrado
+   * físico — sin tombstone un borrado local nunca llega a Supabase ni a
+   * otro dispositivo (ver types/auditoria.ts, auditoriaSync.ts).
+   */
   delete(id: string): Promise<void>
 }
 
@@ -87,7 +92,7 @@ class DexieAuditPremortemRepository implements AuditPremortemRepository {
   }
 
   async delete(id: string): Promise<void> {
-    await db.auditPremortems.delete(id)
+    await db.auditPremortems.update(id, { deletedAt: new Date().toISOString(), updatedAt: new Date().toISOString(), pendingSync: true })
   }
 }
 

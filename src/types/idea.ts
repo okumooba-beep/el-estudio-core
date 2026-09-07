@@ -70,9 +70,15 @@ export interface Idea {
    * cuándo debe aparecer esta Misión en Agenda. Ausente = no programada,
    * invisible para Agenda — la Misión sigue viviendo únicamente acá
    * (Idea es la única fuente de verdad, Agenda solo la lee vía
-   * work-table/public.ts, nunca la copia a otra tabla).
+   * work-table/public.ts, nunca la copia a otra tabla). Acepta `null`
+   * (igual que `programadaHora` abajo) desde Fase 4 sync Misiones: con
+   * `exactOptionalPropertyTypes`, borrar lógicamente una misión necesita
+   * poder limpiar este campo con un valor explícito, no alcanza con
+   * omitirlo del patch — todo consumidor ya lo trata como falsy
+   * (`idea.programadaFecha &&` / `=== fecha`), así que `null` es
+   * equivalente a "ausente" en todos lados.
    */
-  programadaFecha?: string
+  programadaFecha?: string | null
   /** Reservado para Misiones (Sprint 013). Ausente/null si no se extrajo una hora del texto. */
   programadaHora?: string | null
   /**
@@ -107,4 +113,13 @@ export interface Idea {
   updatedAt: string
   /** F5 (ARCHITECTURE_RATIFIED.md): marcado inerte — ver shared-kernel/persistence/Repository. */
   pendingSync: boolean
+  /**
+   * Fase 4 (sync Supabase) — reservado para Misiones (Sprint sync
+   * Misiones): tombstone de borrado lógico, mismo patrón que
+   * FinanceMovimiento/NotesFolder. Ausente en cualquier otro destino —
+   * cada uno que lo adopte más adelante lo setea únicamente desde su
+   * propia pantalla, nunca desde ideaRepository.ts (borrado real,
+   * compartido por todo destino que no lo use).
+   */
+  deletedAt?: string
 }

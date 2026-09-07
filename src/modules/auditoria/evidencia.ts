@@ -50,7 +50,7 @@ export function calcularEvidencia(
   hoyISO: string,
 ): EvidenciaSemana {
   const diasSet = new Set(dias)
-  const bloquesSemana = bloques.filter((bloque) => diasSet.has(bloque.dia) && !bloque.archivado)
+  const bloquesSemana = bloques.filter((bloque) => diasSet.has(bloque.dia) && !bloque.archivado && !bloque.deletedAt)
   const protegidos = bloquesSemana.filter((bloque) => bloque.protegido)
 
   const porRutina: EvidenciaRutina[] = config.rutinasReconocidas.map(({ etiqueta, patron }) => {

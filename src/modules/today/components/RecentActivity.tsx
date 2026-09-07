@@ -22,7 +22,7 @@ export function RecentActivity() {
 
   const recientes = useMemo(() => {
     return ideas
-      .filter((idea) => idea.destino !== 'hoy' && idea.destino !== 'archivo' && idea.history.length > 0)
+      .filter((idea) => idea.destino !== 'hoy' && idea.destino !== 'archivo' && !idea.deletedAt && idea.history.length > 0)
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
       .slice(0, LIMITE)
   }, [ideas])

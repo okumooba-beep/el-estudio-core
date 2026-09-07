@@ -83,7 +83,7 @@ export function AgendaScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, ideas, eventos])
 
-  const bloquesActivos = useMemo(() => bloques.filter((bloque) => !bloque.archivado), [bloques])
+  const bloquesActivos = useMemo(() => bloques.filter((bloque) => !bloque.archivado && !bloque.deletedAt), [bloques])
 
   /**
    * Sprint 013, punto 1: Misiones con "Programada para" — Agenda las lee

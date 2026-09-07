@@ -1,7 +1,24 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
-import { bootstrapFinanceSync, stopFinanceSync, bootstrapNotesSync, stopNotesSync } from '@/lib/sync/bootstrap'
+import {
+  bootstrapFinanceSync,
+  stopFinanceSync,
+  bootstrapNotesSync,
+  stopNotesSync,
+  bootstrapMissionsSync,
+  stopMissionsSync,
+  bootstrapIdeasSync,
+  stopIdeasSync,
+  bootstrapHabitsSync,
+  stopHabitsSync,
+  bootstrapTradingSync,
+  stopTradingSync,
+  bootstrapAgendaSync,
+  stopAgendaSync,
+  bootstrapAuditoriaSync,
+  stopAuditoriaSync,
+} from '@/lib/sync/bootstrap'
 
 interface AuthResult {
   error: string | null
@@ -56,6 +73,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           await bootstrapFinanceSync(nextSession.user.id)
           await bootstrapNotesSync(nextSession.user.id)
+          await bootstrapMissionsSync(nextSession.user.id)
+          await bootstrapIdeasSync(nextSession.user.id)
+          await bootstrapHabitsSync(nextSession.user.id)
+          await bootstrapTradingSync(nextSession.user.id)
+          await bootstrapAgendaSync(nextSession.user.id)
+          await bootstrapAuditoriaSync(nextSession.user.id)
         } catch (error) {
           console.error('[auth] bootstrap de sync falló:', error)
         }
@@ -64,6 +87,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         bootstrapping.current = null
         stopFinanceSync()
         stopNotesSync()
+        stopMissionsSync()
+        stopIdeasSync()
+        stopHabitsSync()
+        stopTradingSync()
+        stopAgendaSync()
+        stopAuditoriaSync()
       }
       if (activo) setLoading(false)
     }

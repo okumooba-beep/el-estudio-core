@@ -50,6 +50,7 @@ export function selectContinueWorking(ideas: readonly Idea[]): Idea | null {
       idea.destino !== 'hoy' &&
       idea.destino !== 'archivo' &&
       idea.estado !== 'terminada' &&
+      !idea.deletedAt &&
       // Se cuentan las mudanzas, nunca el largo del historial: toda hoja
       // nace ya con DOS entradas 'creada' — el diario registra cada hoja
       // al nacer además del mueble donde aterriza (ideaRepository.create).

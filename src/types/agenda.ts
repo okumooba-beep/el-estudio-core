@@ -77,4 +77,11 @@ export interface AgendaBloque {
   createdAt: string
   updatedAt: string
   pendingSync: boolean
+  /**
+   * Fase 4 (sync Supabase): `remove()` dejó de ser un borrado real — sin
+   * tombstone, un borrado local nunca llega a Supabase ni a otro
+   * dispositivo (ver src/lib/sync/agendaSync.ts). Ausente = vivo, mismo
+   * patrón que `FinanceMovimiento.deletedAt`.
+   */
+  deletedAt?: string
 }

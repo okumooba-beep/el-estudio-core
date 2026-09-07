@@ -38,6 +38,13 @@ export interface AuditPremortem {
   createdAt: string
   updatedAt: string
   pendingSync: boolean
+  /**
+   * Fase 4 (sync Supabase): `delete()` dejó de ser un borrado real — sin
+   * tombstone, un borrado local nunca llega a Supabase ni a otro
+   * dispositivo (ver src/lib/sync/auditoriaSync.ts). Ausente = vivo,
+   * mismo patrón que `AgendaBloque.deletedAt`.
+   */
+  deletedAt?: string
 }
 
 /**

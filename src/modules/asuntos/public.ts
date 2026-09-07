@@ -20,6 +20,7 @@ export function useAttentionSignal(): { destino: 'asuntos'; mensaje: string } | 
   const hayImportantesEnEspera = ideas.some(
     (idea) =>
       idea.destino === 'asuntos' &&
+      !idea.deletedAt &&
       prioridadDe(idea) === 'importante' &&
       (estadoDe(idea) === 'pendiente' || estadoDe(idea) === 'en-espera'),
   )

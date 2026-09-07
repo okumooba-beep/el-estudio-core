@@ -68,7 +68,7 @@ function pickFraseId(ids: readonly string[], usedIds: readonly string[]): { id: 
  * el usuario ya escribió/guardó.
  */
 function getSabiduria(ideas: readonly Idea[], now: Date): VoiceEntry | null {
-  const frases = ideas.filter((idea) => idea.destino === 'biblioteca')
+  const frases = ideas.filter((idea) => idea.destino === 'biblioteca' && !idea.deletedAt)
   if (frases.length === 0) return null
 
   const dayKey = now.toISOString().slice(0, 10)

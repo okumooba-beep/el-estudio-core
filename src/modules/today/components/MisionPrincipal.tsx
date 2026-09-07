@@ -48,7 +48,7 @@ export function MisionPrincipal({ excludeId }: MisionPrincipalProps) {
   const navigate = useNavigate()
 
   const pendientes = useMemo(
-    () => ideas.filter((idea) => idea.destino === 'misiones' && idea.estado !== 'terminada'),
+    () => ideas.filter((idea) => idea.destino === 'misiones' && idea.estado !== 'terminada' && !idea.deletedAt),
     [ideas],
   )
   const principal = useMemo(() => {

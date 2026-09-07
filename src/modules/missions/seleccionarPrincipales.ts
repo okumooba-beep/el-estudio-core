@@ -22,7 +22,7 @@ export const MAX_PRINCIPALES = 5
  */
 export function seleccionarActivas(ideas: readonly Idea[]): Idea[] {
   const misiones = ideas.filter((idea) => idea.destino === 'misiones')
-  const pendientes = misiones.filter((m) => m.estado !== 'terminada' && m.estado !== 'completada')
+  const pendientes = misiones.filter((m) => m.estado !== 'terminada' && m.estado !== 'completada' && !m.deletedAt)
   return [...pendientes].sort((a, b) => a.createdAt.localeCompare(b.createdAt))
 }
 

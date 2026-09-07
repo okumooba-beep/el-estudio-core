@@ -37,12 +37,16 @@ function esPendiente(asunto: Idea): boolean {
  * excepciones son código anterior a F16 y un módulo nuevo no las hereda.
  */
 export function AsuntosScreen() {
-  const { ideas, ready, add, update, remove } = useIdeas()
+  const { ideas, ready, add, update } = useIdeas()
   const [draftTitulo, setDraftTitulo] = useState<string | null>(null)
   const [draftPendiente, setDraftPendiente] = useState('')
   const [mostrarHistorial, setMostrarHistorial] = useState(false)
 
-  const asuntos = ideas.filter((idea) => idea.destino === 'asuntos')
+  const asuntos = ideas.filter((idea) => idea.destino === 'asuntos' && !idea.deletedAt)
+
+  function handleEliminar(asunto: Idea) {
+    void update(asunto.id, { deletedAt: new Date().toISOString() })
+  }
   const pendientes = asuntos.filter(esPendiente)
   const resueltos = asuntos.filter((asunto) => !esPendiente(asunto))
 
@@ -120,7 +124,7 @@ export function AsuntosScreen() {
               cerrado={false}
               onEditar={(patch) => void update(asunto.id, patch)}
               onResolver={() => void update(asunto.id, { estado: 'resuelto' })}
-              onEliminar={() => void remove(asunto.id)}
+              onEliminar={() => handleEliminar(asunto)}
             />
           ))}
         </ul>
@@ -148,7 +152,7 @@ export function AsuntosScreen() {
                   asunto={asunto}
                   cerrado
                   onEditar={(patch) => void update(asunto.id, patch)}
-                  onEliminar={() => void remove(asunto.id)}
+                  onEliminar={() => handleEliminar(asunto)}
                 />
               ))}
             </ul>

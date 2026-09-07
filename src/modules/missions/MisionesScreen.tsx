@@ -48,7 +48,7 @@ import type { Idea } from '@/types/idea'
  * porque ese paso era opcional) no debe aparecer como pendiente.
  */
 export function MisionesScreen() {
-  const { ideas, ready, add, update, moveSheet, remove } = useIdeas()
+  const { ideas, ready, add, update, moveSheet } = useIdeas()
   const [draftTexto, setDraftTexto] = useState<string | null>(null)
   /** Sprint 016.2, punto 6: misión que el usuario intenta hacer Principal habiendo ya cinco — nunca se auto-decide. */
   const [intentoPrincipal, setIntentoPrincipal] = useState<Idea | null>(null)
@@ -60,7 +60,7 @@ export function MisionesScreen() {
   const [accionesId, setAccionesId] = useState<string | null>(null)
   /** id de la misión pendiente de confirmar "completar" — el toque del círculo ya no completa al instante. */
   const [confirmarCompletarId, setConfirmarCompletarId] = useState<string | null>(null)
-  /** id de la misión pendiente de confirmar eliminación (borrado real, vía `remove`). */
+  /** id de la misión pendiente de confirmar eliminación (borrado lógico vía `deletedAt`, ver missionsSync.ts). */
   const [confirmarEliminarId, setConfirmarEliminarId] = useState<string | null>(null)
   /** Long-press sobre la fila: temporizador + bandera para suprimir el click sintético que el navegador dispara al soltar. */
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -85,7 +85,11 @@ export function MisionesScreen() {
 
   function handleEliminar(mision: Idea) {
     if (intentoPrincipal?.id === mision.id) setIntentoPrincipal(null)
-    void remove(mision.id)
+    void update(mision.id, {
+      deletedAt: new Date().toISOString(),
+      programadaFecha: null,
+      programadaHora: null,
+    })
   }
 
   const LONG_PRESS_MS = 500

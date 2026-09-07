@@ -130,7 +130,10 @@ export function AuditoriaScreen() {
     [dias, bloques, ideas, config, hoy],
   )
 
-  const premortemsSemana = useMemo(() => premortems.filter((p) => p.semanaId === semanaId), [premortems, semanaId])
+  const premortemsSemana = useMemo(
+    () => premortems.filter((p) => p.semanaId === semanaId && !p.deletedAt),
+    [premortems, semanaId],
+  )
   const correccionSemana = useMemo(() => correcciones.find((c) => c.semanaId === semanaId) ?? null, [correcciones, semanaId])
 
   const [rupturaTexto, setRupturaTexto] = useState('')

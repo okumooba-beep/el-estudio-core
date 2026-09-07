@@ -26,8 +26,15 @@ interface LegacyNota {
  * todavía — Finanzas es el único piloto de sync (ver src/lib/sync/).
  */
 export interface SyncMeta {
-  /** 'sync' = Finanzas (piloto), 'notes-sync' = Notas — una fila propia por módulo sincronizado. */
-  id: 'sync' | 'notes-sync'
+  /**
+   * 'sync' = Finanzas (piloto), 'notes-sync' = Notas, 'missions-sync' =
+   * Misiones, 'ideas-sync' = Asuntos + Biblioteca (+ Hábitos/Agenda desde
+   * Fase 4), 'habits-sync' = Hábitos (habitChecks), 'trading-sync' =
+   * Trading (operaciones), 'agenda-sync' = Agenda (eventos + bloques),
+   * 'auditoria-sync' = Auditoría (rupturas + premortems + correcciones +
+   * config) — una fila propia por módulo sincronizado.
+   */
+  id: 'sync' | 'notes-sync' | 'missions-sync' | 'ideas-sync' | 'habits-sync' | 'trading-sync' | 'agenda-sync' | 'auditoria-sync'
   userId: string
   migratedAt: string | null
   migratedTables: string[]

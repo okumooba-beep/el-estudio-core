@@ -68,10 +68,12 @@ export interface AgendaBloqueRepository extends Repository<AgendaBloque> {
   add(input: NuevoAgendaBloque): Promise<AgendaBloque>
   update(id: string, patch: Partial<Omit<AgendaBloque, 'id' | 'createdAt'>>): Promise<AgendaBloque>
   /**
-   * Sprint 012, punto 3: "Eliminar bloque" es una acción real para
-   * resolver un conflicto de horario, no el archivado suave del
-   * Sprint 010 — un Bloque nunca pasa por el Umbral, así que el
-   * contrato "nada se borra" no lo alcanza (ver types/agenda.ts).
+   * Sprint 012, punto 3: "Eliminar bloque" resuelve un conflicto de
+   * horario, distinto del archivado suave del Sprint 010. Fase 4 (sync
+   * Supabase): dejó de ser un borrado físico — sin tombstone un borrado
+   * local nunca llega a Supabase ni a otro dispositivo, así que ahora es
+   * un soft-delete vía `deletedAt` (ver types/agenda.ts), igual que el
+   * resto de las entidades sincronizadas.
    */
   remove(id: string): Promise<void>
 }
@@ -108,7 +110,7 @@ class DexieAgendaBloqueRepository implements AgendaBloqueRepository {
   }
 
   async remove(id: string): Promise<void> {
-    await db.agendaBloques.delete(id)
+    await db.agendaBloques.update(id, { deletedAt: new Date().toISOString(), updatedAt: new Date().toISOString(), pendingSync: true })
   }
 }
 
