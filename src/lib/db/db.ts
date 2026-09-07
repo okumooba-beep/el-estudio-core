@@ -6,6 +6,7 @@ import type { FinanceAccount, FinanceMovimiento, FinanceGoal, FinanceIncomePerio
 import type { AgendaEvento, AgendaBloque } from '@/types/agenda'
 import type { AuditRuptura, AuditPremortem, AuditCorreccionSemanal, AuditConfig } from '@/types/auditoria'
 import type { NotesFolder, NotesNote } from '@/types/notes'
+import type { Recordatorio } from '@/types/recordatorio'
 import { extraerCategoria } from '@modules/finance/extraccion'
 
 interface LegacyNota {
@@ -32,9 +33,19 @@ export interface SyncMeta {
    * Fase 4), 'habits-sync' = Hábitos (habitChecks), 'trading-sync' =
    * Trading (operaciones), 'agenda-sync' = Agenda (eventos + bloques),
    * 'auditoria-sync' = Auditoría (rupturas + premortems + correcciones +
-   * config) — una fila propia por módulo sincronizado.
+   * config), 'recordatorios-sync' = Recordatorios (Fase 2, push real) —
+   * una fila propia por módulo sincronizado.
    */
-  id: 'sync' | 'notes-sync' | 'missions-sync' | 'ideas-sync' | 'habits-sync' | 'trading-sync' | 'agenda-sync' | 'auditoria-sync'
+  id:
+    | 'sync'
+    | 'notes-sync'
+    | 'missions-sync'
+    | 'ideas-sync'
+    | 'habits-sync'
+    | 'trading-sync'
+    | 'agenda-sync'
+    | 'auditoria-sync'
+    | 'recordatorios-sync'
   userId: string
   migratedAt: string | null
   migratedTables: string[]
@@ -71,6 +82,7 @@ class LifeosDB extends Dexie {
   notesFolders!: EntityTable<NotesFolder, 'id'>
   notesNotes!: EntityTable<NotesNote, 'id'>
   syncMeta!: EntityTable<SyncMeta, 'id'>
+  recordatorios!: EntityTable<Recordatorio, 'id'>
 
   constructor() {
     super('lifeos')
@@ -504,6 +516,16 @@ class LifeosDB extends Dexie {
      */
     this.version(20).stores({
       syncMeta: 'id',
+    })
+
+    /**
+     * Fase 2 (push real) — recordatorios programados que dispatch-reminders
+     * (Edge Function + pg_cron) manda como notificación push cuando llega
+     * `dispararEn` (ver supabase/recordatorios_schema.sql). Tabla nueva y
+     * vacía: no hay dato previo que migrar, el concepto no existía.
+     */
+    this.version(21).stores({
+      recordatorios: 'id, createdAt, dispararEn',
     })
   }
 }

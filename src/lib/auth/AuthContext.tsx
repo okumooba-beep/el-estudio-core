@@ -18,6 +18,8 @@ import {
   stopAgendaSync,
   bootstrapAuditoriaSync,
   stopAuditoriaSync,
+  bootstrapRecordatoriosSync,
+  stopRecordatoriosSync,
 } from '@/lib/sync/bootstrap'
 
 interface AuthResult {
@@ -79,6 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           await bootstrapTradingSync(nextSession.user.id)
           await bootstrapAgendaSync(nextSession.user.id)
           await bootstrapAuditoriaSync(nextSession.user.id)
+          await bootstrapRecordatoriosSync(nextSession.user.id)
         } catch (error) {
           console.error('[auth] bootstrap de sync falló:', error)
         }
@@ -93,6 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         stopTradingSync()
         stopAgendaSync()
         stopAuditoriaSync()
+        stopRecordatoriosSync()
       }
       if (activo) setLoading(false)
     }

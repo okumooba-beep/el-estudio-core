@@ -37,6 +37,12 @@ import {
   migrateAuditoriaOnFirstLogin,
   pushAuditoriaPending,
 } from './auditoriaSync'
+import {
+  allRecordatoriosEmpty,
+  hydrateRecordatoriosFromSupabase,
+  migrateRecordatoriosOnFirstLogin,
+  pushRecordatoriosPending,
+} from './recordatoriosSync'
 
 const PUSH_INTERVAL_MS = 20_000
 const FINANCE_TABLES = ['finance_accounts', 'finance_movimientos', 'finance_goals', 'finance_income_periods']
@@ -47,6 +53,7 @@ const HABITS_TABLES = ['habit_checks']
 const TRADING_TABLES = ['operaciones']
 const AGENDA_TABLES = ['agenda_eventos', 'agenda_bloques']
 const AUDITORIA_TABLES = ['audit_rupturas', 'audit_premortems', 'audit_correcciones', 'audit_config']
+const RECORDATORIOS_TABLES = ['recordatorios']
 
 let pushIntervalId: ReturnType<typeof setInterval> | null = null
 let onlineListener: (() => void) | null = null
@@ -79,6 +86,10 @@ let agendaBootstrappedUserId: string | null = null
 let auditoriaPushIntervalId: ReturnType<typeof setInterval> | null = null
 let auditoriaOnlineListener: (() => void) | null = null
 let auditoriaBootstrappedUserId: string | null = null
+
+let recordatoriosPushIntervalId: ReturnType<typeof setInterval> | null = null
+let recordatoriosOnlineListener: (() => void) | null = null
+let recordatoriosBootstrappedUserId: string | null = null
 
 async function markMigrated(userId: string, tablasConfirmadas: string[]): Promise<void> {
   const completo = FINANCE_TABLES.every((tabla) => tablasConfirmadas.includes(tabla))
@@ -154,6 +165,16 @@ async function markAuditoriaMigrated(userId: string, tablasConfirmadas: string[]
   const completo = AUDITORIA_TABLES.every((tabla) => tablasConfirmadas.includes(tabla))
   await db.syncMeta.put({
     id: 'auditoria-sync',
+    userId,
+    migratedAt: completo ? new Date().toISOString() : null,
+    migratedTables: tablasConfirmadas,
+  })
+}
+
+async function markRecordatoriosMigrated(userId: string, tablasConfirmadas: string[]): Promise<void> {
+  const completo = RECORDATORIOS_TABLES.every((tabla) => tablasConfirmadas.includes(tabla))
+  await db.syncMeta.put({
+    id: 'recordatorios-sync',
     userId,
     migratedAt: completo ? new Date().toISOString() : null,
     migratedTables: tablasConfirmadas,
@@ -248,6 +269,17 @@ function startAuditoriaPushLoop(userId: string): void {
   push()
 }
 
+function startRecordatoriosPushLoop(userId: string): void {
+  stopRecordatoriosSync()
+  const push = () => {
+    void pushRecordatoriosPending(userId)
+  }
+  recordatoriosPushIntervalId = setInterval(push, PUSH_INTERVAL_MS)
+  recordatoriosOnlineListener = push
+  window.addEventListener('online', recordatoriosOnlineListener)
+  push()
+}
+
 /** Se llama al cerrar sesión: no tiene sentido seguir subiendo datos sin un usuario activo. */
 export function stopFinanceSync(): void {
   if (pushIntervalId) clearInterval(pushIntervalId)
@@ -318,6 +350,15 @@ export function stopAuditoriaSync(): void {
   auditoriaPushIntervalId = null
   auditoriaOnlineListener = null
   auditoriaBootstrappedUserId = null
+}
+
+/** Se llama al cerrar sesión: no tiene sentido seguir subiendo datos sin un usuario activo. */
+export function stopRecordatoriosSync(): void {
+  if (recordatoriosPushIntervalId) clearInterval(recordatoriosPushIntervalId)
+  if (recordatoriosOnlineListener) window.removeEventListener('online', recordatoriosOnlineListener)
+  recordatoriosPushIntervalId = null
+  recordatoriosOnlineListener = null
+  recordatoriosBootstrappedUserId = null
 }
 
 /**
@@ -573,6 +614,36 @@ export async function bootstrapAuditoriaSync(userId: string): Promise<void> {
 
   auditoriaBootstrappedUserId = userId
   startAuditoriaPushLoop(userId)
+}
+
+/**
+ * Se llama una vez por sesión nueva (ver src/lib/auth/AuthContext.tsx),
+ * junto a los demás bootstrap*Sync. Mismo mecanismo, fila propia en
+ * `syncMeta` (`id: 'recordatorios-sync'`). Igual que Trading: tabla única,
+ * sin ninguna Idea asociada — sin particularidad (ver recordatoriosSync.ts).
+ */
+export async function bootstrapRecordatoriosSync(userId: string): Promise<void> {
+  if (recordatoriosBootstrappedUserId === userId) return
+
+  const meta = await db.syncMeta.get('recordatorios-sync')
+  if (meta && meta.userId !== userId) {
+    console.warn('[sync] syncMeta (recordatorios) pertenece a otro usuario — no se migra ni se hidrata automáticamente.')
+    return
+  }
+
+  if (!meta?.migratedAt) {
+    const vacia = await allRecordatoriosEmpty()
+    if (vacia) {
+      const tablasConfirmadas = await hydrateRecordatoriosFromSupabase(userId)
+      await markRecordatoriosMigrated(userId, tablasConfirmadas)
+    } else {
+      const tablasConfirmadas = await migrateRecordatoriosOnFirstLogin(userId)
+      await markRecordatoriosMigrated(userId, tablasConfirmadas)
+    }
+  }
+
+  recordatoriosBootstrappedUserId = userId
+  startRecordatoriosPushLoop(userId)
 }
 
 /**
