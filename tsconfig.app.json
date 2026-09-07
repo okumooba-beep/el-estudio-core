@@ -38,5 +38,8 @@
       "@modules/*": ["./src/modules/*"]
     }
   },
-  "include": ["src"]
+  "include": ["src"],
+  // src/sw.ts corre en un Service Worker (lib "webworker"), no en el DOM —
+  // tiene su propio proyecto, ver tsconfig.sw.json.
+  "exclude": ["src/sw.ts"]
 }

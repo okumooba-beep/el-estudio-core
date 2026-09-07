@@ -24,6 +24,7 @@ import { ResetPasswordScreen } from '@/features/auth/ResetPasswordScreen'
 import { RequireAuth } from '@/lib/auth/RequireAuth'
 import { useAuth } from '@/lib/auth/AuthContext'
 import { forceNotesResync } from '@/lib/sync/bootstrap'
+import { isPushSupported, subscribeToPush, sendTestPush } from '@/lib/push/pushClient'
 import { useAmbientLight } from '@world/light/useAmbientLight'
 
 /**
@@ -85,6 +86,9 @@ function App() {
                   accountEmail={user?.email ?? null}
                   onSignOut={signOut}
                   onForceNotesResync={user ? () => forceNotesResync(user.id) : null}
+                  pushSupported={isPushSupported()}
+                  onSubscribePush={user ? () => subscribeToPush(user.id) : null}
+                  onSendTestPush={user ? () => sendTestPush() : null}
                 />
               }
             />

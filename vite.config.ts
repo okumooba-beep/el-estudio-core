@@ -48,6 +48,15 @@ export default defineConfig({
     bundleSizeBudget(230 * 1024),
     VitePWA({
       registerType: 'autoUpdate',
+      // Fase 1 (push real): 'generateSW' (el default anterior) autogenera el
+      // service worker entero vía Workbox, sin ningún gancho para código
+      // propio — no hay forma de reaccionar a un evento `push` entrante ni a
+      // `notificationclick`. 'injectManifest' invierte el control: src/sw.ts
+      // es el service worker real (Rollup lo empaqueta), y Workbox solo
+      // inyecta el manifest de precache dentro de él (self.__WB_MANIFEST).
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       includeAssets: ['icon.svg'],
       manifest: {
         name: 'El Estudio',
@@ -68,9 +77,9 @@ export default defineConfig({
           { src: '/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
-      workbox: {
-        navigateFallback: '/index.html',
-      },
+      // La opción `workbox` (navigateFallback, etc.) solo aplica a
+      // 'generateSW' — con 'injectManifest' ese comportamiento se escribe a
+      // mano dentro de src/sw.ts (NavigationRoute + createHandlerBoundToURL).
     }),
   ],
   resolve: {

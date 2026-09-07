@@ -4,6 +4,9 @@ import { obtenerDatosParaExportar } from '@modules/finance/public'
 type EstadoExportar = 'idle' | 'exportando' | 'exportado' | 'error'
 type EstadoActualizar = 'idle' | 'buscando' | 'buscado' | 'sin-service-worker' | 'error'
 type EstadoResyncNotas = 'idle' | 'procesando' | 'listo' | 'error'
+type EstadoSuscripcionPush = 'ok' | 'sin-soporte' | 'sin-permiso' | 'sin-vapid-key' | 'error'
+type EstadoPush = 'idle' | 'suscribiendo' | EstadoSuscripcionPush
+type EstadoTestPush = 'idle' | 'enviando' | 'enviado' | 'error'
 
 /**
  * Ajustes — pantalla de utilidades del dispositivo, no un panel de
@@ -20,12 +23,27 @@ interface AjustesScreenProps {
   onSignOut: () => void
   /** `null` si no hay sesión activa — oculta la sección de re-sincronización de Notas. */
   onForceNotesResync: (() => Promise<void>) | null
+  /** Feature-detection de Web Push del navegador actual (Notification + PushManager + Service Worker). */
+  pushSupported: boolean
+  /** `null` si no hay sesión activa. */
+  onSubscribePush: (() => Promise<EstadoSuscripcionPush>) | null
+  /** `null` si no hay sesión activa. */
+  onSendTestPush: (() => Promise<boolean>) | null
 }
 
-export function AjustesScreen({ accountEmail, onSignOut, onForceNotesResync }: AjustesScreenProps) {
+export function AjustesScreen({
+  accountEmail,
+  onSignOut,
+  onForceNotesResync,
+  pushSupported,
+  onSubscribePush,
+  onSendTestPush,
+}: AjustesScreenProps) {
   const [estadoExportar, setEstadoExportar] = useState<EstadoExportar>('idle')
   const [estadoActualizar, setEstadoActualizar] = useState<EstadoActualizar>('idle')
   const [estadoResyncNotas, setEstadoResyncNotas] = useState<EstadoResyncNotas>('idle')
+  const [estadoPush, setEstadoPush] = useState<EstadoPush>('idle')
+  const [estadoTestPush, setEstadoTestPush] = useState<EstadoTestPush>('idle')
 
   async function handleExportar() {
     setEstadoExportar('exportando')
@@ -64,6 +82,20 @@ export function AjustesScreen({ accountEmail, onSignOut, onForceNotesResync }: A
     } catch {
       setEstadoActualizar('error')
     }
+  }
+
+  async function handleSuscribirPush() {
+    if (!onSubscribePush) return
+    setEstadoPush('suscribiendo')
+    const resultado = await onSubscribePush()
+    setEstadoPush(resultado)
+  }
+
+  async function handleTestPush() {
+    if (!onSendTestPush) return
+    setEstadoTestPush('enviando')
+    const ok = await onSendTestPush()
+    setEstadoTestPush(ok ? 'enviado' : 'error')
   }
 
   async function handleResyncNotas() {
@@ -134,6 +166,64 @@ export function AjustesScreen({ accountEmail, onSignOut, onForceNotesResync }: A
         )}
         {estadoActualizar === 'error' && (
           <p className="text-[13px] text-critical">No se pudo buscar una actualización. Probá de nuevo.</p>
+        )}
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <h2 className="text-[15px] text-ink">Notificaciones push (Fase 1)</h2>
+        {!pushSupported ? (
+          <p className="text-[13px] text-ink-dim">
+            Este navegador no soporta notificaciones push. En iPhone hace falta instalar la app desde
+            "Compartir → Agregar a inicio" (iOS 16.4+) — una pestaña normal de Safari no alcanza.
+          </p>
+        ) : (
+          <>
+            <p className="text-[13px] text-ink-dim">
+              Activá los recordatorios reales para este dispositivo y mandate una notificación de prueba para
+              confirmar que llega, incluso con la app cerrada.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="idea-destino self-start"
+                onClick={() => void handleSuscribirPush()}
+                disabled={!onSubscribePush || estadoPush === 'suscribiendo'}
+              >
+                {estadoPush === 'suscribiendo' ? 'Activando…' : 'Activar notificaciones'}
+              </button>
+              {estadoPush === 'ok' && (
+                <button
+                  type="button"
+                  className="idea-destino self-start"
+                  onClick={() => void handleTestPush()}
+                  disabled={!onSendTestPush || estadoTestPush === 'enviando'}
+                >
+                  {estadoTestPush === 'enviando' ? 'Enviando…' : 'Mandame una notificación de prueba'}
+                </button>
+              )}
+            </div>
+            {estadoPush === 'ok' && (
+              <p className="text-[13px] text-ink-dim">Notificaciones activadas en este dispositivo.</p>
+            )}
+            {estadoPush === 'sin-permiso' && (
+              <p className="text-[13px] text-critical">
+                Permiso denegado. Habilitalo en los ajustes de notificaciones del navegador/sistema y probá de
+                nuevo.
+              </p>
+            )}
+            {estadoPush === 'sin-vapid-key' && (
+              <p className="text-[13px] text-critical">Falta configurar VITE_VAPID_PUBLIC_KEY en este entorno.</p>
+            )}
+            {estadoPush === 'error' && (
+              <p className="text-[13px] text-critical">No se pudo activar. Probá de nuevo.</p>
+            )}
+            {estadoTestPush === 'enviado' && (
+              <p className="text-[13px] text-ink-dim">Enviada — debería llegarte en unos segundos.</p>
+            )}
+            {estadoTestPush === 'error' && (
+              <p className="text-[13px] text-critical">No se pudo enviar la notificación de prueba.</p>
+            )}
+          </>
         )}
       </section>
 
