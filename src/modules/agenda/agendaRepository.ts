@@ -61,6 +61,13 @@ export interface NuevoAgendaEvento {
 export interface AgendaEventoRepository extends Repository<AgendaEvento> {
   add(input: NuevoAgendaEvento): Promise<AgendaEvento>
   update(id: string, patch: Partial<Omit<AgendaEvento, 'id' | 'createdAt'>>): Promise<AgendaEvento>
+  /**
+   * Fase 3.1 (push real): mismo patrón que `AgendaBloqueRepository.remove` —
+   * soft-delete vía `deletedAt` (ver types/agenda.ts) más cancelación del
+   * recordatorio asociado, para que un Evento borrado nunca dispare una
+   * notificación de algo que el usuario ya eliminó.
+   */
+  remove(id: string): Promise<void>
 }
 
 class DexieAgendaEventoRepository implements AgendaEventoRepository {
@@ -96,6 +103,11 @@ class DexieAgendaEventoRepository implements AgendaEventoRepository {
     if (!updated) throw new Error(`Evento ${id} no encontrado`)
     await sincronizarRecordatorioEvento(updated)
     return updated
+  }
+
+  async remove(id: string): Promise<void> {
+    await db.agendaEventos.update(id, { deletedAt: new Date().toISOString(), updatedAt: new Date().toISOString(), pendingSync: true })
+    await cancelarRecordatorio('agenda_evento', id)
   }
 }
 

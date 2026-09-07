@@ -45,6 +45,15 @@ export interface AgendaEvento {
   createdAt: string
   updatedAt: string
   pendingSync: boolean
+  /**
+   * Fase 3.1 (push real): mismo patrón que `AgendaBloque.deletedAt` — sin
+   * tombstone, un borrado local nunca llega a Supabase ni a otro
+   * dispositivo. Se agrega ahora (sin que todavía exista UI de borrado de
+   * Eventos) para que `agendaEventoRepository.remove()` pueda cancelar el
+   * recordatorio asociado desde el día uno, en vez de depender de que
+   * quien construya esa UI se acuerde de hacerlo. Ausente = vivo.
+   */
+  deletedAt?: string
 }
 
 export interface AgendaBloque {

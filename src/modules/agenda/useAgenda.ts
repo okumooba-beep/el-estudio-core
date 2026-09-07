@@ -48,5 +48,10 @@ export function useAgenda() {
     setBloques((current) => current.filter((bloque) => bloque.id !== id))
   }
 
-  return { eventos, bloques, ready, addEvento, updateEvento, addBloque, updateBloque, removeBloque }
+  async function removeEvento(id: string): Promise<void> {
+    await agendaEventoRepository.remove(id)
+    setEventos((current) => current.filter((evento) => evento.id !== id))
+  }
+
+  return { eventos, bloques, ready, addEvento, updateEvento, addBloque, updateBloque, removeBloque, removeEvento }
 }
