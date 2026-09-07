@@ -64,6 +64,10 @@ export function MisionesScreen() {
   const [confirmarCompletarId, setConfirmarCompletarId] = useState<string | null>(null)
   /** id de la misión pendiente de confirmar eliminación (borrado lógico vía `deletedAt`, ver missionsSync.ts). */
   const [confirmarEliminarId, setConfirmarEliminarId] = useState<string | null>(null)
+  /** id de la misión cuyo selector de fecha/hora (programadaFecha/programadaHora) está abierto — null = cerrado. */
+  const [editarProgramacionId, setEditarProgramacionId] = useState<string | null>(null)
+  /** Valor del input datetime-local mientras se edita — formato `YYYY-MM-DDTHH:MM`. */
+  const [borradorProgramacion, setBorradorProgramacion] = useState('')
   /** Long-press sobre la fila: temporizador + bandera para suprimir el click sintético que el navegador dispara al soltar. */
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const suprimirClick = useRef(false)
@@ -97,31 +101,64 @@ export function MisionesScreen() {
   }
 
   /**
-   * Fase 3 (push real): a diferencia de Agenda (donde el toggle ya existía
-   * y solo hacía falta conectarlo), acá no hay ningún flujo que edite
+   * Fase 3.2: ahora que el selector de fecha/hora permite editar
    * `programadaFecha`/`programadaHora` después de creada la misión (ver
-   * handleDraftBlur) — por eso alcanza con calcular el disparo una sola
-   * vez, al activar, sin un `sincronizarRecordatorio` central como en
-   * agendaRepository.ts. Solo se puede llamar con ambos campos cargados
-   * (ver el botón condicionado más abajo).
+   * handleGuardarProgramacion), una alarma ya activa puede quedar
+   * apuntando a un horario viejo si no se recalcula en cada cambio —
+   * mismo problema que resuelve `sincronizarRecordatorioEvento` en
+   * agendaRepository.ts, acá replicado a nivel de pantalla porque
+   * `Idea`/`ideaRepository` es compartido por otros destinos que este
+   * sprint no toca (ver comentario de scope en recordatorios.ts).
+   * Recibe el estado YA fusionado (patch + mision), nunca el parcial.
    */
-  function handleToggleAlarma(mision: Idea) {
-    const activar = !mision.alarma
-    void update(mision.id, { alarma: activar })
-    if (!activar) {
-      void cancelarRecordatorio('mision', mision.id)
+  async function sincronizarRecordatorioMision(mision: Idea): Promise<void> {
+    if (!mision.alarma || !mision.programadaFecha || !mision.programadaHora) {
+      await cancelarRecordatorio('mision', mision.id)
       return
     }
-    if (!mision.programadaFecha || !mision.programadaHora) return
     const dispararEn = calcularDisparo(mision.programadaFecha, mision.programadaHora)
-    if (!dispararEn) return
-    void activarRecordatorio({
+    if (!dispararEn) {
+      await cancelarRecordatorio('mision', mision.id)
+      return
+    }
+    await activarRecordatorio({
       origenTipo: 'mision',
       origenId: mision.id,
       titulo: mision.texto,
       cuerpo: `Misión · ${formatearHora12(mision.programadaHora)}`,
       dispararEn,
     })
+  }
+
+  function handleToggleAlarma(mision: Idea) {
+    const activar = !mision.alarma
+    void update(mision.id, { alarma: activar })
+    void sincronizarRecordatorioMision({ ...mision, alarma: activar })
+  }
+
+  /** Abre el selector de fecha/hora con el valor actual precargado, o vacío si la misión todavía no tiene programación. */
+  function handleAbrirProgramacion(mision: Idea) {
+    setAccionesId(null)
+    setBorradorProgramacion(
+      mision.programadaFecha && mision.programadaHora ? `${mision.programadaFecha}T${mision.programadaHora}` : '',
+    )
+    setEditarProgramacionId(mision.id)
+  }
+
+  /**
+   * `datetime-local` entrega `YYYY-MM-DDTHH:MM` (a veces con segundos, que
+   * se descartan). Si el usuario cierra sin elegir nada, no se toca la
+   * misión. Si ya había una alarma activa, `sincronizarRecordatorioMision`
+   * recalcula el disparo contra la fecha/hora nueva en el mismo paso.
+   */
+  function handleGuardarProgramacion(mision: Idea) {
+    setEditarProgramacionId(null)
+    if (!borradorProgramacion) return
+    const [fecha, horaConSegundos] = borradorProgramacion.split('T')
+    const hora = horaConSegundos?.slice(0, 5)
+    if (!fecha || !hora) return
+    void update(mision.id, { programadaFecha: fecha, programadaHora: hora })
+    void sincronizarRecordatorioMision({ ...mision, programadaFecha: fecha, programadaHora: hora })
   }
 
   const LONG_PRESS_MS = 500
@@ -297,6 +334,13 @@ export function MisionesScreen() {
             >
               Agregar sub-tarea
             </button>
+            <button
+              type="button"
+              className="idea-destino"
+              onClick={() => handleAbrirProgramacion(mision)}
+            >
+              {mision.programadaFecha && mision.programadaHora ? 'Editar fecha/hora' : 'Programar fecha/hora'}
+            </button>
             {mision.programadaFecha && mision.programadaHora && (
               <button
                 type="button"
@@ -341,6 +385,28 @@ export function MisionesScreen() {
                 Confirmar
               </button>
               <button type="button" className="idea-destino" onClick={() => setConfirmarCompletarId(null)}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </li>
+      )}
+      {editarProgramacionId === mision.id && (
+        <li className="mision-fila-acciones">
+          <div className="flex flex-col gap-1">
+            <input
+              type="datetime-local"
+              autoFocus
+              value={borradorProgramacion}
+              onChange={(event) => setBorradorProgramacion(event.target.value)}
+              aria-label="Fecha y hora de la misión"
+              className="mision-nuevo-input"
+            />
+            <div className="idea-destinos" role="group" aria-label="Confirmar fecha y hora">
+              <button type="button" className="idea-destino" onClick={() => handleGuardarProgramacion(mision)}>
+                Guardar
+              </button>
+              <button type="button" className="idea-destino" onClick={() => setEditarProgramacionId(null)}>
                 Cancelar
               </button>
             </div>
