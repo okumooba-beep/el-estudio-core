@@ -13,6 +13,13 @@ function linkClass(isActive: boolean): string {
 
 const TOP_LEVEL_PATHS = new Set(MODULES.map((mod) => mod.path))
 
+/** Input, textarea o contenteditable — lo único que puede realmente abrir el teclado en pantalla. */
+function esEditable(el: Element | null): boolean {
+  if (!el) return false
+  const tag = el.tagName
+  return tag === 'INPUT' || tag === 'TEXTAREA' || (el as HTMLElement).isContentEditable
+}
+
 /**
  * iOS Safari: al abrir el teclado, `visualViewport` se achica pero
  * `position: fixed` sigue anclado al layout viewport completo (el que
@@ -22,6 +29,14 @@ const TOP_LEVEL_PATHS = new Set(MODULES.map((mod) => mod.path))
  * `transform` la diferencia exacta entre ambos viewports, recalculada
  * en cada resize/scroll de `visualViewport` (Safari dispara `scroll`
  * ahí, no en `window`, cuando el teclado sube/baja).
+ *
+ * El corrimiento solo se aplica con un input/textarea/contenteditable
+ * realmente enfocado (focusin/focusout en document, vía esEditable):
+ * en reposo, `visualViewport.height` puede reportar unos px menos que
+ * `window.innerHeight` por la franja del home indicator en iPhone —
+ * sin este freno, esa diferencia se leía como "teclado abierto" y
+ * el nav quedaba corrido hacia arriba todo el tiempo, destapando el
+ * fondo de la habitación (--canvas) en vez del propio de la barra.
  */
 function useNavAncladaAlViewportVisual<T extends HTMLElement>() {
   const ref = useRef<T>(null)
@@ -30,19 +45,40 @@ function useNavAncladaAlViewportVisual<T extends HTMLElement>() {
     const visualViewport = window.visualViewport
     if (!visualViewport) return
 
+    let hayInputEnfocado = esEditable(document.activeElement)
+
     function reanclar() {
       const nav = ref.current
       if (!nav || !visualViewport) return
+      if (!hayInputEnfocado) {
+        nav.style.transform = ''
+        return
+      }
       const tapadoPorTeclado = window.innerHeight - visualViewport.height - visualViewport.offsetTop
       nav.style.transform = tapadoPorTeclado > 0 ? `translateY(-${tapadoPorTeclado}px)` : ''
+    }
+
+    function onFocusIn(evento: FocusEvent) {
+      if (!esEditable(evento.target as Element | null)) return
+      hayInputEnfocado = true
+      reanclar()
+    }
+
+    function onFocusOut() {
+      hayInputEnfocado = false
+      reanclar()
     }
 
     reanclar()
     visualViewport.addEventListener('resize', reanclar)
     visualViewport.addEventListener('scroll', reanclar)
+    document.addEventListener('focusin', onFocusIn)
+    document.addEventListener('focusout', onFocusOut)
     return () => {
       visualViewport.removeEventListener('resize', reanclar)
       visualViewport.removeEventListener('scroll', reanclar)
+      document.removeEventListener('focusin', onFocusIn)
+      document.removeEventListener('focusout', onFocusOut)
     }
   }, [])
 

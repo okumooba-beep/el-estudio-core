@@ -114,7 +114,7 @@ export function AjustesScreen({
       <h1 className="font-mono text-[11px] uppercase tracking-wide text-accent">Ajustes</h1>
 
       <section className="flex flex-col gap-2">
-        <h2 className="text-[15px] text-ink">Cuenta</h2>
+        <h2 className="font-mono text-[11px] uppercase tracking-wide text-accent">Cuenta</h2>
         {accountEmail && <p className="text-[13px] text-ink-dim">Sesión iniciada como {accountEmail}.</p>}
         <button type="button" className="idea-destino self-start" onClick={onSignOut}>
           Cerrar sesión
@@ -122,7 +122,7 @@ export function AjustesScreen({
       </section>
 
       <section className="flex flex-col gap-2">
-        <h2 className="text-[15px] text-ink">Exportar datos</h2>
+        <h2 className="font-mono text-[11px] uppercase tracking-wide text-accent">Exportar datos</h2>
         <p className="text-[13px] text-ink-dim">
           Descarga un archivo JSON con todos los movimientos, cuentas, metas y períodos de Finanzas — un backup que
           podés guardar antes de actualizar o reinstalar la app.
@@ -142,7 +142,7 @@ export function AjustesScreen({
       </section>
 
       <section className="flex flex-col gap-2">
-        <h2 className="text-[15px] text-ink">Actualizar app</h2>
+        <h2 className="font-mono text-[11px] uppercase tracking-wide text-accent">Actualizar app</h2>
         <p className="text-[13px] text-ink-dim">
           Fuerza a la app a buscar una versión nueva ahora mismo, en vez de esperar el chequeo automático. Si
           encuentra una, se recarga sola en unos segundos. Esto nunca borra tus datos: viven aparte, en el
@@ -170,7 +170,7 @@ export function AjustesScreen({
       </section>
 
       <section className="flex flex-col gap-2">
-        <h2 className="text-[15px] text-ink">Notificaciones push (Fase 1)</h2>
+        <h2 className="font-mono text-[11px] uppercase tracking-wide text-accent">Notificaciones push (Fase 1)</h2>
         {!pushSupported ? (
           <p className="text-[13px] text-ink-dim">
             Este navegador no soporta notificaciones push. En iPhone hace falta instalar la app desde
@@ -229,7 +229,7 @@ export function AjustesScreen({
 
       {onForceNotesResync && (
         <section className="flex flex-col gap-2">
-          <h2 className="text-[15px] text-ink">Notas — forzar re-sincronización (temporal)</h2>
+          <h2 className="font-mono text-[11px] uppercase tracking-wide text-accent">Notas — forzar re-sincronización (temporal)</h2>
           <p className="text-[13px] text-ink-dim">
             Usalo solo si en este dispositivo Notas quedó vacío después de loguearte a pesar de tener carpetas o
             notas en otro dispositivo. Borra el estado de sincronización de Notas guardado en este dispositivo y
