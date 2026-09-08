@@ -16,10 +16,9 @@ import type { FurnitureId } from '../studio/furniture'
  * propio); un mueble reservado (Biblioteca) ya tiene lugar propio
  * aunque ninguna pantalla lo use todavía.
  *
- * `position` no es visual: es la misma escala 0-100 que ya usan los
- * dos focos de luz fijos de la habitación (room-layer-window en
- * 17/15, room-layer-lamp en 83/87 — ver src/index.css), aplicada acá
- * al nivel de la habitación entera en vez de al escritorio (que ya
+ * `position` no es visual: es una escala 0-100 sobre los dos ejes de
+ * la habitación (0,0 = esquina superior izquierda), aplicada acá al
+ * nivel de la habitación entera en vez de al escritorio (que ya
  * tiene la suya propia, RoomObjectPosition, ver
  * src/types/roomObject.ts). Nadie todavía dibuja estas coordenadas —
  * existen para que un futuro plano, o una futura cámara, tengan de

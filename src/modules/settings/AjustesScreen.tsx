@@ -7,6 +7,14 @@ type EstadoResyncNotas = 'idle' | 'procesando' | 'listo' | 'error'
 type EstadoSuscripcionPush = 'ok' | 'sin-soporte' | 'sin-permiso' | 'sin-vapid-key' | 'error'
 type EstadoPush = 'idle' | 'suscribiendo' | EstadoSuscripcionPush
 type EstadoTestPush = 'idle' | 'enviando' | 'enviado' | 'error'
+type EstadoFondo = 'idle' | 'guardando' | 'error'
+
+/** Duplicado a propósito de FondoOption (src/lib/room/roomBackgrounds.ts) — `settings-boundaries` en .dependency-cruiser.cjs no permite importar de src/lib, mismo motivo por el que EstadoSuscripcionPush está duplicado acá abajo en vez de importado de pushClient.ts. */
+interface FondoOption {
+  id: string
+  label: string
+  archivo: string
+}
 
 /**
  * Ajustes — pantalla de utilidades del dispositivo, no un panel de
@@ -29,6 +37,12 @@ interface AjustesScreenProps {
   onSubscribePush: (() => Promise<EstadoSuscripcionPush>) | null
   /** `null` si no hay sesión activa. */
   onSendTestPush: (() => Promise<boolean>) | null
+  /** Las 15 imágenes del banco de fondos (Sprint ROOM). */
+  fondos: FondoOption[]
+  /** Id del fondo actualmente activo — ya aplicado, no una elección pendiente. */
+  fondoActivo: string
+  /** Aplica el fondo (CSS var + caché local) y, si hay sesión, lo sube a Supabase. 'sin-sesion' cuando no hay usuario logueado — el fondo igual queda aplicado en este dispositivo. */
+  onSelectFondo: (fondoId: string) => Promise<'ok' | 'sin-sesion' | 'error'>
 }
 
 export function AjustesScreen({
@@ -38,12 +52,17 @@ export function AjustesScreen({
   pushSupported,
   onSubscribePush,
   onSendTestPush,
+  fondos,
+  fondoActivo,
+  onSelectFondo,
 }: AjustesScreenProps) {
   const [estadoExportar, setEstadoExportar] = useState<EstadoExportar>('idle')
   const [estadoActualizar, setEstadoActualizar] = useState<EstadoActualizar>('idle')
   const [estadoResyncNotas, setEstadoResyncNotas] = useState<EstadoResyncNotas>('idle')
   const [estadoPush, setEstadoPush] = useState<EstadoPush>('idle')
   const [estadoTestPush, setEstadoTestPush] = useState<EstadoTestPush>('idle')
+  const [estadoFondo, setEstadoFondo] = useState<EstadoFondo>('idle')
+  const [fondoConError, setFondoConError] = useState<string | null>(null)
 
   async function handleExportar() {
     setEstadoExportar('exportando')
@@ -96,6 +115,18 @@ export function AjustesScreen({
     setEstadoTestPush('enviando')
     const ok = await onSendTestPush()
     setEstadoTestPush(ok ? 'enviado' : 'error')
+  }
+
+  async function handleSeleccionarFondo(fondoId: string) {
+    setFondoConError(null)
+    setEstadoFondo('guardando')
+    const resultado = await onSelectFondo(fondoId)
+    if (resultado === 'error') {
+      setFondoConError(fondoId)
+      setEstadoFondo('error')
+    } else {
+      setEstadoFondo('idle')
+    }
   }
 
   async function handleResyncNotas() {
@@ -224,6 +255,44 @@ export function AjustesScreen({
               <p className="text-[13px] text-critical">No se pudo enviar la notificación de prueba.</p>
             )}
           </>
+        )}
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <h2 className="font-mono text-[11px] uppercase tracking-wide text-accent">Fondo de la habitación</h2>
+        <p className="text-[13px] text-ink-dim">
+          Elegí la imagen que compone la habitación. Cada fondo ya trae su propia luz y atmósfera.
+        </p>
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+          {fondos.map((fondo) => {
+            const activo = fondo.id === fondoActivo
+            return (
+              <button
+                key={fondo.id}
+                type="button"
+                aria-pressed={activo}
+                aria-label={fondo.label}
+                className={[
+                  'relative aspect-square overflow-hidden rounded-(--radius-sm) bg-cover bg-center transition-opacity active:opacity-70 motion-reduce:transition-none',
+                  activo ? 'ring-2 ring-accent' : 'ring-1 ring-border/40',
+                ].join(' ')}
+                style={{ backgroundImage: `url('/room/backgrounds/${fondo.archivo}')` }}
+                onClick={() => void handleSeleccionarFondo(fondo.id)}
+              >
+                {activo && (
+                  <span className="absolute inset-x-0 bottom-0 bg-canvas/70 px-1 py-0.5 text-center text-[10px] text-ink">
+                    Activo
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+        {estadoFondo === 'error' && (
+          <p className="text-[13px] text-critical">
+            "{fondos.find((f) => f.id === fondoConError)?.label ?? fondoConError}" quedó activo en este dispositivo,
+            pero no se pudo guardar en tu cuenta. Probá de nuevo.
+          </p>
         )}
       </section>
 

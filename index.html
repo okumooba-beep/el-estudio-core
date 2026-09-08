@@ -50,22 +50,21 @@
     <!--
       La habitación (ver src/components/room/RoomBackground.tsx) ya existe
       acá, en el HTML, antes de que React monte nada: mismas clases
-      .room-layer-* que ya pinta el motor de luz, sin script propio. Así
-      el espacio ya está iluminado con la hora real (applyLight corre
-      antes del primer paint) cuando la información recién empieza a
+      .room-layer-* de siempre, sin script propio. Así el espacio ya está
+      pintado con --room-photo/--canvas reales (applyLight/light-bootstrap
+      corren antes del primer paint) cuando la información recién empieza a
       montarse dentro de #root — la habitación aparece primero, nunca al
       revés (Sprint "Arrival").
 
-      Sprint 020 (World Visual Foundation): room-layer-photo es la base —
-      la foto North Star (public/room/estudio-hero.png) que hasta ahora
-      solo existía como asset sin usar. Ventana y lámpara siguen encima,
-      ahora como el acento de luz que respira sobre la foto real, no como
-      la habitación entera.
+      Sprint ROOM ("eliminar motor de luz + banco de fondos"): la ventana y
+      la lámpara (el resplandor direccional artificial que se superponía a
+      la foto) se eliminaron por completo — cada imagen del banco de fondos
+      ya trae su propia luz y atmósfera. room-layer-photo sigue siendo la
+      única base visual, ahora elegible desde Ajustes (ver
+      src/lib/room/roomBackgrounds.ts).
     -->
     <div aria-hidden class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
       <div class="room-layer-photo absolute inset-0"></div>
-      <div class="room-layer room-layer-window absolute inset-0"></div>
-      <div class="room-layer room-layer-lamp absolute inset-0"></div>
       <div class="room-layer-grain absolute inset-0"></div>
     </div>
     <div id="root"></div>

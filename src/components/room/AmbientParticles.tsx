@@ -3,10 +3,10 @@ import type { AmbientParticleDefinition } from '@/types/ambientParticle'
 
 /**
  * El polvo: motas de polvo suspendidas en la luz, no partículas de
- * videojuego. Prácticamente invisibles — solo se notan un instante
- * cuando cruzan el resplandor de la ventana, cerca de donde vive
- * .room-layer-window (ver src/index.css). Posiciones y duraciones fijas
- * a mano, no un sistema de partículas: son cuatro motas, no cientos.
+ * videojuego. Prácticamente invisibles — solo se notan un instante al
+ * cruzar el cuadrante superior/izquierdo de la habitación. Posiciones
+ * y duraciones fijas a mano, no un sistema de partículas: son cuatro
+ * motas, no cientos.
  *
  * "Reducir movimiento" hace desaparecer esta capa entera (ver
  * .ambient-particles en src/index.css) — no una versión más lenta,

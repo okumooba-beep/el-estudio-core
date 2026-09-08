@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Route, Routes, useLocation } from 'react-router-dom'
 import { AppShell } from '@/components/layout/AppShell'
 import { RoomBackground } from '@/components/room/RoomBackground'
@@ -26,6 +26,8 @@ import { useAuth } from '@/lib/auth/AuthContext'
 import { forceNotesResync } from '@/lib/sync/bootstrap'
 import { isPushSupported, subscribeToPush, sendTestPush } from '@/lib/push/pushClient'
 import { useAmbientLight } from '@world/light/useAmbientLight'
+import { FONDOS, aplicarFondo, leerFondoGuardado } from '@/lib/room/roomBackgrounds'
+import { obtenerFondoSeleccionado, setFondoSeleccionado } from '@/lib/room/roomBackgroundClient'
 
 /**
  * Sprint 018 ("Home: recuperar el lugar"): RoomBackground se monta una
@@ -53,10 +55,45 @@ function useRouteAttribute() {
   }, [location.pathname])
 }
 
+/**
+ * Sprint ROOM: el fondo elegido ya pintó antes del primer paint desde
+ * localStorage (ver src/light-bootstrap.ts) — esto solo lo reconcilia
+ * contra Supabase una vez que la sesión resuelve, para que un usuario que
+ * cambió de fondo en otro dispositivo lo vea acá también. Mismo patrón
+ * que forceNotesResync/hydrateNotesFromSupabase (src/lib/sync/bootstrap.ts),
+ * pero sin Dexie: una sola lectura, no una cola offline.
+ */
+function useFondoDeHabitacion(userId: string | undefined) {
+  const [fondoActivo, setFondoActivo] = useState<string>(() => leerFondoGuardado())
+
+  useEffect(() => {
+    if (!userId) return
+    let cancelado = false
+    void obtenerFondoSeleccionado(userId).then((fondoId) => {
+      if (cancelado || !fondoId) return
+      aplicarFondo(fondoId)
+      setFondoActivo(fondoId)
+    })
+    return () => {
+      cancelado = true
+    }
+  }, [userId])
+
+  async function seleccionarFondo(fondoId: string): Promise<'ok' | 'sin-sesion' | 'error'> {
+    aplicarFondo(fondoId)
+    setFondoActivo(fondoId)
+    if (!userId) return 'sin-sesion'
+    return setFondoSeleccionado(userId, fondoId)
+  }
+
+  return { fondoActivo, seleccionarFondo }
+}
+
 function App() {
   useAmbientLight()
   useRouteAttribute()
   const { user, signOut } = useAuth()
+  const { fondoActivo, seleccionarFondo } = useFondoDeHabitacion(user?.id)
 
   return (
     <>
@@ -89,6 +126,9 @@ function App() {
                   pushSupported={isPushSupported()}
                   onSubscribePush={user ? () => subscribeToPush(user.id) : null}
                   onSendTestPush={user ? () => sendTestPush() : null}
+                  fondos={FONDOS}
+                  fondoActivo={fondoActivo}
+                  onSelectFondo={seleccionarFondo}
                 />
               }
             />

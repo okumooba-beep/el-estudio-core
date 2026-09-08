@@ -278,21 +278,6 @@ textarea,
 }
 
 /*
-  La habitación: una ventana fría y una lámpara cálida, siempre las dos
-  presentes, nunca una luz central. Solo su opacidad cambia con la hora
-  (ver src/packages/world/light) — la forma y posición del gradiente es fija.
-*/
-.room-layer {
-  transition: opacity 60s linear;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .room-layer {
-    transition: none;
-  }
-}
-
-/*
   Sprint 020 (World Visual Foundation): la foto North Star ya vivía en
   public/room/estudio-hero.png (Fase 2 "El Estudio", ver stations.ts) pero
   ningún componente real la montaba nunca — el motor de cámara que la
@@ -331,7 +316,7 @@ textarea,
       rgba(12, 9, 7, 0.58) 45%,
       rgba(12, 9, 7, 0.68) 100%
     ),
-    url('/room/estudio-hero.png');
+    var(--room-photo, url('/room/estudio-hero.png'));
   background-repeat: no-repeat, no-repeat;
   /*
     La foto es 3:2 (1536x1024). En mobile (retrato) `cover` encuadra por
@@ -344,185 +329,6 @@ textarea,
   */
   background-position: 40% center, 40% center;
   background-size: cover, cover;
-}
-
-/*
-  Sprint "Framing the Studio": la ventana deja de ser un resplandor sin
-  forma y pasa a ser arquitectura — un vano real con marco y parteluces,
-  no solo luz ambiente. Sigue viviendo en el mismo div de siempre
-  (.room-layer-window, sin cambios en index.html) y sigue reaccionando
-  solo a --window-opacity: la forma y la posición quedan fijas, igual
-  que antes, coherente con worldMap.ventana (x:17, y:15). El blur es la
-  distancia: la ventana es el plano más lejano del cuarto, nunca debe
-  competir en nitidez con la veta de madera del escritorio, el plano más
-  cercano al ojo.
-*/
-.room-layer-window {
-  background:
-    linear-gradient(180deg, rgba(215, 228, 255, 0.9), rgba(180, 202, 240, 0.4) 75%, transparent 100%),
-    radial-gradient(ellipse 70% 60% at 50% 35%, rgba(190, 210, 255, 0.55), transparent 70%);
-  background-repeat: no-repeat, no-repeat;
-  background-position:
-    6% 5%,
-    17% 15%;
-  background-size:
-    24% 44%,
-    61% 48%;
-  filter: blur(2.5px);
-  /*
-    x0.55 (hallazgo post-arreglo del bug de apilamiento de <body>, mismo
-    Sprint "Framing the Studio"): esta ventana nunca había sido visible en
-    la app real, así que este techo de brillo nunca se había puesto a
-    prueba contra el nav fijo de AppShell.tsx, que vive en el mismo ancho
-    de viewport (aside md:w-52, ver AppShell.tsx). Al mediodía real
-    (--window-opacity ≈0.63) el resplandor sin atenuar lavaba el contraste
-    de los links no activos (text-ink-faint) del nav — un lugar no debería
-    apagar la puerta por la que se entra a él. El resplandor sigue
-    reaccionando 1:1 a la hora real, solo que ahora nunca compite con la
-    legibilidad del resto de la casa.
-
-    Threshold Experience V1 — "aumentar contraste, sin competir con la
-    interfaz": el mismo multiplicador baja un poco más (0.55 → 0.45).
-    Nunca se toca --window-opacity ni light/lightEngine.ts (la curva de
-    luz real del día): esto solo ajusta cuánto de esa luz llega a
-    pintarse encima del contenido, el mismo lever ya usado arriba.
-
-    Sprint 020 (World Visual Foundation): baja otra vez (0.45 → 0.2).
-    Antes esta franja fría ERA la única ventana que existía — ahora hay
-    una foto real de bosque debajo (.room-layer-photo) en la misma
-    posición (worldMap.ventana x:17 y:15, la coordenada que ya la
-    alineaba con la foto desde antes de que la foto se usara). Al 0.45
-    de antes, este resplandor celeste lavaba el verde del bosque real
-    hacia gris-azulado — exactamente el problema que este sprint corrige.
-    Ahora es solo el acento que respira con la hora del día sobre una
-    ventana que ya es de verdad.
-  */
-  opacity: calc(var(--window-opacity, 0.3) * 0.2);
-  animation: light-breathe-window 71s ease-in-out infinite;
-}
-
-.room-layer-window::before,
-.room-layer-window::after {
-  content: '';
-  position: absolute;
-  background: rgba(18, 15, 12, 0.4);
-}
-
-.room-layer-window::before {
-  left: 17.6%;
-  top: 5%;
-  width: 3px;
-  height: 44%;
-}
-
-.room-layer-window::after {
-  left: 6%;
-  top: 26%;
-  width: 24%;
-  height: 3px;
-}
-
-.room-layer-lamp {
-  background: radial-gradient(ellipse 66% 54% at 83% 87%, rgba(255, 190, 120, 0.85), transparent 60%);
-  /*
-    Build Core V1: la lámpara era la única luz sin distancia (sin blur,
-    a diferencia de la ventana — ver comentario de .room-layer-window).
-    Ahora que el cuarto pasa a ser solo atmósfera detrás de una
-    aplicación real, ninguna de las dos luces puede leerse más nítida
-    que el texto que vive encima.
-  */
-  filter: blur(3px);
-  opacity: var(--lamp-opacity, 0.3);
-  animation: light-breathe-lamp 56s ease-in-out infinite;
-}
-
-/*
-  La ventana nunca tapa la puerta (hallazgo de Sprint "Framing the
-  Studio", el mismo que la hizo visible por primera vez): AppShell.tsx
-  fija un nav a la izquierda (aside md:w-52, dentro de un contenedor
-  mx-auto max-w-6xl) desde md hacia arriba — el mismo lado frío del
-  cuarto donde vive esta ventana (17%, 15%). Antes esto era invisible
-  (ver el fix de <body> más arriba), así que este choque nunca se había
-  probado contra texto real. El recorte replica el borde real del aside
-  (mitad del margen sobrante del contenedor + su ancho + padding) para
-  que el resplandor exista pero nunca dentro de esa columna.
-*/
-@media (min-width: 768px) {
-  .room-layer-window {
-    clip-path: inset(0 0 0 calc(max(0px, (100vw - 72rem) / 2) + 15rem));
-  }
-}
-
-/*
-  Sprint 020 (World Visual Foundation): el clip de arriba solo protegía
-  el nav de escritorio (aside, ≥768px) — en mobile este resplandor nunca
-  tuvo un límite. Invisible cuando atrás solo había --canvas casi negro;
-  ahora que .room-layer-photo trae una foto real, el mismo problema que
-  "Framing the Studio" ya resolvió para el nav y Sprint 018 para el
-  saludo de Hoy aparece en el resto de las pantallas: en mobile no hay
-  aside que empuje el contenido, así que el título de cada pantalla
-  arranca en la misma esquina superior izquierda donde vive esta
-  ventana por defecto. Un clip-path deja un borde recto y duro — se lee
-  como panel, justo lo que este sprint corrige. La solución ya probada
-  es la de Hoy: mover la ventana a la esquina donde no hay texto, no
-  recortarla. Acá se generaliza esa misma idea (misma técnica, sin
-  tocar el override de Hoy) a cualquier pantalla que no sea Hoy.
-*/
-@media (max-width: 767px) {
-  .room-layer-window {
-    background-position:
-      94% 4%,
-      85% 13%;
-  }
-}
-
-/*
-  Sprint 018 ("Home: recuperar el lugar"): en Home el vano/parteluz de
-  .room-layer-window (que en el resto de la app queda detrás de
-  contenido más angosto o corrido, ver el clip-path de arriba) caía
-  directo sobre el saludo, la voz ambiental y la lectura del día —
-  literalmente una línea de parteluz atravesando texto real, el mismo
-  problema de legibilidad que "Framing the Studio" ya resolvió para el
-  nav, ahora en el flujo vertical propio de Home. Nunca se toca la
-  forma ni la posición del gradiente (siguen fijas, worldMap.ventana
-  x:17 y:15): solo se recorta qué porción de esa ventana ya existente
-  llega a pintarse sobre Home, para que la luz quede como presencia de
-  esquina superior derecha en vez de un haz sobre el bloque de texto.
-  html[data-route="hoy"] es del mismo tamaño que .room-layer-window en
-  todas las demás pantallas — cero cambio fuera de Home.
-*/
-html[data-route='hoy'] .room-layer-window {
-  background-position:
-    92% 0%,
-    88% 0%;
-  clip-path: inset(0 0 55% 0);
-}
-
-html[data-route='hoy'] .room-layer-window::before {
-  left: 89.6%;
-}
-
-html[data-route='hoy'] .room-layer-window::after {
-  left: 78%;
-  top: 0%;
-}
-
-@media (min-width: 768px) {
-  html[data-route='hoy'] .room-layer-window {
-    clip-path: inset(0 0 0 calc(max(0px, (100vw - 72rem) / 2) + 15rem));
-    background-position:
-      6% 5%,
-      17% 15%;
-  }
-
-  html[data-route='hoy'] .room-layer-window::before {
-    left: 17.6%;
-  }
-
-  html[data-route='hoy'] .room-layer-window::after {
-    left: 6%;
-    top: 26%;
-  }
 }
 
 /*
@@ -557,59 +363,6 @@ html[data-route='hoy'] .room-layer-window::after {
   z-index: -1;
   pointer-events: none;
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.2) 0%, transparent 18%, transparent 62%, rgba(0, 0, 0, 0.38) 100%);
-}
-
-/*
-  No respira la habitación: respira la luz. La forma y la posición del
-  degradado quedan fijas — moverlas sería la habitación misma
-  desplazándose. Lo único que oscila es la intensidad, y tan poco y tan
-  despacio que no debería leerse como una animación (Implementación 09,
-  punto 07 — "si el usuario nota claramente la animación, es
-  demasiado"): períodos largos y no redondos (71s y 56s) para que nunca
-  coincidan ni se sientan cíclicos, y una amplitud mínima, como una nube
-  fina que apenas atenúa la ventana o una lámpara que tiembla un poco.
-  Cada keyframe multiplica la opacidad que ya escribe el motor de luz
-  (var(--window-opacity) / var(--lamp-opacity)) en vez de reemplazarla,
-  para que la respiración nunca contradiga la hora del día real.
-
-  Sprint "Ambient Life Engine v1.0" (window_light_shift, ver
-  ambientEvents.ts): la ventana no solo respira parejo — el pozo del
-  medio se estira (35%→68%) en vez de un único pico en 50%, para que se
-  sienta más como una nube real cruzando despacio que como un pulso
-  mecánico. Sigue siendo la misma animación de siempre, mismo nombre,
-  mismo elemento: solo más forma en el medio.
-*/
-@keyframes light-breathe-window {
-  0%,
-  100% {
-    opacity: var(--window-opacity, 0.3);
-  }
-  35% {
-    opacity: calc(var(--window-opacity, 0.3) * 0.97);
-  }
-  50% {
-    opacity: calc(var(--window-opacity, 0.3) * 0.92);
-  }
-  68% {
-    opacity: calc(var(--window-opacity, 0.3) * 0.96);
-  }
-}
-
-@keyframes light-breathe-lamp {
-  0%,
-  100% {
-    opacity: var(--lamp-opacity, 0.3);
-  }
-  50% {
-    opacity: calc(var(--lamp-opacity, 0.3) * 1.035);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .room-layer-window,
-  .room-layer-lamp {
-    animation: none;
-  }
 }
 
 /*
@@ -4146,9 +3899,7 @@ html[data-route='hoy'] .room-layer-window::after {
   otra ruta toca `.room-layer-*` ni recibe `.finanzas-tarjeta`.
 */
 html[data-route='finanzas'] .room-layer-photo,
-html[data-route='finanzas'] .room-layer,
-html[data-route='notas'] .room-layer-photo,
-html[data-route='notas'] .room-layer {
+html[data-route='notas'] .room-layer-photo {
   position: fixed;
 }
 
