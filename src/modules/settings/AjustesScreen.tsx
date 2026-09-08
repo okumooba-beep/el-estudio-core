@@ -14,6 +14,7 @@ interface FondoOption {
   id: string
   label: string
   archivo: string
+  ruta: string
 }
 
 /**
@@ -63,6 +64,7 @@ export function AjustesScreen({
   const [estadoTestPush, setEstadoTestPush] = useState<EstadoTestPush>('idle')
   const [estadoFondo, setEstadoFondo] = useState<EstadoFondo>('idle')
   const [fondoConError, setFondoConError] = useState<string | null>(null)
+  const [grillaFondosAbierta, setGrillaFondosAbierta] = useState(false)
 
   async function handleExportar() {
     setEstadoExportar('exportando')
@@ -141,7 +143,7 @@ export function AjustesScreen({
   }
 
   return (
-    <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10">
+    <div className="ajustes-superficie mx-auto flex max-w-xl flex-col gap-8 p-4 sm:p-6">
       <h1 className="font-mono text-[11px] uppercase tracking-wide text-accent">Ajustes</h1>
 
       <section className="flex flex-col gap-2">
@@ -259,35 +261,47 @@ export function AjustesScreen({
       </section>
 
       <section className="flex flex-col gap-2">
-        <h2 className="font-mono text-[11px] uppercase tracking-wide text-accent">Fondo de la habitación</h2>
+        <button
+          type="button"
+          className="flex items-center justify-between gap-2 text-left"
+          aria-expanded={grillaFondosAbierta}
+          onClick={() => setGrillaFondosAbierta((abierta) => !abierta)}
+        >
+          <h2 className="font-mono text-[11px] uppercase tracking-wide text-accent">Fondo del estudio</h2>
+          <span aria-hidden className="font-mono text-[11px] text-ink-dim">
+            {grillaFondosAbierta ? '−' : '+'}
+          </span>
+        </button>
         <p className="text-[13px] text-ink-dim">
           Elegí la imagen que compone la habitación. Cada fondo ya trae su propia luz y atmósfera.
         </p>
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-          {fondos.map((fondo) => {
-            const activo = fondo.id === fondoActivo
-            return (
-              <button
-                key={fondo.id}
-                type="button"
-                aria-pressed={activo}
-                aria-label={fondo.label}
-                className={[
-                  'relative aspect-square overflow-hidden rounded-(--radius-sm) bg-cover bg-center transition-opacity active:opacity-70 motion-reduce:transition-none',
-                  activo ? 'ring-2 ring-accent' : 'ring-1 ring-border/40',
-                ].join(' ')}
-                style={{ backgroundImage: `url('/room/backgrounds/${fondo.archivo}')` }}
-                onClick={() => void handleSeleccionarFondo(fondo.id)}
-              >
-                {activo && (
-                  <span className="absolute inset-x-0 bottom-0 bg-canvas/70 px-1 py-0.5 text-center text-[10px] text-ink">
-                    Activo
-                  </span>
-                )}
-              </button>
-            )
-          })}
-        </div>
+        {grillaFondosAbierta && (
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+            {fondos.map((fondo) => {
+              const activo = fondo.id === fondoActivo
+              return (
+                <button
+                  key={fondo.id}
+                  type="button"
+                  aria-pressed={activo}
+                  aria-label={fondo.label}
+                  className={[
+                    'relative aspect-square overflow-hidden rounded-(--radius-sm) bg-cover bg-center transition-opacity active:opacity-70 motion-reduce:transition-none',
+                    activo ? 'ring-2 ring-accent' : 'ring-1 ring-border/40',
+                  ].join(' ')}
+                  style={{ backgroundImage: `url('${fondo.ruta}')` }}
+                  onClick={() => void handleSeleccionarFondo(fondo.id)}
+                >
+                  {activo && (
+                    <span className="absolute inset-x-0 bottom-0 bg-canvas/70 px-1 py-0.5 text-center text-[10px] text-ink">
+                      Activo
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        )}
         {estadoFondo === 'error' && (
           <p className="text-[13px] text-critical">
             "{fondos.find((f) => f.id === fondoConError)?.label ?? fondoConError}" quedó activo en este dispositivo,

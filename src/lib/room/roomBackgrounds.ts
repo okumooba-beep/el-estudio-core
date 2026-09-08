@@ -20,24 +20,37 @@ export interface FondoOption {
   id: string
   label: string
   archivo: string
+  /** Ruta pública real del archivo — todas viven en /room/backgrounds/ salvo '33', que apunta a la North Star original (/room/estudio-hero.png, ver comentario más abajo). */
+  ruta: string
+}
+
+function fondoDeBanco(id: string, label: string, archivo: string): FondoOption {
+  return { id, label, archivo, ruta: `/room/backgrounds/${archivo}` }
 }
 
 export const FONDOS: FondoOption[] = [
-  { id: 'brutalismo_minimalismo_1', label: 'Brutalismo minimalista', archivo: 'brutalismo_minimalismo_1.png' },
-  { id: 'brutalismo_noche', label: 'Brutalismo — noche', archivo: 'brutalismo_noche.png' },
-  { id: 'campo_3', label: 'Campo', archivo: 'campo_3.png' },
-  { id: 'ciudad_1_dia', label: 'Ciudad — día', archivo: 'ciudad_1_dia.png' },
-  { id: 'ciudad_2_noche', label: 'Ciudad — noche', archivo: 'ciudad_2_noche.png' },
-  { id: 'ciudad_noche_3', label: 'Ciudad de noche', archivo: 'ciudad_noche_3.png' },
-  { id: 'costa_1_dia', label: 'Costa — día', archivo: 'costa_1_dia.png' },
-  { id: 'desierto_1', label: 'Desierto', archivo: 'desierto_1.png' },
-  { id: 'futurista_1', label: 'Futurista', archivo: 'futurista_1.png' },
-  { id: 'minimal_zen_1', label: 'Minimal zen', archivo: 'minimal_zen_1.png' },
-  { id: 'montana_2', label: 'Montaña', archivo: 'montana_2.png' },
-  { id: 'naturaleza_1', label: 'Naturaleza', archivo: 'naturaleza_1.png' },
-  { id: 'piedra_natural_1', label: 'Piedra natural', archivo: 'piedra_natural_1.png' },
-  { id: 'playa_1', label: 'Playa', archivo: 'playa_1.png' },
-  { id: '33', label: '33', archivo: '33.png' },
+  fondoDeBanco('brutalismo_minimalismo_1', 'Brutalismo minimalista', 'brutalismo_minimalismo_1.png'),
+  fondoDeBanco('brutalismo_noche', 'Brutalismo — noche', 'brutalismo_noche.png'),
+  fondoDeBanco('campo_3', 'Campo', 'campo_3.png'),
+  fondoDeBanco('ciudad_1_dia', 'Ciudad — día', 'ciudad_1_dia.png'),
+  fondoDeBanco('ciudad_2_noche', 'Ciudad — noche', 'ciudad_2_noche.png'),
+  fondoDeBanco('ciudad_noche_3', 'Ciudad de noche', 'ciudad_noche_3.png'),
+  fondoDeBanco('costa_1_dia', 'Costa — día', 'costa_1_dia.png'),
+  fondoDeBanco('desierto_1', 'Desierto', 'desierto_1.png'),
+  fondoDeBanco('futurista_1', 'Futurista', 'futurista_1.png'),
+  fondoDeBanco('minimal_zen_1', 'Minimal zen', 'minimal_zen_1.png'),
+  fondoDeBanco('montana_2', 'Montaña', 'montana_2.png'),
+  fondoDeBanco('naturaleza_1', 'Naturaleza', 'naturaleza_1.png'),
+  fondoDeBanco('piedra_natural_1', 'Piedra natural', 'piedra_natural_1.png'),
+  fondoDeBanco('playa_1', 'Playa', 'playa_1.png'),
+  /*
+    Sprint "Room / Ajustes: 4 cambios puntuales" (§2) — '33' es la North
+    Star original (Sprint 020, ver comentario de .room-layer-photo en
+    src/index.css): apunta directo a /room/estudio-hero.png, la
+    composición protegida, no a la copia que el banco de 15 fondos había
+    guardado en backgrounds/33.png.
+  */
+  { id: '33', label: '33', archivo: '33.png', ruta: '/room/estudio-hero.png' },
 ]
 
 /** North Star: el fondo por defecto cuando el usuario nunca eligió uno. */
@@ -47,7 +60,7 @@ const CLAVE_LOCAL = 'room.fondo'
 
 function urlDeFondo(id: string): string {
   const fondo = FONDOS.find((f) => f.id === id) ?? FONDOS.find((f) => f.id === FONDO_DEFAULT)
-  return `/room/backgrounds/${fondo!.archivo}`
+  return fondo!.ruta
 }
 
 /** Última elección conocida en este dispositivo — lectura síncrona, para pintar antes de que React monte (ver src/light-bootstrap.ts). */

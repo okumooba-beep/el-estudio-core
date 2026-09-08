@@ -261,6 +261,22 @@ textarea,
 }
 
 /*
+  Sprint "Room / Ajustes: 4 cambios puntuales" (§3) — el contenido de
+  Ajustes flotaba directo sobre la foto de la habitación, sin superficie
+  propia (a diferencia del resto de la app). Mismo tratamiento que
+  .nav-inferior (mismo color-mix sobre --surface, mismo blur) para que
+  se lea como la misma placa tallada — pero como clase aparte, no
+  reutilizando .nav-inferior en sí: su borde superior y su sombra son
+  del panel de navegación, no de este contenido.
+*/
+.ajustes-superficie {
+  background: color-mix(in srgb, var(--surface) 90%, black 10%);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+/*
   Sprint 036 (hotfix) — la regla universal de deriva de luz (más abajo,
   `*, *::before, *::after { transition: background-color 60s linear,
   color 60s linear }`) también alcanzaba a estos links: nada acá fijaba
@@ -319,16 +335,16 @@ textarea,
     var(--room-photo, url('/room/estudio-hero.png'));
   background-repeat: no-repeat, no-repeat;
   /*
-    La foto es 3:2 (1536x1024). En mobile (retrato) `cover` encuadra por
-    alto y recorta el ancho a una tira ~31% central — 40% deja ese recorte
-    sobre escritorio + monitores + un borde de ventana/bosque, en vez de
-    caer sobre la estantería (80–100%, fuera de la tira) o el sofá
-    (0–25%, también fuera). En desktop (ancho ≥ alto*1.5) `cover` recorta
-    por ancho y se ve casi toda la foto entera, así que la misma posición
-    sigue funcionando sin una regla aparte.
+    Sprint "Room / Ajustes: 4 cambios puntuales" (§1) — `cover` recortaba
+    los costados de las 15 imágenes del banco de fondos para llenar el
+    viewport; `contain` muestra cada una completa, sin recorte, mismo
+    tratamiento para las 15 sin lógica especial por imagen. El espacio
+    sobrante (las franjas donde la foto no llega a cubrir) lo llena
+    --canvas de abajo, no negro puro ni transparencia.
   */
-  background-position: 40% center, 40% center;
-  background-size: cover, cover;
+  background-position: 40% center, center center;
+  background-size: cover, contain;
+  background-color: var(--canvas);
 }
 
 /*
