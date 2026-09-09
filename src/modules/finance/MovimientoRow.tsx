@@ -87,7 +87,8 @@ export function MovimientoRow({
   const [formAbierto, setFormAbierto] = useState(false)
   const [confirmandoBorrado, setConfirmandoBorrado] = useState(false)
   const [montoTexto, setMontoTexto] = useState(() => String(movimiento.monto))
-  const [fechaTexto, setFechaTexto] = useState(movimiento.fecha)
+  /** `.slice(0, 10)`: `movimiento.fecha` es `timestamptz` en Supabase — una fila sincronizada trae "...T00:00:00+00:00" pegado, y el <input type="date"> exige exactamente YYYY-MM-DD o queda vacío. */
+  const [fechaTexto, setFechaTexto] = useState(movimiento.fecha.slice(0, 10))
   const [monedaEditada, setMonedaEditada] = useState<Moneda>(movimiento.moneda)
   const [medioEditado, setMedioEditado] = useState<Medio>(movimiento.medio)
   const [conceptoTexto, setConceptoTexto] = useState(movimiento.concepto)
@@ -114,7 +115,7 @@ export function MovimientoRow({
 
   function abrirForm() {
     setMontoTexto(String(movimiento.monto))
-    setFechaTexto(movimiento.fecha)
+    setFechaTexto(movimiento.fecha.slice(0, 10))
     setMonedaEditada(movimiento.moneda)
     setMedioEditado(movimiento.medio)
     setConceptoTexto(movimiento.concepto)

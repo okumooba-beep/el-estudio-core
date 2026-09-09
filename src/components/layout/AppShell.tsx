@@ -47,7 +47,21 @@ function esEditable(el: Element | null): boolean {
  * `visualViewport` (el teclado cerrándose) aplica el corrimiento sin
  * que haya ningún input enfocado ya — el hueco persistente que
  * apareció en reposo, en la PWA instalada, sin teclado visible.
+ *
+ * Dato nuevo: el mismo desfasaje `window.innerHeight` vs
+ * `visualViewport.height` aparece SIN teclado, apenas se entra a una
+ * pantalla — Chrome/Safari en mobile todavía no asentaron el chrome
+ * dinámico (barra de direcciones) en el primer paint, `position: fixed`
+ * queda anclado al layout viewport "grande" (chrome oculto) mientras lo
+ * visible es el más chico (chrome mostrado), y el nav queda con un
+ * hueco debajo hasta que un scroll fuerza a asentar el chrome y
+ * recalcular. `UMBRAL_DESFASAJE_PX` separa ese caso (desfasaje grande,
+ * del orden de una barra de direcciones) del ruido de unos pocos px del
+ * home indicator en reposo que el freno de `esEditable` ya evitaba —
+ * sin el umbral, corregir siempre reabriría ese bug viejo.
  */
+const UMBRAL_DESFASAJE_PX = 30
+
 function useNavAncladaAlViewportVisual<T extends HTMLElement>() {
   const ref = useRef<T>(null)
 
@@ -58,12 +72,12 @@ function useNavAncladaAlViewportVisual<T extends HTMLElement>() {
     function reanclar() {
       const nav = ref.current
       if (!nav || !visualViewport) return
-      if (!esEditable(document.activeElement)) {
+      const desfasaje = window.innerHeight - visualViewport.height - visualViewport.offsetTop
+      if (!esEditable(document.activeElement) && desfasaje < UMBRAL_DESFASAJE_PX) {
         nav.style.transform = ''
         return
       }
-      const tapadoPorTeclado = window.innerHeight - visualViewport.height - visualViewport.offsetTop
-      nav.style.transform = tapadoPorTeclado > 0 ? `translateY(-${tapadoPorTeclado}px)` : ''
+      nav.style.transform = desfasaje > 0 ? `translateY(-${desfasaje}px)` : ''
     }
 
     reanclar()

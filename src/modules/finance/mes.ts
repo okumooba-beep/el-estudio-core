@@ -217,9 +217,16 @@ export function etiquetaSemana(mes: string, semana: number): string {
   return `${desde}–${hasta} ${nombreMes}`
 }
 
-/** "8 agosto" — la fecha de un movimiento individual en las listas de detalle (Sprint 016). */
+/**
+ * "8 agosto" — la fecha de un movimiento individual en las listas de
+ * detalle (Sprint 016). `.slice(0, 10)`: `fecha` es `timestamptz` en
+ * Supabase, así que una fila ya sincronizada vuelve como
+ * "2026-08-08T00:00:00+00:00", no "2026-08-08" — sin el recorte,
+ * `${fecha}T00:00:00` arma un string con dos horarios pegados y
+ * `new Date(...)` da "Invalid Date".
+ */
 export function etiquetaDia(fecha: string): string {
-  return new Date(`${fecha}T00:00:00`).toLocaleDateString('es-AR', { day: 'numeric', month: 'long' })
+  return new Date(`${fecha.slice(0, 10)}T00:00:00`).toLocaleDateString('es-AR', { day: 'numeric', month: 'long' })
 }
 
 /**

@@ -9,9 +9,17 @@
  * por día-del-mes que usan los egresos, un concepto distinto a propósito.
  */
 
-/** Fecha local a medianoche, igual que `etiquetaDia` en mes.ts — nunca vía Date.parse ni toISOString, para no correr un día por huso horario. */
+/**
+ * Fecha local a medianoche, igual que `etiquetaDia` en mes.ts — nunca vía
+ * Date.parse ni toISOString, para no correr un día por huso horario.
+ * `.slice(0, 10)` antes de partir: `fecha`/`fechaInicio`/`fechaFin` son
+ * `timestamptz` en Supabase (ver finance_schema.sql), así que cualquier
+ * fila que ya pasó por la base vuelve como "2026-08-31T00:00:00+00:00",
+ * no como "2026-08-31" — sin este recorte, partir por "-" agarra basura
+ * después del día y arma un Date inválido.
+ */
 function aFechaLocal(fechaISO: string): Date {
-  const partes = fechaISO.split('-')
+  const partes = fechaISO.slice(0, 10).split('-')
   const anio = Number(partes[0])
   const mes = Number(partes[1])
   const dia = Number(partes[2])
