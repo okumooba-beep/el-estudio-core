@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { MovimientoRow, type PatchMovimiento } from './MovimientoRow'
-import { formatearMonto } from './mes'
+import { formatearMonto, mesDe } from './mes'
 import { numeroDeSemana } from './semanaCobro'
 import type { FinanceMovimiento, FinanceIncomePeriod } from '@/types/finance'
 
@@ -201,6 +201,62 @@ function PeriodoBlock({
   )
 }
 
+/** El mes (YYYY-MM) al que pertenece un período, según el lunes con el que empieza. Una semana que cruza de mes se agrupa por dónde arranca. */
+function mesDePeriodo(periodo: FinanceIncomePeriod): string {
+  return periodo.fechaInicio.slice(0, 7)
+}
+
+/** "Septiembre 2026" — el `uppercase` del header ya lo mayusculiza, mismo criterio que `periodoLabel` en FinanceScreen. */
+function etiquetaMesConAnio(mes: string): string {
+  return new Date(`${mes}-02`).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
+}
+
+interface GrupoMesProps {
+  mes: string
+  periodos: readonly FinanceIncomePeriod[]
+  todosLosPeriodos: readonly FinanceIncomePeriod[]
+  ingresos: readonly FinanceMovimiento[]
+  abierto: boolean
+  onToggle: () => void
+  onEditar: (movimiento: FinanceMovimiento, patch: PatchMovimiento) => void
+  onEliminar: (movimiento: FinanceMovimiento) => void
+  onEliminarPeriodo: (periodoId: string) => void
+}
+
+/**
+ * Un mes es un acordeón propio (mismo patrón que la grilla de fondos en
+ * Ajustes): el mes en curso arranca abierto, el resto colapsado, para
+ * que "Ingresos" no vuelva a mostrar meses viejos mezclados con el
+ * actual apenas se entra a la pantalla.
+ */
+function GrupoMes({ mes, periodos, todosLosPeriodos, ingresos, abierto, onToggle, onEditar, onEliminar, onEliminarPeriodo }: GrupoMesProps) {
+  return (
+    <li className="flex flex-col gap-3">
+      <button type="button" className="flex items-center justify-between gap-2 text-left" aria-expanded={abierto} onClick={onToggle}>
+        <h2 className="font-mono text-[11px] uppercase tracking-wide text-accent">{etiquetaMesConAnio(mes)}</h2>
+        <span aria-hidden className="font-mono text-[11px] text-ink-dim">
+          {abierto ? '−' : '+'}
+        </span>
+      </button>
+      {abierto ? (
+        <ul className="flex flex-col gap-6">
+          {periodos.map((periodo) => (
+            <PeriodoBlock
+              key={periodo.id}
+              periodo={periodo}
+              movimientos={ingresos.filter((m) => m.periodoId === periodo.id)}
+              periodos={todosLosPeriodos}
+              onEditar={onEditar}
+              onEliminar={onEliminar}
+              onEliminarPeriodo={onEliminarPeriodo}
+            />
+          ))}
+        </ul>
+      ) : null}
+    </li>
+  )
+}
+
 /**
  * Sprint 036 — "Ingresos como períodos financieros reales". Reemplaza
  * el desglose por semana calendario (Sprint 016/Mini Sprint 032): antes
@@ -221,11 +277,31 @@ export function EntroDetalle({
 }: EntroDetalleProps) {
   const [creandoPeriodo, setCreandoPeriodo] = useState(false)
   const [fechaNueva, setFechaNueva] = useState('')
+  const mesActual = mesDe(new Date())
+  const [mesesAbiertos, setMesesAbiertos] = useState<Set<string>>(() => new Set([mesActual]))
 
   const periodosOrdenados = periodos.slice().sort((a, b) => a.fechaInicio.localeCompare(b.fechaInicio) || a.orden - b.orden)
   const idsConocidos = new Set(periodos.map((p) => p.id))
   const sinPeriodo = ingresos.filter((m) => !m.periodoId || !idsConocidos.has(m.periodoId))
   const { ars: totalArs, usd: totalUsd } = sumarPorMoneda(ingresos)
+
+  const periodosPorMes = new Map<string, FinanceIncomePeriod[]>()
+  for (const periodo of periodosOrdenados) {
+    const mes = mesDePeriodo(periodo)
+    const grupo = periodosPorMes.get(mes)
+    if (grupo) grupo.push(periodo)
+    else periodosPorMes.set(mes, [periodo])
+  }
+  const mesesOrdenados = Array.from(periodosPorMes.keys()).sort((a, b) => b.localeCompare(a))
+
+  function toggleMes(mes: string) {
+    setMesesAbiertos((actual) => {
+      const siguiente = new Set(actual)
+      if (siguiente.has(mes)) siguiente.delete(mes)
+      else siguiente.add(mes)
+      return siguiente
+    })
+  }
 
   const puedeCrear = fechaNueva.length === 10
 
@@ -253,12 +329,15 @@ export function EntroDetalle({
       </section>
 
       <ul className="flex flex-col gap-6">
-        {periodosOrdenados.map((periodo) => (
-          <PeriodoBlock
-            key={periodo.id}
-            periodo={periodo}
-            movimientos={ingresos.filter((m) => m.periodoId === periodo.id)}
-            periodos={periodos}
+        {mesesOrdenados.map((mes) => (
+          <GrupoMes
+            key={mes}
+            mes={mes}
+            periodos={periodosPorMes.get(mes) ?? []}
+            todosLosPeriodos={periodos}
+            ingresos={ingresos}
+            abierto={mesesAbiertos.has(mes)}
+            onToggle={() => toggleMes(mes)}
             onEditar={onEditar}
             onEliminar={onEliminar}
             onEliminarPeriodo={onEliminarPeriodo}
