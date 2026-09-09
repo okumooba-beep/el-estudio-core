@@ -72,18 +72,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (nextSession?.user && bootstrapping.current !== nextSession.user.id) {
         bootstrapping.current = nextSession.user.id
-        try {
-          await bootstrapFinanceSync(nextSession.user.id)
-          await bootstrapNotesSync(nextSession.user.id)
-          await bootstrapMissionsSync(nextSession.user.id)
-          await bootstrapIdeasSync(nextSession.user.id)
-          await bootstrapHabitsSync(nextSession.user.id)
-          await bootstrapTradingSync(nextSession.user.id)
-          await bootstrapAgendaSync(nextSession.user.id)
-          await bootstrapAuditoriaSync(nextSession.user.id)
-          await bootstrapRecordatoriosSync(nextSession.user.id)
-        } catch (error) {
-          console.error('[auth] bootstrap de sync falló:', error)
+        const userId = nextSession.user.id
+        /*
+          Cada bootstrap en su propio try/catch: antes compartían uno solo
+          alrededor de los nueve `await` seguidos, así que una excepción en
+          cualquiera de ellos (ej. Misiones) dejaba sin correr, en silencio,
+          a todos los que venían después en la lista (Ideas, Hábitos,
+          Trading, Agenda, Auditoría, Recordatorios) — sin ningún error
+          visible más que un console.error. Aislado así, el fallo de un
+          módulo ya no le cuesta los datos a los demás.
+        */
+        const bootstraps: Array<[string, () => Promise<void>]> = [
+          ['finance', () => bootstrapFinanceSync(userId)],
+          ['notes', () => bootstrapNotesSync(userId)],
+          ['missions', () => bootstrapMissionsSync(userId)],
+          ['ideas', () => bootstrapIdeasSync(userId)],
+          ['habits', () => bootstrapHabitsSync(userId)],
+          ['trading', () => bootstrapTradingSync(userId)],
+          ['agenda', () => bootstrapAgendaSync(userId)],
+          ['auditoria', () => bootstrapAuditoriaSync(userId)],
+          ['recordatorios', () => bootstrapRecordatoriosSync(userId)],
+        ]
+        for (const [nombre, bootstrap] of bootstraps) {
+          try {
+            await bootstrap()
+          } catch (error) {
+            console.error(`[auth] bootstrap de sync (${nombre}) falló:`, error)
+          }
         }
       }
       if (!nextSession) {
