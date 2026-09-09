@@ -31,12 +31,22 @@ function esEditable(el: Element | null): boolean {
  * ahí, no en `window`, cuando el teclado sube/baja).
  *
  * El corrimiento solo se aplica con un input/textarea/contenteditable
- * realmente enfocado (focusin/focusout en document, vía esEditable):
- * en reposo, `visualViewport.height` puede reportar unos px menos que
- * `window.innerHeight` por la franja del home indicator en iPhone —
- * sin este freno, esa diferencia se leía como "teclado abierto" y
- * el nav quedaba corrido hacia arriba todo el tiempo, destapando el
- * fondo de la habitación (--canvas) en vez del propio de la barra.
+ * realmente enfocado: en reposo, `visualViewport.height` puede reportar
+ * unos px menos que `window.innerHeight` por la franja del home
+ * indicator en iPhone — sin este freno, esa diferencia se leía como
+ * "teclado abierto" y el nav quedaba corrido hacia arriba, destapando
+ * el fondo de la habitación (--canvas) en vez del propio de la barra.
+ *
+ * ESA CONDICIÓN SE LEE EN VIVO (`document.activeElement`), nunca de un
+ * flag cacheado en focusin/focusout: si el input enfocado se desmonta
+ * sin perder el foco a mano antes (ej. el usuario escribe algo en "¿Qué
+ * tenés en mente?" y toca un ítem del nav para navegar — React Router
+ * desmonta la pantalla, y el input, con foco activo), el navegador
+ * nunca dispara `focusout` para un elemento sacado del DOM. Un flag
+ * cacheado se queda en `true` para siempre y el próximo resize de
+ * `visualViewport` (el teclado cerrándose) aplica el corrimiento sin
+ * que haya ningún input enfocado ya — el hueco persistente que
+ * apareció en reposo, en la PWA instalada, sin teclado visible.
  */
 function useNavAncladaAlViewportVisual<T extends HTMLElement>() {
   const ref = useRef<T>(null)
@@ -45,12 +55,10 @@ function useNavAncladaAlViewportVisual<T extends HTMLElement>() {
     const visualViewport = window.visualViewport
     if (!visualViewport) return
 
-    let hayInputEnfocado = esEditable(document.activeElement)
-
     function reanclar() {
       const nav = ref.current
       if (!nav || !visualViewport) return
-      if (!hayInputEnfocado) {
+      if (!esEditable(document.activeElement)) {
         nav.style.transform = ''
         return
       }
@@ -58,27 +66,16 @@ function useNavAncladaAlViewportVisual<T extends HTMLElement>() {
       nav.style.transform = tapadoPorTeclado > 0 ? `translateY(-${tapadoPorTeclado}px)` : ''
     }
 
-    function onFocusIn(evento: FocusEvent) {
-      if (!esEditable(evento.target as Element | null)) return
-      hayInputEnfocado = true
-      reanclar()
-    }
-
-    function onFocusOut() {
-      hayInputEnfocado = false
-      reanclar()
-    }
-
     reanclar()
     visualViewport.addEventListener('resize', reanclar)
     visualViewport.addEventListener('scroll', reanclar)
-    document.addEventListener('focusin', onFocusIn)
-    document.addEventListener('focusout', onFocusOut)
+    document.addEventListener('focusin', reanclar)
+    document.addEventListener('focusout', reanclar)
     return () => {
       visualViewport.removeEventListener('resize', reanclar)
       visualViewport.removeEventListener('scroll', reanclar)
-      document.removeEventListener('focusin', onFocusIn)
-      document.removeEventListener('focusout', onFocusOut)
+      document.removeEventListener('focusin', reanclar)
+      document.removeEventListener('focusout', reanclar)
     }
   }, [])
 

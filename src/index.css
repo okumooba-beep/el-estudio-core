@@ -335,15 +335,16 @@ textarea,
     var(--room-photo, url('/room/estudio-hero.png'));
   background-repeat: no-repeat, no-repeat;
   /*
-    Sprint "Room / Ajustes: 4 cambios puntuales" (§1) — `cover` recortaba
-    los costados de las 15 imágenes del banco de fondos para llenar el
-    viewport; `contain` muestra cada una completa, sin recorte, mismo
-    tratamiento para las 15 sin lógica especial por imagen. El espacio
-    sobrante (las franjas donde la foto no llega a cubrir) lo llena
-    --canvas de abajo, no negro puro ni transparencia.
+    Sprint "Room / Ajustes: 4 cambios puntuales" (§4) — `contain` (probado
+    en el §1 de este mismo sprint) volvió a `cover`: llenar el viewport
+    ganó sobre mostrar la imagen completa. Para compensar el recorte
+    lateral que eso trae de vuelta, la foto (segundo valor de cada
+    propiedad) suma --room-photo-position-x — Ajustes guarda ahí una de
+    tres posiciones fijas (left/center/right, ver roomBackgrounds.ts) que
+    el usuario elige a mano; nunca un encuadre automático por imagen.
   */
-  background-position: 40% center, center center;
-  background-size: cover, contain;
+  background-position: 40% center, var(--room-photo-position-x, center) center;
+  background-size: cover, cover;
   background-color: var(--canvas);
 }
 

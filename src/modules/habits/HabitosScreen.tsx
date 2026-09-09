@@ -47,7 +47,10 @@ export function HabitosScreen() {
   const { checks, ready: checksReady, toggle } = useHabitChecks()
   const [draftTexto, setDraftTexto] = useState<string | null>(null)
   const [orden, setOrden] = useState<string[]>(() => leerOrden())
-  const habitosSinOrden = ideas.filter((idea) => idea.destino === 'habitos')
+  /** `ideas` (useIdeas) viene más-nuevo-primero (ver ideaRepository.list) — acá se necesita el orden de creación real, ascendente, para que un hábito nuevo se agregue al final y no adelante de los que ya existían. */
+  const habitosSinOrden = ideas
+    .filter((idea) => idea.destino === 'habitos')
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
   const semana = fechasSemanaActual()
   const semanaSet = useMemo(() => new Set(semana), [semana])
   const hoyISO = new Date().toISOString().slice(0, 10)

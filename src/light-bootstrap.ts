@@ -1,5 +1,5 @@
 import { applyLight } from '@world/light/applyLight'
-import { aplicarFondo, leerFondoGuardado } from '@/lib/room/roomBackgrounds'
+import { aplicarFondo, leerFondoGuardado, aplicarPosicionX, leerPosicionXGuardada } from '@/lib/room/roomBackgrounds'
 
 // Se ejecuta antes que main.tsx (ver el orden de los <script> en index.html)
 // para que la habitación nunca haga un flash de la luz equivocada al abrir.
@@ -10,6 +10,7 @@ applyLight()
 // Supabase (otros dispositivos del mismo usuario) llega después, ya con
 // sesión resuelta, ver App.tsx.
 aplicarFondo(leerFondoGuardado())
+aplicarPosicionX(leerPosicionXGuardada())
 
 // La clase que bloquea toda transición (ver src/index.css) se saca recién
 // ahora, en el mismo tick en el que la luz real ya quedó escrita — así la

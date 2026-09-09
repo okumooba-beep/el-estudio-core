@@ -8,6 +8,7 @@ type EstadoSuscripcionPush = 'ok' | 'sin-soporte' | 'sin-permiso' | 'sin-vapid-k
 type EstadoPush = 'idle' | 'suscribiendo' | EstadoSuscripcionPush
 type EstadoTestPush = 'idle' | 'enviando' | 'enviado' | 'error'
 type EstadoFondo = 'idle' | 'guardando' | 'error'
+type EstadoPosicionX = 'idle' | 'guardando' | 'error'
 
 /** Duplicado a propósito de FondoOption (src/lib/room/roomBackgrounds.ts) — `settings-boundaries` en .dependency-cruiser.cjs no permite importar de src/lib, mismo motivo por el que EstadoSuscripcionPush está duplicado acá abajo en vez de importado de pushClient.ts. */
 interface FondoOption {
@@ -16,6 +17,15 @@ interface FondoOption {
   archivo: string
   ruta: string
 }
+
+/** Duplicado a propósito de PosicionX (src/lib/room/roomBackgrounds.ts) — mismo motivo que FondoOption arriba. */
+type PosicionX = 'left' | 'center' | 'right'
+
+const OPCIONES_POSICION_X: Array<{ id: PosicionX; label: string }> = [
+  { id: 'left', label: 'Izquierda' },
+  { id: 'center', label: 'Centro' },
+  { id: 'right', label: 'Derecha' },
+]
 
 /**
  * Ajustes — pantalla de utilidades del dispositivo, no un panel de
@@ -44,6 +54,10 @@ interface AjustesScreenProps {
   fondoActivo: string
   /** Aplica el fondo (CSS var + caché local) y, si hay sesión, lo sube a Supabase. 'sin-sesion' cuando no hay usuario logueado — el fondo igual queda aplicado en este dispositivo. */
   onSelectFondo: (fondoId: string) => Promise<'ok' | 'sin-sesion' | 'error'>
+  /** Posición horizontal manual de la foto ('center' por defecto) — ver comentario de .room-layer-photo en src/index.css. */
+  posicionXActiva: PosicionX
+  /** Aplica la posición (CSS var + caché local) y, si hay sesión, la sube a Supabase. Mismo contrato que onSelectFondo. */
+  onSelectPosicionX: (posicionX: PosicionX) => Promise<'ok' | 'sin-sesion' | 'error'>
 }
 
 export function AjustesScreen({
@@ -56,6 +70,8 @@ export function AjustesScreen({
   fondos,
   fondoActivo,
   onSelectFondo,
+  posicionXActiva,
+  onSelectPosicionX,
 }: AjustesScreenProps) {
   const [estadoExportar, setEstadoExportar] = useState<EstadoExportar>('idle')
   const [estadoActualizar, setEstadoActualizar] = useState<EstadoActualizar>('idle')
@@ -65,6 +81,7 @@ export function AjustesScreen({
   const [estadoFondo, setEstadoFondo] = useState<EstadoFondo>('idle')
   const [fondoConError, setFondoConError] = useState<string | null>(null)
   const [grillaFondosAbierta, setGrillaFondosAbierta] = useState(false)
+  const [estadoPosicionX, setEstadoPosicionX] = useState<EstadoPosicionX>('idle')
 
   async function handleExportar() {
     setEstadoExportar('exportando')
@@ -129,6 +146,12 @@ export function AjustesScreen({
     } else {
       setEstadoFondo('idle')
     }
+  }
+
+  async function handleSeleccionarPosicionX(posicionX: PosicionX) {
+    setEstadoPosicionX('guardando')
+    const resultado = await onSelectPosicionX(posicionX)
+    setEstadoPosicionX(resultado === 'error' ? 'error' : 'idle')
   }
 
   async function handleResyncNotas() {
@@ -308,6 +331,35 @@ export function AjustesScreen({
             pero no se pudo guardar en tu cuenta. Probá de nuevo.
           </p>
         )}
+
+        <div className="flex flex-col gap-2 pt-2">
+          <h3 className="font-mono text-[11px] uppercase tracking-wide text-ink-dim">Posición del fondo</h3>
+          <p className="text-[13px] text-ink-dim">
+            El fondo llena la pantalla y puede recortar los costados — elegí qué parte de la imagen queda visible.
+          </p>
+          <div className="flex gap-2">
+            {OPCIONES_POSICION_X.map((opcion) => {
+              const activa = opcion.id === posicionXActiva
+              return (
+                <button
+                  key={opcion.id}
+                  type="button"
+                  aria-pressed={activa}
+                  className={['idea-destino', activa ? 'ring-2 ring-accent' : ''].join(' ')}
+                  disabled={estadoPosicionX === 'guardando'}
+                  onClick={() => void handleSeleccionarPosicionX(opcion.id)}
+                >
+                  {opcion.label}
+                </button>
+              )
+            })}
+          </div>
+          {estadoPosicionX === 'error' && (
+            <p className="text-[13px] text-critical">
+              La posición quedó aplicada en este dispositivo, pero no se pudo guardar en tu cuenta. Probá de nuevo.
+            </p>
+          )}
+        </div>
       </section>
 
       {onForceNotesResync && (

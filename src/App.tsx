@@ -26,8 +26,20 @@ import { useAuth } from '@/lib/auth/AuthContext'
 import { forceNotesResync } from '@/lib/sync/bootstrap'
 import { isPushSupported, subscribeToPush, sendTestPush } from '@/lib/push/pushClient'
 import { useAmbientLight } from '@world/light/useAmbientLight'
-import { FONDOS, aplicarFondo, leerFondoGuardado } from '@/lib/room/roomBackgrounds'
-import { obtenerFondoSeleccionado, setFondoSeleccionado } from '@/lib/room/roomBackgroundClient'
+import {
+  FONDOS,
+  aplicarFondo,
+  leerFondoGuardado,
+  aplicarPosicionX,
+  leerPosicionXGuardada,
+  type PosicionX,
+} from '@/lib/room/roomBackgrounds'
+import {
+  obtenerFondoSeleccionado,
+  setFondoSeleccionado,
+  obtenerPosicionXSeleccionada,
+  setPosicionXSeleccionada,
+} from '@/lib/room/roomBackgroundClient'
 
 /**
  * Sprint 018 ("Home: recuperar el lugar"): RoomBackground se monta una
@@ -65,6 +77,7 @@ function useRouteAttribute() {
  */
 function useFondoDeHabitacion(userId: string | undefined) {
   const [fondoActivo, setFondoActivo] = useState<string>(() => leerFondoGuardado())
+  const [posicionXActiva, setPosicionXActiva] = useState<PosicionX>(() => leerPosicionXGuardada())
 
   useEffect(() => {
     if (!userId) return
@@ -73,6 +86,12 @@ function useFondoDeHabitacion(userId: string | undefined) {
       if (cancelado || !fondoId) return
       aplicarFondo(fondoId)
       setFondoActivo(fondoId)
+    })
+    void obtenerPosicionXSeleccionada(userId).then((posicionX) => {
+      if (cancelado || !posicionX) return
+      if (posicionX !== 'left' && posicionX !== 'center' && posicionX !== 'right') return
+      aplicarPosicionX(posicionX)
+      setPosicionXActiva(posicionX)
     })
     return () => {
       cancelado = true
@@ -86,14 +105,21 @@ function useFondoDeHabitacion(userId: string | undefined) {
     return setFondoSeleccionado(userId, fondoId)
   }
 
-  return { fondoActivo, seleccionarFondo }
+  async function seleccionarPosicionX(posicionX: PosicionX): Promise<'ok' | 'sin-sesion' | 'error'> {
+    aplicarPosicionX(posicionX)
+    setPosicionXActiva(posicionX)
+    if (!userId) return 'sin-sesion'
+    return setPosicionXSeleccionada(userId, posicionX)
+  }
+
+  return { fondoActivo, seleccionarFondo, posicionXActiva, seleccionarPosicionX }
 }
 
 function App() {
   useAmbientLight()
   useRouteAttribute()
   const { user, signOut } = useAuth()
-  const { fondoActivo, seleccionarFondo } = useFondoDeHabitacion(user?.id)
+  const { fondoActivo, seleccionarFondo, posicionXActiva, seleccionarPosicionX } = useFondoDeHabitacion(user?.id)
 
   return (
     <>
@@ -129,6 +155,8 @@ function App() {
                   fondos={FONDOS}
                   fondoActivo={fondoActivo}
                   onSelectFondo={seleccionarFondo}
+                  posicionXActiva={posicionXActiva}
+                  onSelectPosicionX={seleccionarPosicionX}
                 />
               }
             />

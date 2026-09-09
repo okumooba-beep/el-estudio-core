@@ -73,3 +73,35 @@ export function aplicarFondo(id: string): void {
   document.documentElement.style.setProperty('--room-photo', `url('${urlDeFondo(id)}')`)
   writeJSON(CLAVE_LOCAL, id)
 }
+
+/**
+ * Sprint "Room / Ajustes: 4 cambios puntuales" (§4) — control manual de
+ * posición horizontal, independiente del fondo elegido: cada imagen del
+ * banco puede necesitar un recorte distinto una vez que .room-layer-photo
+ * vuelve a `cover` (ver src/index.css). Tres posiciones fijas, elegidas a
+ * mano por el usuario en Ajustes — nunca un encuadre automático por
+ * imagen. Mismo mecanismo que el fondo: localStorage + --room-photo-
+ * position-x en :root, con Supabase (room_preferences.posicion_x) como
+ * reflejo entre dispositivos (ver roomBackgroundClient.ts).
+ */
+export type PosicionX = 'left' | 'center' | 'right'
+
+export const POSICION_X_DEFAULT: PosicionX = 'center'
+
+const CLAVE_LOCAL_POSICION_X = 'room.posicionX'
+
+function esPosicionXValida(valor: unknown): valor is PosicionX {
+  return valor === 'left' || valor === 'center' || valor === 'right'
+}
+
+/** Última posición conocida en este dispositivo — lectura síncrona, para pintar antes de que React monte (ver src/light-bootstrap.ts). */
+export function leerPosicionXGuardada(): PosicionX {
+  const valor = readJSON<string>(CLAVE_LOCAL_POSICION_X, POSICION_X_DEFAULT)
+  return esPosicionXValida(valor) ? valor : POSICION_X_DEFAULT
+}
+
+/** Escribe --room-photo-position-x en :root y cachea la elección en este dispositivo. */
+export function aplicarPosicionX(posicion: PosicionX): void {
+  document.documentElement.style.setProperty('--room-photo-position-x', posicion)
+  writeJSON(CLAVE_LOCAL_POSICION_X, posicion)
+}
