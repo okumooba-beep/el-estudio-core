@@ -81,11 +81,19 @@ function useNavAncladaAlViewportVisual<T extends HTMLElement>() {
     }
 
     reanclar()
+    // La primera medición (arriba) puede correr antes de que el navegador
+    // termine de asentar el chrome dinámico del primer paint — a veces
+    // todavía no hay desfasaje que medir en ese tick exacto. Un segundo
+    // recálculo post-paint (rAF) agarra el valor ya asentado sin esperar
+    // a que el usuario dispare el primer scroll/resize/foco.
+    const idPostPaint = requestAnimationFrame(reanclar)
+
     visualViewport.addEventListener('resize', reanclar)
     visualViewport.addEventListener('scroll', reanclar)
     document.addEventListener('focusin', reanclar)
     document.addEventListener('focusout', reanclar)
     return () => {
+      cancelAnimationFrame(idPostPaint)
       visualViewport.removeEventListener('resize', reanclar)
       visualViewport.removeEventListener('scroll', reanclar)
       document.removeEventListener('focusin', reanclar)

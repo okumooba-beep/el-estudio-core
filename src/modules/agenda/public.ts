@@ -140,8 +140,17 @@ export function useAgendaHoy(): {
 
     const primerConflicto = [...conflictosHoy.conflictosPorEvento.values()][0]
     const conflictoTexto = primerConflicto?.[0]?.texto ?? null
-    const hayEventoUrgente = [...buckets.ahora, ...buckets.atrasado, ...buckets.hoy, ...buckets.manana].some(
-      (candidato) => candidato.tipo === 'evento' && candidato.item.prioridad === 'urgente',
+    /**
+     * `atrasado` mezcla dos cosas con la misma fecha de corte pero
+     * distinto significado: un ítem de HOY que ya pasó su hora, y un
+     * ítem realmente vencido de un día anterior (semanas atrás incluso —
+     * un Evento nunca se archiva solo). Sin filtrar por `fecha === hoy`,
+     * un evento urgente de agosto nunca completado seguía marcando "Hay
+     * un evento urgente hoy" en Home para siempre. `manana` tampoco es
+     * hoy: se excluye directo, nunca puede matchear `fecha === hoy`.
+     */
+    const hayEventoUrgente = [...buckets.ahora, ...buckets.atrasado, ...buckets.hoy].some(
+      (candidato) => candidato.tipo === 'evento' && candidato.item.prioridad === 'urgente' && candidato.fecha === hoy,
     )
 
     const resumen: ResumenHoy = {

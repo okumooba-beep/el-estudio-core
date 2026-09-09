@@ -1482,6 +1482,45 @@ textarea,
   font-variant-numeric: tabular-nums;
 }
 
+/* Envuelve el contador y el chevron para que el chevron quede pegado al lado, sin romper el layout en columna de .mision-contenido. */
+.mision-progreso {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+/*
+  Chevron junto al "X/Y": antes las sub-tareas solo eran alcanzables
+  abriendo el detalle completo (tocar la fila), sin ninguna señal visual
+  de que eso existiera. Mismo lenguaje silencioso que .mision-principal-toggle
+  (glyph sin borde/fondo) — despliega/colapsa la sub-lista inline, nunca
+  navega a otra pantalla.
+*/
+.mision-progreso-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.55rem 0.35rem;
+  margin: -0.55rem 0;
+  border: none;
+  background: none;
+  font-size: 0.75rem;
+  line-height: 1;
+  color: var(--ink-faint);
+  cursor: pointer;
+  transition: color 150ms ease, transform 150ms ease;
+}
+
+.mision-progreso-chevron:hover,
+.mision-progreso-chevron:focus-visible {
+  color: var(--ink);
+}
+
+.mision-progreso-chevron[aria-expanded='true'] {
+  color: var(--accent);
+  transform: rotate(180deg);
+}
+
 /*
   Sprint 016.2, punto 5: control chico y silencioso sobre la fila
   existente — mismo lenguaje que .idea-destino (sin borde, sin fondo,

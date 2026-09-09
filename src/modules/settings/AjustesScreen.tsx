@@ -354,6 +354,29 @@ export function AjustesScreen({
               )
             })}
           </div>
+          {/*
+            Antes de esto, tocar Izquierda/Centro/Derecha no mostraba ningún
+            cambio visible porque el panel de Ajustes tapa el fondo real —
+            había que salir de Ajustes para confirmar el recorte. `ruta` y
+            `posicionXActiva` bajan del mismo estado que ya aplica
+            aplicarPosicionX() sobre --room-photo-position-x (ver App.tsx:
+            seleccionarPosicionX actualiza el estado antes del await), así
+            que esta cajita queda en vivo con cada tap, sin esperar el
+            guardado en Supabase.
+          */}
+          <div
+            aria-hidden="true"
+            style={{
+              width: '100%',
+              maxWidth: 300,
+              height: 150,
+              borderRadius: 'var(--radius-sm)',
+              backgroundImage: `url('${fondos.find((f) => f.id === fondoActivo)?.ruta ?? ''}')`,
+              backgroundSize: 'cover',
+              backgroundPosition: `${posicionXActiva} center`,
+              backgroundColor: 'var(--canvas)',
+            }}
+          />
           {estadoPosicionX === 'error' && (
             <p className="text-[13px] text-critical">
               La posición quedó aplicada en este dispositivo, pero no se pudo guardar en tu cuenta. Probá de nuevo.
