@@ -29,7 +29,7 @@ function rotuloPrioridad(prioridad: AgendaPrioridad): string {
  * la vista diaria nunca los crea, solo los muestra.
  */
 export function AgendaScreen() {
-  const { eventos, bloques, ready, addEvento, updateEvento, addBloque, updateBloque, removeBloque } = useAgenda()
+  const { eventos: eventosCrudos, bloques, ready, addEvento, updateEvento, addBloque, updateBloque, removeBloque, removeEvento } = useAgenda()
   const { ideas, moveSheet } = useIdeas()
   const [modo, setModo] = useState<Modo>('diaria')
   const [semanaOffset, setSemanaOffset] = useState(0)
@@ -44,7 +44,14 @@ export function AgendaScreen() {
   const [editandoEventoId, setEditandoEventoId] = useState<string | null>(null)
   const [textoEdicionEvento, setTextoEdicionEvento] = useState('')
 
-  const convertidas = useMemo(() => new Set(eventos.map((evento) => evento.ideaId)), [eventos])
+  /**
+   * `convertidas` usa `eventosCrudos` (sin filtrar `deletedAt`) a propósito:
+   * una Idea ya convertida en Evento y después borrada sigue "convertida" —
+   * si mirara solo `eventosActivos`, borrar el Evento resucitaría la Idea
+   * pendiente y el efecto de abajo la volvería a convertir en un Evento
+   * nuevo cada vez que se recargue la pantalla.
+   */
+  const convertidas = useMemo(() => new Set(eventosCrudos.map((evento) => evento.ideaId)), [eventosCrudos])
   /**
    * Sprint 017.1: `convertidas` solo sabe de una Idea ya pasada a Evento
    * una vez que `addEvento` (async: escribe en IndexedDB y recién
@@ -82,8 +89,9 @@ export function AgendaScreen() {
     // Se re-ejecuta cuando cambian ideas o eventos: cada alta reduce
     // `pendientes` en el próximo render (mismo patrón que FinanceScreen).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, ideas, eventos])
+  }, [ready, ideas, eventosCrudos])
 
+  const eventos = useMemo(() => eventosCrudos.filter((evento) => !evento.deletedAt), [eventosCrudos])
   const bloquesActivos = useMemo(() => bloques.filter((bloque) => !bloque.archivado && !bloque.deletedAt), [bloques])
 
   /**
@@ -140,6 +148,17 @@ export function AgendaScreen() {
     if (item.tipo === 'evento') void updateEvento(item.id, { completado: true })
     else if (item.tipo === 'bloque') void updateBloque(item.id, { completado: true })
     else void moveSheet(item.item, 'archivador')
+  }
+
+  /**
+   * Único punto de borrado real de Eventos en toda la pantalla — el
+   * botón "Eliminar" de Seccion y el de "Próximamente" llaman acá.
+   * `removeEvento` (useAgenda.ts) ya existía desde antes pero nunca se
+   * llamaba desde ningún lado: no había forma de borrar un Evento una
+   * vez creado, solo de completarlo.
+   */
+  function eliminarEvento(id: string) {
+    void removeEvento(id)
   }
 
   function alternarAlarma(item: AgendaItem) {
@@ -338,9 +357,20 @@ export function AgendaScreen() {
                       )
                     }
                     return (
-                      <p key={item.id} className="text-[14px] text-ink-faint">
-                        {item.hora ? `${formatearHora12(item.hora)} · ` : ''}
-                        {item.texto}
+                      <p key={item.id} className="agenda-bloque text-[14px] text-ink-faint">
+                        <span className="agenda-bloque-texto">
+                          {item.hora ? `${formatearHora12(item.hora)} · ` : ''}
+                          {item.texto}
+                        </span>
+                        <span className="agenda-bloque-acciones">
+                          <button
+                            type="button"
+                            className="agenda-bloque-accion"
+                            onClick={() => eliminarEvento(item.id)}
+                          >
+                            Eliminar
+                          </button>
+                        </span>
                       </p>
                     )
                   }
@@ -475,20 +505,33 @@ export function AgendaScreen() {
         />
       ) : (
         <>
-          <Seccion titulo="Ahora" items={buckets.ahora} onCompletar={completar} onAlarma={alternarAlarma} onPrioridad={ciclarPrioridad} onProteger={protegerDesdeItem} />
-          <Seccion titulo="Próximo" items={proximo ? [proximo] : []} onCompletar={completar} onAlarma={alternarAlarma} onPrioridad={ciclarPrioridad} onProteger={protegerDesdeItem} />
-          <Seccion titulo="Atrasado" items={buckets.atrasado} onCompletar={completar} onAlarma={alternarAlarma} onPrioridad={ciclarPrioridad} onProteger={protegerDesdeItem} />
+          <Seccion titulo="Ahora" items={buckets.ahora} onCompletar={completar} onAlarma={alternarAlarma} onPrioridad={ciclarPrioridad} onProteger={protegerDesdeItem} onEliminarEvento={eliminarEvento} />
+          <Seccion titulo="Próximo" items={proximo ? [proximo] : []} onCompletar={completar} onAlarma={alternarAlarma} onPrioridad={ciclarPrioridad} onProteger={protegerDesdeItem} onEliminarEvento={eliminarEvento} />
+          <Seccion titulo="Atrasado" items={buckets.atrasado} onCompletar={completar} onAlarma={alternarAlarma} onPrioridad={ciclarPrioridad} onProteger={protegerDesdeItem} onEliminarEvento={eliminarEvento} />
           {proximamente ? (
             <section>
               <h2 className="mb-1 font-mono text-[11px] uppercase tracking-wide text-accent">Próximamente</h2>
-              <p className="text-[15px] leading-snug text-ink">
-                {proximamente.tipo === 'mision' ? '□ ' : ''}
-                {proximamente.texto}
-              </p>
-              <p className="text-[12.5px] text-ink-faint">
-                {nombreDia(proximamente.fecha)}
-                {proximamente.hora ? ` · ${formatearHora12(proximamente.hora)}` : ''}
-              </p>
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[15px] leading-snug text-ink">
+                    {proximamente.tipo === 'mision' ? '□ ' : ''}
+                    {proximamente.texto}
+                  </p>
+                  <p className="text-[12.5px] text-ink-faint">
+                    {nombreDia(proximamente.fecha)}
+                    {proximamente.hora ? ` · ${formatearHora12(proximamente.hora)}` : ''}
+                  </p>
+                </div>
+                {proximamente.tipo === 'evento' ? (
+                  <button
+                    type="button"
+                    className="idea-destino shrink-0"
+                    onClick={() => eliminarEvento(proximamente.id)}
+                  >
+                    Eliminar
+                  </button>
+                ) : null}
+              </div>
             </section>
           ) : null}
         </>
@@ -504,6 +547,7 @@ function Seccion({
   onAlarma,
   onPrioridad,
   onProteger,
+  onEliminarEvento,
 }: {
   titulo: string
   items: AgendaItem[]
@@ -511,6 +555,7 @@ function Seccion({
   onAlarma: (item: AgendaItem) => void
   onPrioridad: (item: AgendaItem) => void
   onProteger: (item: AgendaItem) => void
+  onEliminarEvento: (id: string) => void
 }) {
   if (items.length === 0) return null
   return (
@@ -568,6 +613,16 @@ function Seccion({
                 onClick={() => onAlarma(item)}
               >
                 Alarma
+              </button>
+            ) : null}
+            {item.tipo === 'evento' ? (
+              <button
+                type="button"
+                className="idea-destino shrink-0"
+                aria-label="Eliminar evento"
+                onClick={() => onEliminarEvento(item.id)}
+              >
+                Eliminar
               </button>
             ) : null}
           </li>

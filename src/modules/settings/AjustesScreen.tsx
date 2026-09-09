@@ -4,6 +4,7 @@ import { obtenerDatosParaExportar } from '@modules/finance/public'
 type EstadoExportar = 'idle' | 'exportando' | 'exportado' | 'error'
 type EstadoActualizar = 'idle' | 'buscando' | 'buscado' | 'sin-service-worker' | 'error'
 type EstadoResyncNotas = 'idle' | 'procesando' | 'listo' | 'error'
+type EstadoResyncAgenda = 'idle' | 'procesando' | 'listo' | 'error'
 type EstadoSuscripcionPush = 'ok' | 'sin-soporte' | 'sin-permiso' | 'sin-vapid-key' | 'error'
 type EstadoPush = 'idle' | 'suscribiendo' | EstadoSuscripcionPush
 type EstadoTestPush = 'idle' | 'enviando' | 'enviado' | 'error'
@@ -42,6 +43,8 @@ interface AjustesScreenProps {
   onSignOut: () => void
   /** `null` si no hay sesión activa — oculta la sección de re-sincronización de Notas. */
   onForceNotesResync: (() => Promise<void>) | null
+  /** `null` si no hay sesión activa — oculta la sección de re-sincronización de Agenda. */
+  onForceAgendaResync: (() => Promise<void>) | null
   /** Feature-detection de Web Push del navegador actual (Notification + PushManager + Service Worker). */
   pushSupported: boolean
   /** `null` si no hay sesión activa. */
@@ -64,6 +67,7 @@ export function AjustesScreen({
   accountEmail,
   onSignOut,
   onForceNotesResync,
+  onForceAgendaResync,
   pushSupported,
   onSubscribePush,
   onSendTestPush,
@@ -76,6 +80,7 @@ export function AjustesScreen({
   const [estadoExportar, setEstadoExportar] = useState<EstadoExportar>('idle')
   const [estadoActualizar, setEstadoActualizar] = useState<EstadoActualizar>('idle')
   const [estadoResyncNotas, setEstadoResyncNotas] = useState<EstadoResyncNotas>('idle')
+  const [estadoResyncAgenda, setEstadoResyncAgenda] = useState<EstadoResyncAgenda>('idle')
   const [estadoPush, setEstadoPush] = useState<EstadoPush>('idle')
   const [estadoTestPush, setEstadoTestPush] = useState<EstadoTestPush>('idle')
   const [estadoFondo, setEstadoFondo] = useState<EstadoFondo>('idle')
@@ -162,6 +167,17 @@ export function AjustesScreen({
       setEstadoResyncNotas('listo')
     } catch {
       setEstadoResyncNotas('error')
+    }
+  }
+
+  async function handleResyncAgenda() {
+    if (!onForceAgendaResync) return
+    setEstadoResyncAgenda('procesando')
+    try {
+      await onForceAgendaResync()
+      setEstadoResyncAgenda('listo')
+    } catch {
+      setEstadoResyncAgenda('error')
     }
   }
 
@@ -371,6 +387,8 @@ export function AjustesScreen({
               maxWidth: 300,
               height: 150,
               borderRadius: 'var(--radius-sm)',
+              border: '1px solid var(--border)',
+              boxShadow: '0 6px 16px -6px rgba(0, 0, 0, 0.5)',
               backgroundImage: `url('${fondos.find((f) => f.id === fondoActivo)?.ruta ?? ''}')`,
               backgroundSize: 'cover',
               backgroundPosition: `${posicionXActiva} center`,
@@ -405,6 +423,31 @@ export function AjustesScreen({
             <p className="text-[13px] text-ink-dim">Listo — revisá el módulo Notas.</p>
           )}
           {estadoResyncNotas === 'error' && (
+            <p className="text-[13px] text-critical">No se pudo re-sincronizar. Probá de nuevo.</p>
+          )}
+        </section>
+      )}
+
+      {onForceAgendaResync && (
+        <section className="flex flex-col gap-2">
+          <h2 className="font-mono text-[11px] uppercase tracking-wide text-accent">Agenda — forzar re-sincronización</h2>
+          <p className="text-[13px] text-ink-dim">
+            Usalo si borraste eventos o bloques directo en Supabase y siguen apareciendo acá. Trae el estado real
+            del servidor y saca de este dispositivo lo que ya no exista ahí — nunca borra algo que todavía no se
+            subió.
+          </p>
+          <button
+            type="button"
+            className="idea-destino self-start"
+            onClick={() => void handleResyncAgenda()}
+            disabled={estadoResyncAgenda === 'procesando'}
+          >
+            {estadoResyncAgenda === 'procesando' ? 'Sincronizando…' : 'Forzar re-sincronización de Agenda'}
+          </button>
+          {estadoResyncAgenda === 'listo' && (
+            <p className="text-[13px] text-ink-dim">Listo — revisá el módulo Agenda.</p>
+          )}
+          {estadoResyncAgenda === 'error' && (
             <p className="text-[13px] text-critical">No se pudo re-sincronizar. Probá de nuevo.</p>
           )}
         </section>

@@ -77,9 +77,10 @@ export function useAgendaHoy(): {
   resumen: ResumenHoy
   ready: boolean
 } {
-  const { eventos, bloques, ready } = useAgenda()
+  const { eventos: eventosCrudos, bloques, ready } = useAgenda()
   const { ideas } = useIdeas()
 
+  const eventos = useMemo(() => eventosCrudos.filter((evento) => !evento.deletedAt), [eventosCrudos])
   const bloquesActivos = useMemo(() => bloques.filter((bloque) => !bloque.archivado && !bloque.deletedAt), [bloques])
   const misionesProgramadas = useMemo(
     () => ideas.filter((idea) => idea.destino === 'misiones' && idea.programadaFecha),
@@ -178,7 +179,10 @@ export function useAgendaSemana(dias: readonly string[]): {
 } {
   const { eventos, bloques, ready } = useAgenda()
   const diasSet = useMemo(() => new Set(dias), [dias])
-  const eventosSemana = useMemo(() => eventos.filter((evento) => diasSet.has(evento.fecha)), [eventos, diasSet])
+  const eventosSemana = useMemo(
+    () => eventos.filter((evento) => diasSet.has(evento.fecha) && !evento.deletedAt),
+    [eventos, diasSet],
+  )
   const bloquesSemana = useMemo(
     () => bloques.filter((bloque) => diasSet.has(bloque.dia) && !bloque.deletedAt),
     [bloques, diasSet],

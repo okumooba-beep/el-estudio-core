@@ -56,8 +56,6 @@ export function MisionesScreen() {
   const [intentoPrincipal, setIntentoPrincipal] = useState<Idea | null>(null)
   /** Rediseño Misiones: id de la misión cuyo detalle (sub-tareas) está abierto — null = lista. */
   const [detalleId, setDetalleId] = useState<string | null>(null)
-  /** id de la misión cuyas sub-tareas están desplegadas inline en la lista (chevron junto al contador) — null = ninguna. */
-  const [expandidoId, setExpandidoId] = useState<string | null>(null)
   /** Sprint "Legibilidad Misiones": si el detalle se abrió desde "Agregar sub-tarea" del menú de long-press, arranca con el input de nueva sub-tarea ya abierto. */
   const [abrirNuevaSubtarea, setAbrirNuevaSubtarea] = useState(false)
   /** id de la misión cuyo menú de acciones (long-press) está abierto — reemplaza la esquina chiquita que abría el detalle para agregar sub-tareas. */
@@ -306,27 +304,25 @@ export function MisionesScreen() {
               {mision.programadaHora ? ` · ${formatearHora12(mision.programadaHora)}` : ''}
             </span>
           )}
-          {totalSubtareas > 0 && (
-            <span className="mision-progreso">
-              <span className="mision-progreso-texto">
-                {hechasSubtareas}/{totalSubtareas}
-              </span>
-              {/* Chevron junto al contador: antes las sub-tareas solo se veían abriendo el detalle completo (tocando la fila), sin ninguna señal visual de que existiera esa vía — acá se despliegan inline, sin salir de la lista. */}
-              <button
-                type="button"
-                className="mision-progreso-chevron"
-                aria-expanded={expandidoId === mision.id}
-                aria-label={expandidoId === mision.id ? 'Ocultar sub-tareas' : 'Ver sub-tareas'}
-                onClick={(event) => {
-                  event.stopPropagation()
-                  setExpandidoId(expandidoId === mision.id ? null : mision.id)
-                }}
-              >
-                ⌄
-              </button>
-            </span>
-          )}
         </span>
+        {/*
+          Contador X/Y movido afuera de .mision-contenido: el desplegable
+          inline hacia abajo (chevron + sub-lista en la propia fila) ocupaba
+          mucho espacio en la lista y quedó descartado. Ahora es un botón
+          grande y sombreado del lado derecho de la fila (mismo destino que
+          tocar la fila: abre el detalle completo con sus sub-tareas, nunca
+          expande nada in situ).
+        */}
+        {totalSubtareas > 0 && (
+          <button
+            type="button"
+            className="mision-progreso-boton"
+            aria-label={`Ver sub-tareas — ${hechasSubtareas} de ${totalSubtareas} completadas`}
+            onClick={() => setDetalleId(mision.id)}
+          >
+            {hechasSubtareas}/{totalSubtareas}
+          </button>
+        )}
         <button
           type="button"
           className="mision-principal-toggle"
@@ -337,38 +333,6 @@ export function MisionesScreen() {
           {esPrincipal ? '★' : '☆'}
         </button>
       </li>
-      {expandidoId === mision.id && (
-        <li className="mision-fila-acciones">
-          <ul className="mision-lista">
-            {subtareas.map((subtarea) => (
-              <li key={subtarea.id} className="mision-fila">
-                <button
-                  type="button"
-                  className="mision-check"
-                  aria-label={subtarea.completada ? 'Marcar sub-tarea como pendiente' : 'Marcar sub-tarea como completada'}
-                  aria-pressed={subtarea.completada}
-                  onClick={() =>
-                    void update(mision.id, {
-                      subtareas: subtareas.map((s) => (s.id === subtarea.id ? { ...s, completada: !s.completada } : s)),
-                    })
-                  }
-                >
-                  <span
-                    className="mision-check-circulo"
-                    aria-hidden="true"
-                    style={subtarea.completada ? { background: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
-                  />
-                </button>
-                <span className="mision-contenido" style={{ cursor: 'default' }}>
-                  <span className="mision-texto" style={{ cursor: 'default' }}>
-                    {subtarea.texto}
-                  </span>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </li>
-      )}
       {accionesId === mision.id && (
         <li className="mision-fila-acciones">
           <div className="idea-destinos" role="group" aria-label="Acciones de la misión">

@@ -12,13 +12,12 @@ import type { EntityTable } from 'dexie'
  * `agenda_eventos.idea_id` referencia el `id` de la Idea (destino
  * 'agenda') de la que nació el evento — sin foreign key, motores de sync
  * independientes, sin orden garantizado entre el push de Ideas y el de
- * Agenda (ver supabase/agenda_schema.sql). Sin mecanismo de borrado real
- * hoy — no tiene `deletedAt`.
+ * Agenda (ver supabase/agenda_schema.sql).
  *
- * `agendaBloques` sí tiene `deletedAt`: `agendaBloqueRepository.remove()`
- * pasó de borrado físico a soft-delete en este mismo sprint (ver
- * agendaRepository.ts) — sin tombstone un borrado local nunca llegaba a
- * Supabase ni a otro dispositivo.
+ * Ambas tablas tienen `deletedAt` (mismo patrón soft-delete): Eventos lo
+ * suma recién acá — requiere la migración
+ * `supabase/agenda_eventos_add_deleted_at.sql` corrida a mano en Supabase
+ * antes de este cambio, igual que `agendaBloques` ya la tenía.
  */
 interface EventoRow {
   id: string
@@ -33,6 +32,7 @@ interface EventoRow {
   idea_id: string
   created_at: string
   updated_at: string
+  deleted_at: string | null
 }
 
 interface BloqueRow {
@@ -73,6 +73,7 @@ const eventosSync: TableSync<AgendaEvento, EventoRow> = {
     idea_id: e.ideaId,
     created_at: e.createdAt,
     updated_at: e.updatedAt,
+    deleted_at: e.deletedAt ?? null,
   }),
   fromRow: (row) => ({
     id: row.id,
@@ -87,6 +88,7 @@ const eventosSync: TableSync<AgendaEvento, EventoRow> = {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     pendingSync: false,
+    ...(row.deleted_at ? { deletedAt: row.deleted_at } : {}),
   }),
 }
 
@@ -197,4 +199,40 @@ export async function migrateAgendaOnFirstLogin(userId: string): Promise<string[
     tablasConfirmadas.push(table.supabaseTable)
   }
   return tablasConfirmadas
+}
+
+/**
+ * "Forzar re-sincronización de Agenda" en Ajustes — a diferencia de
+ * `hydrateAgendaFromSupabase` (que solo agrega/actualiza y nunca corre
+ * dos veces, gateada por `syncMeta.migratedAt`), esta función pull-y-
+ * reconcilia: trae el estado real de Supabase y BORRA de Dexie local
+ * cualquier fila que ya no esté ahí. Existe para el caso puntual de
+ * filas borradas directo en el dashboard de Supabase (fuera de la app) —
+ * sin esto, la hidratación de una sola vez nunca se entera de ese borrado
+ * y el fantasma queda local para siempre.
+ *
+ * Nunca borra una fila con `pendingSync: true`: esa fila es una edición
+ * local todavía no confirmada en el servidor (pudo crearse offline,
+ * después de la última foto de Supabase que se está comparando acá) —
+ * borrarla destruiría trabajo real nunca sincronizado.
+ */
+export async function reconcileAgendaFromSupabase(userId: string): Promise<void> {
+  if (!supabase) return
+  for (const table of ALL_TABLES) {
+    const { data, error } = await supabase.from(table.supabaseTable).select('*').eq('user_id', userId)
+    if (error) {
+      console.error(`[sync] reconciliación falló en ${table.supabaseTable}:`, error.message)
+      continue
+    }
+    const remotas = data ?? []
+    const locales = remotas.map((row) => table.fromRow(row))
+    if (locales.length > 0) await table.dexieTable.bulkPut(locales)
+
+    const idsRemotos = new Set(remotas.map((row) => row.id))
+    const filasLocales = await table.dexieTable.toArray()
+    const idsABorrar = filasLocales
+      .filter((local) => !idsRemotos.has(local.id) && !local.pendingSync)
+      .map((local) => local.id)
+    if (idsABorrar.length > 0) await table.dexieTable.bulkDelete(idsABorrar)
+  }
 }

@@ -1,0 +1,12 @@
+-- Ampliación de agenda_schema.sql — Agenda: borrado real de Eventos.
+--
+-- agenda_eventos nació sin `deleted_at` (ver comentario original en
+-- agenda_schema.sql: "no hay deleted_at en esta tabla") porque todavía no
+-- existía UI para borrar un Evento. Ahora sí (ver AgendaScreen.tsx: botón
+-- "Eliminar" en Ahora/Próximo/Atrasado/Próximamente/Planificación semanal),
+-- así que suma el mismo tombstone que agenda_bloques ya tenía desde el
+-- soft-delete de Sprint 010 — sin esta columna, `agendaEventoRepository
+-- .remove()` sigue marcando `deletedAt` solo en Dexie local: nunca llega a
+-- Supabase ni a otro dispositivo, y el Evento "borrado" reaparece solo con
+-- re-hidratar.
+alter table agenda_eventos add column if not exists deleted_at timestamptz;

@@ -30,6 +30,7 @@ import {
   hydrateAgendaFromSupabase,
   migrateAgendaOnFirstLogin,
   pushAgendaPending,
+  reconcileAgendaFromSupabase,
 } from './agendaSync'
 import {
   allAuditoriaTablesEmpty,
@@ -658,4 +659,16 @@ export async function forceNotesResync(userId: string): Promise<void> {
   await db.syncMeta.delete('notes-sync')
   notesBootstrappedUserId = null
   await bootstrapNotesSync(userId)
+}
+
+/**
+ * Botón "Forzar re-sincronización de Agenda" en Ajustes — a diferencia de
+ * `forceNotesResync` (que solo re-corre la hidratación de una sola vez,
+ * pensada para "la tabla todavía no existía"), acá el problema es otro:
+ * filas borradas directo en el dashboard de Supabase, que la hidratación
+ * de una sola vez nunca vuelve a mirar. Llama a `reconcileAgendaFromSupabase`
+ * (pull + poda de fantasmas locales) en vez de repetir el bootstrap.
+ */
+export async function forceAgendaResync(userId: string): Promise<void> {
+  await reconcileAgendaFromSupabase(userId)
 }
