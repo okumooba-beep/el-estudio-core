@@ -25,6 +25,7 @@ import { etiquetaSemanaCobro, fechaEnSemana, semanaActual as semanaCobroActual }
 import type { FinanceMovimiento } from '@/types/finance'
 import type { NuevaCompraEnCuotas, NuevaFinanceMovimiento } from './financeRepository'
 import type { PatchMovimiento } from './MovimientoRow'
+import { fechaLocalISO } from '@shared-kernel/date/fechaLocal'
 
 type Vista = 'semana' | 'mes'
 type Detalle = 'entro' | 'sefue' | 'nuevo' | null
@@ -185,7 +186,7 @@ export function FinanceScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, ideas, movimientos])
 
-  const semanaActual = useMemo(() => semanaDelMes(new Date().toISOString().slice(0, 10)), [])
+  const semanaActual = useMemo(() => semanaDelMes(fechaLocalISO()), [])
   const resumen = useMemo(
     () => resumirMes(movimientos, mesSeleccionado, moneda),
     [movimientos, mesSeleccionado, moneda],

@@ -1,6 +1,7 @@
 import { CATEGORIAS, type FinanceCategoria } from './categorias'
 import type { Medio, Moneda } from './extraccion'
 import type { FinanceMovimiento } from '@/types/finance'
+import { fechaLocalISO } from '@shared-kernel/date/fechaLocal'
 
 export interface GrupoCategoria {
   categoria: FinanceCategoria
@@ -57,8 +58,9 @@ export function categoriaDe(movimiento: FinanceMovimiento): FinanceCategoria | n
   return categoria && (CATEGORIAS as readonly string[]).includes(categoria) ? (categoria as FinanceCategoria) : null
 }
 
+/** Nunca vía toISOString: corre el mes en el huso horario de Argentina cerca de medianoche (ver fechaLocalISO). */
 export function mesDe(fecha: Date): string {
-  return fecha.toISOString().slice(0, 7)
+  return fechaLocalISO(fecha).slice(0, 7)
 }
 
 /** Desplaza un mes (YYYY-MM) `delta` meses hacia adelante (o atrás, si es negativo) — para la navegación "‹ mes ›" de "Este mes". */

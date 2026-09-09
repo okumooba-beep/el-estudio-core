@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { CATEGORIAS, CATEGORIA_LABEL, type FinanceCategoria } from './categorias'
 import { etiquetaDia, formatearMonto } from './mes'
 import { parsearMontoManual } from './extraccion'
-import { numeroDeSemana } from './semanaCobro'
+import { fechaEfectivaSemana, numeroDeSemana } from './semanaCobro'
 import type { FinanceMovimiento, FinanceIncomePeriod } from '@/types/finance'
 import type { Medio, Moneda } from './extraccion'
 
@@ -125,7 +125,9 @@ export function MovimientoRow({
   const haySelectorPeriodo = Boolean(periodos && periodos.length > 0)
   /** Cuando hay semana elegida, su lunes ES la fecha del movimiento — el input de fecha se oculta en ese caso (mismo criterio que NuevoMovimiento), así nunca compiten dos fechas por decir "cuándo es esto". */
   const periodoSeleccionado = haySelectorPeriodo ? periodos?.find((p) => p.id === periodoEditado) : undefined
-  const fechaEditadaEfectiva = haySelectorPeriodo ? (periodoSeleccionado?.fechaInicio ?? fechaTexto) : fechaTexto
+  const fechaEditadaEfectiva = haySelectorPeriodo
+    ? (periodoSeleccionado ? fechaEfectivaSemana(periodoSeleccionado.fechaInicio) : fechaTexto)
+    : fechaTexto
 
   function guardarEdicion() {
     if (!onEditar || montoEditado === null) return

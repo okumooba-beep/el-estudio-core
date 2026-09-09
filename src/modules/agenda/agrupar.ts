@@ -1,6 +1,7 @@
 import { extraerRangoHora } from './extraccionFecha'
 import type { AgendaEvento, AgendaBloque } from '@/types/agenda'
 import type { Idea } from '@/types/idea'
+import { fechaLocalISO } from '@shared-kernel/date/fechaLocal'
 
 /**
  * Vista diaria (spec): "Ahora, Hoy, Mañana, Esta semana", sin archivado
@@ -128,7 +129,7 @@ function yaTermino(item: AgendaItem, horaActual: string): boolean {
 }
 
 export function agruparPorCuando(items: readonly AgendaItem[], ahora: Date = new Date()): Buckets {
-  const hoyISO = ahora.toISOString().slice(0, 10)
+  const hoyISO = fechaLocalISO(ahora)
   const mananaISO = sumarDias(hoyISO, 1)
   const horaActual = `${String(ahora.getHours()).padStart(2, '0')}:${String(ahora.getMinutes()).padStart(2, '0')}`
 
@@ -232,7 +233,7 @@ export function proximoCompromisoFuturo(buckets: Buckets): AgendaItem | null {
  * fecha desplazada, nunca "los próximos 7 días" desde ahí.
  */
 export function semanaCalendario(
-  hoyISO: string = new Date().toISOString().slice(0, 10),
+  hoyISO: string = fechaLocalISO(),
   desplazamientoSemanas = 0,
 ): string[] {
   const base = desplazamientoSemanas === 0 ? hoyISO : sumarDias(hoyISO, desplazamientoSemanas * 7)

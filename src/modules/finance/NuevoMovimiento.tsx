@@ -3,8 +3,9 @@ import { CATEGORIAS, CATEGORIA_LABEL, type FinanceCategoria } from './categorias
 import { dividirEnCuotas, parsearMontoManual, type Medio, type Moneda } from './extraccion'
 import type { NuevaCompraEnCuotas, NuevaFinanceMovimiento } from './financeRepository'
 import { etiquetaSemana, formatearMonto, mesDe, rangoSemana, semanaDelMes } from './mes'
-import { numeroDeSemana } from './semanaCobro'
+import { fechaEfectivaSemana, numeroDeSemana } from './semanaCobro'
 import type { FinanceIncomePeriod, FinanceMovimientoTipo } from '@/types/finance'
+import { fechaLocalISO } from '@shared-kernel/date/fechaLocal'
 
 interface NuevoMovimientoProps {
   /** Arranca en la moneda que ya se está mirando en Finanzas — no inventa un tercer estado de moneda. */
@@ -55,7 +56,7 @@ export function NuevoMovimiento({
   const [concepto, setConcepto] = useState('')
   const [monto, setMonto] = useState('')
   const [categoria, setCategoria] = useState<FinanceCategoria | null>(null)
-  const [fecha, setFecha] = useState(() => new Date().toISOString().slice(0, 10))
+  const [fecha, setFecha] = useState(() => fechaLocalISO())
   const [moneda, setMoneda] = useState<Moneda>(monedaDefault)
   const [medio, setMedio] = useState<Medio>('transferencia')
   const [cuotas, setCuotas] = useState('1')
@@ -81,7 +82,9 @@ export function NuevoMovimiento({
    * un campo de fecha visible que pueda contradecirla. `fecha` (el input
    * libre, solo para egresos) queda intacto para ese otro caso.
    */
-  const fechaEfectiva = mostrarSelectorPeriodo ? (periodoElegido?.fechaInicio ?? fecha) : fecha
+  const fechaEfectiva = mostrarSelectorPeriodo
+    ? (periodoElegido ? fechaEfectivaSemana(periodoElegido.fechaInicio) : fecha)
+    : fecha
 
   const montoNumero = parsearMontoManual(monto) ?? NaN
   const cuotasNumero = Number(cuotas)
@@ -182,7 +185,7 @@ export function NuevoMovimiento({
 
       {/* Bloque 1 — Qué gasté: Concepto + Monto (o los tres baldes de ingreso), misma lógica de siempre. */}
       <div className="finanzas-tarjeta flex flex-col gap-3">
-        <p className="finanzas-form-bloque-titulo">Qué gasté</p>
+        <p className="finanzas-form-bloque-titulo">{tipo === 'ingreso' ? 'Qué ingresé' : 'Qué gasté'}</p>
 
         <input
           type="text"

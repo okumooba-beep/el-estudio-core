@@ -6,6 +6,7 @@ import { aItems, agruparPorCuando, proximoItem, type AgendaItem } from './agrupa
 import { calcularConflictosDia } from './conflictos'
 import { extraerHora, extraerRangoHora } from './extraccionFecha'
 import type { AgendaEvento, AgendaBloque } from '@/types/agenda'
+import { fechaLocalISO } from '@shared-kernel/date/fechaLocal'
 
 /**
  * Superficie pública del módulo Agenda. `agenda` ya existía reservado
@@ -26,7 +27,7 @@ export const MODULE = { path: '/agenda', label: 'Agenda' }
 export { calcularConflictosDia, extraerRangoHora }
 
 function hoyISO(): string {
-  return new Date().toISOString().slice(0, 10)
+  return fechaLocalISO()
 }
 
 export interface ProximoAgenda {

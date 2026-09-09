@@ -4,6 +4,7 @@ import type { Repository } from '@shared-kernel/persistence/Repository'
 import type { FinanceCategoria } from './categorias'
 import { dividirEnCuotas, fechaCuota, type Medio, type Moneda } from './extraccion'
 import { etiquetaSemanaCobro, normalizarSemana } from './semanaCobro'
+import { fechaLocalISO } from '@shared-kernel/date/fechaLocal'
 import type {
   FinanceAccount,
   FinanceAccountTipo,
@@ -145,7 +146,7 @@ class DexieFinanceMovimientoRepository implements FinanceMovimientoRepository {
       medio: input.medio,
       ...(input.ideaId ? { ideaId: input.ideaId } : {}),
       ...(input.periodoId ? { periodoId: input.periodoId } : {}),
-      fecha: input.fecha ?? now.toISOString().slice(0, 10),
+      fecha: input.fecha ?? fechaLocalISO(now),
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
       pendingSync: true,
@@ -156,7 +157,7 @@ class DexieFinanceMovimientoRepository implements FinanceMovimientoRepository {
 
   async addCompra(input: NuevaCompraEnCuotas): Promise<FinanceMovimiento[]> {
     const compraId = generateId()
-    const fechaCompra = input.fecha ?? new Date().toISOString().slice(0, 10)
+    const fechaCompra = input.fecha ?? fechaLocalISO()
     const montos = dividirEnCuotas(input.montoTotal, input.cantidadCuotas)
     const now = new Date().toISOString()
     const movimientos: FinanceMovimiento[] = montos.map((monto, indice) => ({

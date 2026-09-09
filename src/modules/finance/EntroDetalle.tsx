@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { MovimientoRow, type PatchMovimiento } from './MovimientoRow'
 import { formatearMonto, mesDe } from './mes'
-import { numeroDeSemana } from './semanaCobro'
+import { fechaEfectivaSemana, numeroDeSemana } from './semanaCobro'
 import type { FinanceMovimiento, FinanceIncomePeriod } from '@/types/finance'
 
 export interface NuevoPeriodoInput {
@@ -201,9 +201,9 @@ function PeriodoBlock({
   )
 }
 
-/** El mes (YYYY-MM) al que pertenece un período, según el lunes con el que empieza. Una semana que cruza de mes se agrupa por dónde arranca. */
+/** El mes (YYYY-MM) al que pertenece un período — el mes del jueves de esa semana, no el del lunes (ver fechaEfectivaSemana): así una semana que cruza de mes se agrupa donde vive la mayoría de sus días. */
 function mesDePeriodo(periodo: FinanceIncomePeriod): string {
-  return periodo.fechaInicio.slice(0, 7)
+  return fechaEfectivaSemana(periodo.fechaInicio).slice(0, 7)
 }
 
 /** "Septiembre 2026" — el `uppercase` del header ya lo mayusculiza, mismo criterio que `periodoLabel` en FinanceScreen. */

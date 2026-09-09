@@ -12,13 +12,10 @@
  */
 
 import { interpretar, normalizar, aHora24, type Prioridad } from '@shared-kernel/text/interpretarTexto'
-
-function aISO(fecha: Date): string {
-  return fecha.toISOString().slice(0, 10)
-}
+import { fechaLocalISO } from '@shared-kernel/date/fechaLocal'
 
 /** YYYY-MM-DD. Sin fecha explícita en el texto ("a las 5"), el día es hoy. */
-export function extraerFecha(texto: string, hoyISO: string = aISO(new Date())): string {
+export function extraerFecha(texto: string, hoyISO: string = fechaLocalISO()): string {
   return interpretar(texto, hoyISO).fecha ?? hoyISO
 }
 
@@ -45,7 +42,7 @@ export function extraerHora(texto: string): string | null {
 /** Evento completo desde el texto libre del Umbral: fecha, hora, prioridad y el título ya limpio. */
 export function interpretarEvento(
   texto: string,
-  hoyISO: string = aISO(new Date()),
+  hoyISO: string = fechaLocalISO(),
 ): { fecha: string; hora: string | null; prioridad: Prioridad | null; textoLimpio: string } {
   const resultado = interpretar(texto, hoyISO)
   return {

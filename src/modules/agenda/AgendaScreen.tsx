@@ -6,6 +6,7 @@ import { extraerFecha, extraerHora, interpretarEvento } from './extraccionFecha'
 import { aItems, agruparPorCuando, proximoItem, proximoCompromisoFuturo, semanaCalendario, type AgendaItem } from './agrupar'
 import { calcularConflictosDia } from './conflictos'
 import { formatearHora12 } from '@shared-kernel/text/interpretarTexto'
+import { fechaLocalISO } from '@shared-kernel/date/fechaLocal'
 import type { AgendaEvento, AgendaBloque, AgendaPrioridad } from '@/types/agenda'
 
 type Modo = 'diaria' | 'planificacion'
@@ -126,7 +127,7 @@ export function AgendaScreen() {
   const proximo = useMemo(() => proximoItem(buckets), [buckets])
   const proximamente = useMemo(() => proximoCompromisoFuturo(buckets), [buckets])
   /** Sprint 015.2, punto 1: única referencia de "hoy" — fecha real del dispositivo, nunca la semana/día seleccionado. */
-  const hoyISO = new Date().toISOString().slice(0, 10)
+  const hoyISO = fechaLocalISO()
   const semana = useMemo(() => semanaCalendario(hoyISO, semanaOffset), [hoyISO, semanaOffset])
 
   /**

@@ -56,6 +56,23 @@ export function semanaActual(): { fechaInicio: string; fechaFin: string } {
   return normalizarSemana(aTextoISO(new Date()))
 }
 
+/**
+ * El día que representa a la semana a fines de "a qué mes pertenece" —
+ * el jueves, no el lunes. Antes un ingreso cargado contra una semana
+ * (`fechaInicio`, siempre lunes) quedaba SIEMPRE en el mes del lunes,
+ * aunque la semana viviera casi entera en el mes siguiente (31 ago→6
+ * sep: 1 día en agosto, 6 en septiembre, y el ingreso caía en agosto).
+ * El jueves es el mismo criterio que usa ISO-8601 para asignarle año a
+ * una semana que cruza el 1 de enero, y funciona igual acá: en una
+ * semana de 7 días, el jueves siempre cae del lado que tiene 4 días o
+ * más — la mayoría real, nunca fijo al lunes.
+ */
+export function fechaEfectivaSemana(fechaInicio: string): string {
+  const jueves = aFechaLocal(fechaInicio)
+  jueves.setDate(jueves.getDate() + 3)
+  return aTextoISO(jueves)
+}
+
 const MESES_CORTOS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
 
 /**
