@@ -139,6 +139,21 @@ html[data-gaze="escritorio"] body {
   min-height: 100dvh;
 }
 
+/*
+  Reemplaza el viejo anclaje por JS del nav inferior (useNavAncladaAlViewportVisual,
+  AppShell.tsx): en vez de compensar a mano el desfasaje entre el layout
+  viewport y visualViewport cuando el teclado abre, el contenedor raíz de
+  AppShell mide directo el viewport dinámico (100dvh) y el nav pasa a ser un
+  hijo flex más, no position:fixed — el navegador ya reacomoda esa altura
+  solo. 100vh primero como fallback para navegadores sin soporte de dvh
+  (la segunda declaración gana cuando dvh existe; si no, el navegador
+  ignora esa línea entera y queda la de arriba).
+*/
+.h-dvh-safe {
+  height: 100vh;
+  height: 100dvh;
+}
+
 * {
   -webkit-tap-highlight-color: transparent;
 }

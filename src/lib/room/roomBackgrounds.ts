@@ -78,30 +78,48 @@ export function aplicarFondo(id: string): void {
  * Sprint "Room / Ajustes: 4 cambios puntuales" (§4) — control manual de
  * posición horizontal, independiente del fondo elegido: cada imagen del
  * banco puede necesitar un recorte distinto una vez que .room-layer-photo
- * vuelve a `cover` (ver src/index.css). Tres posiciones fijas, elegidas a
- * mano por el usuario en Ajustes — nunca un encuadre automático por
- * imagen. Mismo mecanismo que el fondo: localStorage + --room-photo-
- * position-x en :root, con Supabase (room_preferences.posicion_x) como
- * reflejo entre dispositivos (ver roomBackgroundClient.ts).
+ * vuelve a `cover` (ver src/index.css). Empezó como 3 posiciones fijas
+ * (left/center/right); ahora es un porcentaje continuo 0–100 elegido
+ * arrastrando sobre la miniatura del fondo en Ajustes (0 = borde
+ * izquierdo, 50 = centro, 100 = borde derecho) — `background-position`
+ * acepta tanto keywords como porcentajes, así que .room-layer-photo no
+ * necesitó cambios. Mismo mecanismo de siempre: localStorage +
+ * --room-photo-position-x en :root, con Supabase (room_preferences.
+ * posicion_x, guardado como texto) como reflejo entre dispositivos (ver
+ * roomBackgroundClient.ts). `normalizarPosicionX` interpreta tanto un
+ * valor viejo ('left'/'center'/'right', ya guardado por usuarios de
+ * antes de este cambio) como el porcentaje nuevo, para no perder la
+ * elección de nadie.
  */
-export type PosicionX = 'left' | 'center' | 'right'
+export type PosicionX = number
 
-export const POSICION_X_DEFAULT: PosicionX = 'center'
+export const POSICION_X_DEFAULT: PosicionX = 50
 
 const CLAVE_LOCAL_POSICION_X = 'room.posicionX'
 
-function esPosicionXValida(valor: unknown): valor is PosicionX {
-  return valor === 'left' || valor === 'center' || valor === 'right'
+const POSICION_X_LEGADA: Record<string, PosicionX> = { left: 0, center: 50, right: 100 }
+
+/** Acepta el formato viejo ('left'/'center'/'right') y el nuevo (0–100) — cualquier otra cosa cae al centro. */
+function normalizarPosicionX(valor: unknown): PosicionX {
+  if (typeof valor === 'string' && valor in POSICION_X_LEGADA) return POSICION_X_LEGADA[valor] ?? POSICION_X_DEFAULT
+  const numero = typeof valor === 'number' ? valor : Number(valor)
+  if (!Number.isFinite(numero)) return POSICION_X_DEFAULT
+  return Math.min(100, Math.max(0, numero))
 }
 
 /** Última posición conocida en este dispositivo — lectura síncrona, para pintar antes de que React monte (ver src/light-bootstrap.ts). */
 export function leerPosicionXGuardada(): PosicionX {
-  const valor = readJSON<string>(CLAVE_LOCAL_POSICION_X, POSICION_X_DEFAULT)
-  return esPosicionXValida(valor) ? valor : POSICION_X_DEFAULT
+  const valor = readJSON<string | number>(CLAVE_LOCAL_POSICION_X, POSICION_X_DEFAULT)
+  return normalizarPosicionX(valor)
 }
 
 /** Escribe --room-photo-position-x en :root y cachea la elección en este dispositivo. */
 export function aplicarPosicionX(posicion: PosicionX): void {
-  document.documentElement.style.setProperty('--room-photo-position-x', posicion)
+  document.documentElement.style.setProperty('--room-photo-position-x', `${posicion}%`)
   writeJSON(CLAVE_LOCAL_POSICION_X, posicion)
+}
+
+/** Interpreta lo que venga de Supabase (texto: 'left'/'center'/'right' o un número como string) al mismo formato que usa el resto del módulo. */
+export function normalizarPosicionXRemota(valor: string): PosicionX {
+  return normalizarPosicionX(valor)
 }

@@ -1,4 +1,3 @@
-import { useEffect, useRef } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { MODULES } from '@/app/modules'
 import { ESPACIOS_MODULE } from '@modules/today/public'
@@ -13,97 +12,6 @@ function linkClass(isActive: boolean): string {
 
 const TOP_LEVEL_PATHS = new Set(MODULES.map((mod) => mod.path))
 
-/** Input, textarea o contenteditable — lo único que puede realmente abrir el teclado en pantalla. */
-function esEditable(el: Element | null): boolean {
-  if (!el) return false
-  const tag = el.tagName
-  return tag === 'INPUT' || tag === 'TEXTAREA' || (el as HTMLElement).isContentEditable
-}
-
-/**
- * iOS Safari: al abrir el teclado, `visualViewport` se achica pero
- * `position: fixed` sigue anclado al layout viewport completo (el que
- * incluye el área tapada por el teclado) — la barra inferior queda
- * desplazada hacia arriba con un espacio vacío debajo, en vez de pegada
- * al borde inferior real y visible. Se corrige empujándola con
- * `transform` la diferencia exacta entre ambos viewports, recalculada
- * en cada resize/scroll de `visualViewport` (Safari dispara `scroll`
- * ahí, no en `window`, cuando el teclado sube/baja).
- *
- * El corrimiento solo se aplica con un input/textarea/contenteditable
- * realmente enfocado: en reposo, `visualViewport.height` puede reportar
- * unos px menos que `window.innerHeight` por la franja del home
- * indicator en iPhone — sin este freno, esa diferencia se leía como
- * "teclado abierto" y el nav quedaba corrido hacia arriba, destapando
- * el fondo de la habitación (--canvas) en vez del propio de la barra.
- *
- * ESA CONDICIÓN SE LEE EN VIVO (`document.activeElement`), nunca de un
- * flag cacheado en focusin/focusout: si el input enfocado se desmonta
- * sin perder el foco a mano antes (ej. el usuario escribe algo en "¿Qué
- * tenés en mente?" y toca un ítem del nav para navegar — React Router
- * desmonta la pantalla, y el input, con foco activo), el navegador
- * nunca dispara `focusout` para un elemento sacado del DOM. Un flag
- * cacheado se queda en `true` para siempre y el próximo resize de
- * `visualViewport` (el teclado cerrándose) aplica el corrimiento sin
- * que haya ningún input enfocado ya — el hueco persistente que
- * apareció en reposo, en la PWA instalada, sin teclado visible.
- *
- * Dato nuevo: el mismo desfasaje `window.innerHeight` vs
- * `visualViewport.height` aparece SIN teclado, apenas se entra a una
- * pantalla — Chrome/Safari en mobile todavía no asentaron el chrome
- * dinámico (barra de direcciones) en el primer paint, `position: fixed`
- * queda anclado al layout viewport "grande" (chrome oculto) mientras lo
- * visible es el más chico (chrome mostrado), y el nav queda con un
- * hueco debajo hasta que un scroll fuerza a asentar el chrome y
- * recalcular. `UMBRAL_DESFASAJE_PX` separa ese caso (desfasaje grande,
- * del orden de una barra de direcciones) del ruido de unos pocos px del
- * home indicator en reposo que el freno de `esEditable` ya evitaba —
- * sin el umbral, corregir siempre reabriría ese bug viejo.
- */
-const UMBRAL_DESFASAJE_PX = 30
-
-function useNavAncladaAlViewportVisual<T extends HTMLElement>() {
-  const ref = useRef<T>(null)
-
-  useEffect(() => {
-    const visualViewport = window.visualViewport
-    if (!visualViewport) return
-
-    function reanclar() {
-      const nav = ref.current
-      if (!nav || !visualViewport) return
-      const desfasaje = window.innerHeight - visualViewport.height - visualViewport.offsetTop
-      if (!esEditable(document.activeElement) && desfasaje < UMBRAL_DESFASAJE_PX) {
-        nav.style.transform = ''
-        return
-      }
-      nav.style.transform = desfasaje > 0 ? `translateY(-${desfasaje}px)` : ''
-    }
-
-    reanclar()
-    // La primera medición (arriba) puede correr antes de que el navegador
-    // termine de asentar el chrome dinámico del primer paint — a veces
-    // todavía no hay desfasaje que medir en ese tick exacto. Un segundo
-    // recálculo post-paint (rAF) agarra el valor ya asentado sin esperar
-    // a que el usuario dispare el primer scroll/resize/foco.
-    const idPostPaint = requestAnimationFrame(reanclar)
-
-    visualViewport.addEventListener('resize', reanclar)
-    visualViewport.addEventListener('scroll', reanclar)
-    document.addEventListener('focusin', reanclar)
-    document.addEventListener('focusout', reanclar)
-    return () => {
-      cancelAnimationFrame(idPostPaint)
-      visualViewport.removeEventListener('resize', reanclar)
-      visualViewport.removeEventListener('scroll', reanclar)
-      document.removeEventListener('focusin', reanclar)
-      document.removeEventListener('focusout', reanclar)
-    }
-  }, [])
-
-  return ref
-}
-
 export function AppShell() {
   // Sprint 036: rutas como /auditoria viven dentro de Espacios pero no
   // tienen ítem propio en el nav — cualquier ruta que no sea de primer
@@ -112,7 +20,6 @@ export function AppShell() {
   // booleano local duplicado.
   const { pathname } = useLocation()
   const espaciosAbsorbeRuta = pathname !== '/' && !TOP_LEVEL_PATHS.has(pathname)
-  const navInferiorRef = useNavAncladaAlViewportVisual<HTMLElement>()
 
   function isModuleActive(mod: (typeof MODULES)[number], routerActive: boolean): boolean {
     if (mod.path === ESPACIOS_MODULE.path && espaciosAbsorbeRuta) return true
@@ -120,7 +27,7 @@ export function AppShell() {
   }
 
   return (
-    <div className="mx-auto flex h-dvh max-w-6xl overflow-hidden md:gap-6">
+    <div className="h-dvh-safe mx-auto flex max-w-6xl flex-col overflow-hidden md:flex-row md:gap-6">
       <aside className="hidden shrink-0 flex-col justify-between border-r border-border/40 px-4 py-6 md:flex md:w-52">
         <div>
           <p className="mb-8 px-3 font-mono text-[11px] tracking-[0.15em] text-ink-faint">EL ESTUDIO</p>
@@ -144,25 +51,36 @@ export function AppShell() {
       </aside>
 
       {/*
-        Sprint 036: el scroll pasa a vivir acá adentro (h-dvh + overflow-y-auto),
-        nunca en <body>. Antes <main> crecía con el contenido (min-h-dvh) y el
-        documento entero scrolleaba — con contenido largo como Auditoría eso
-        dispara más ciclos de ocultamiento de la barra del navegador que módulos
-        cortos, y la habitación (fixed inset-0 + background-size:cover en
-        index.html) recalcula su "cover" contra ese viewport visual cambiante,
-        el mismo mecanismo ya diagnosticado en el comentario de body:has(...)
-        más arriba y en el Sprint 031 (ver index.html). Con <body>/#root fijos
-        en 100dvh y el scroll contenido acá, ese viewport visual nunca cambia
-        por navegar contenido — la foto nunca se re-ancla.
+        Sprint 036: el scroll pasa a vivir acá adentro (min-h-0 + flex-1 +
+        overflow-y-auto), nunca en <body>. Antes <main> crecía con el
+        contenido (min-h-dvh) y el documento entero scrolleaba — con
+        contenido largo como Auditoría eso dispara más ciclos de
+        ocultamiento de la barra del navegador que módulos cortos, y la
+        habitación (fixed inset-0 + background-size:cover en index.html)
+        recalcula su "cover" contra ese viewport visual cambiante, el mismo
+        mecanismo ya diagnosticado en el comentario de body:has(...) más
+        arriba y en el Sprint 031 (ver index.html). Con <body>/#root fijos
+        en 100dvh y el scroll contenido acá, ese viewport visual nunca
+        cambia por navegar contenido — la foto nunca se re-ancla.
+
+        `min-h-0` es necesario porque este <main> es un hijo flex dentro de
+        un padre flex-column de altura fija (ver arriba): sin él, un hijo
+        flex no baja de su min-height de contenido por default y el propio
+        <main> empuja al nav fuera de la pantalla en vez de scrollear puertas
+        adentro.
       */}
-      <main className="h-dvh flex-1 overflow-y-auto pt-[calc(1.5rem+env(safe-area-inset-top))] pr-[calc(1.25rem+env(safe-area-inset-right))] pb-28 pl-[calc(1.25rem+env(safe-area-inset-left))] md:px-8 md:pb-10 md:pt-8">
+      <main className="min-h-0 flex-1 overflow-y-auto pt-[calc(1.5rem+env(safe-area-inset-top))] pr-[calc(1.25rem+env(safe-area-inset-right))] pb-6 pl-[calc(1.25rem+env(safe-area-inset-left))] md:px-8 md:pb-10 md:pt-8">
         <Outlet />
       </main>
 
-      <nav
-        ref={navInferiorRef}
-        className="nav-inferior fixed inset-x-0 bottom-0 z-10 flex items-stretch justify-around pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] md:hidden"
-      >
+      {/*
+        Sin position:fixed y sin transform por JS (ver .h-dvh-safe en
+        index.css): el nav es simplemente el último hijo flex de un
+        contenedor de 100dvh/100vh — el propio navegador reacomoda esa
+        altura cuando el teclado abre o el chrome dinámico se asienta, sin
+        que haga falta medir visualViewport a mano.
+      */}
+      <nav className="nav-inferior z-10 flex shrink-0 items-stretch justify-around pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] md:hidden">
         {MODULES.map((mod) => {
           const Icon = MODULE_ICONS[mod.path]
           return (

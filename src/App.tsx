@@ -32,6 +32,7 @@ import {
   leerFondoGuardado,
   aplicarPosicionX,
   leerPosicionXGuardada,
+  normalizarPosicionXRemota,
   type PosicionX,
 } from '@/lib/room/roomBackgrounds'
 import {
@@ -89,9 +90,9 @@ function useFondoDeHabitacion(userId: string | undefined) {
     })
     void obtenerPosicionXSeleccionada(userId).then((posicionX) => {
       if (cancelado || !posicionX) return
-      if (posicionX !== 'left' && posicionX !== 'center' && posicionX !== 'right') return
-      aplicarPosicionX(posicionX)
-      setPosicionXActiva(posicionX)
+      const normalizada = normalizarPosicionXRemota(posicionX)
+      aplicarPosicionX(normalizada)
+      setPosicionXActiva(normalizada)
     })
     return () => {
       cancelado = true
@@ -109,7 +110,7 @@ function useFondoDeHabitacion(userId: string | undefined) {
     aplicarPosicionX(posicionX)
     setPosicionXActiva(posicionX)
     if (!userId) return 'sin-sesion'
-    return setPosicionXSeleccionada(userId, posicionX)
+    return setPosicionXSeleccionada(userId, String(posicionX))
   }
 
   return { fondoActivo, seleccionarFondo, posicionXActiva, seleccionarPosicionX }

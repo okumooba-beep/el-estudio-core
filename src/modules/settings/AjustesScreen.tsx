@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { obtenerDatosParaExportar } from '@modules/finance/public'
 
 type EstadoExportar = 'idle' | 'exportando' | 'exportado' | 'error'
@@ -19,14 +19,11 @@ interface FondoOption {
   ruta: string
 }
 
-/** Duplicado a propósito de PosicionX (src/lib/room/roomBackgrounds.ts) — mismo motivo que FondoOption arriba. */
-type PosicionX = 'left' | 'center' | 'right'
+/** Duplicado a propósito de PosicionX (src/lib/room/roomBackgrounds.ts) — mismo motivo que FondoOption arriba. Porcentaje 0–100 (0 = borde izquierdo de la imagen, 100 = borde derecho). */
+type PosicionX = number
 
-const OPCIONES_POSICION_X: Array<{ id: PosicionX; label: string }> = [
-  { id: 'left', label: 'Izquierda' },
-  { id: 'center', label: 'Centro' },
-  { id: 'right', label: 'Derecha' },
-]
+/** Proporción de pantalla de teléfono usada para dibujar la caja de recorte sobre la miniatura — mismo valor que asume `background-size: cover` al llenar la pantalla real. */
+const ASPECTO_TELEFONO = 390 / 844
 
 /**
  * Ajustes — pantalla de utilidades del dispositivo, no un panel de
@@ -57,7 +54,7 @@ interface AjustesScreenProps {
   fondoActivo: string
   /** Aplica el fondo (CSS var + caché local) y, si hay sesión, lo sube a Supabase. 'sin-sesion' cuando no hay usuario logueado — el fondo igual queda aplicado en este dispositivo. */
   onSelectFondo: (fondoId: string) => Promise<'ok' | 'sin-sesion' | 'error'>
-  /** Posición horizontal manual de la foto ('center' por defecto) — ver comentario de .room-layer-photo en src/index.css. */
+  /** Posición horizontal manual de la foto, 0–100 (50 por defecto) — ver comentario de .room-layer-photo en src/index.css. */
   posicionXActiva: PosicionX
   /** Aplica la posición (CSS var + caché local) y, si hay sesión, la sube a Supabase. Mismo contrato que onSelectFondo. */
   onSelectPosicionX: (posicionX: PosicionX) => Promise<'ok' | 'sin-sesion' | 'error'>
@@ -87,6 +84,12 @@ export function AjustesScreen({
   const [fondoConError, setFondoConError] = useState<string | null>(null)
   const [grillaFondosAbierta, setGrillaFondosAbierta] = useState(false)
   const [estadoPosicionX, setEstadoPosicionX] = useState<EstadoPosicionX>('idle')
+  /** Posición en vivo mientras se arrastra la caja sobre la miniatura — `null` cuando no se está arrastrando, y el control cae a `posicionXActiva` (la ya guardada). Evita disparar el guardado remoto en cada pointermove. */
+  const [posicionArrastre, setPosicionArrastre] = useState<number | null>(null)
+  /** Relación ancho/alto real de la imagen activa, para que la caja de recorte represente la proporción real de pantalla de teléfono — se reinicia al cambiar de fondo y se mide de nuevo con onLoad. */
+  const [aspectoImagen, setAspectoImagen] = useState<number | null>(null)
+  const contenedorMiniaturaRef = useRef<HTMLDivElement>(null)
+  const arrastrandoRef = useRef(false)
 
   async function handleExportar() {
     setEstadoExportar('exportando')
@@ -158,6 +161,61 @@ export function AjustesScreen({
     const resultado = await onSelectPosicionX(posicionX)
     setEstadoPosicionX(resultado === 'error' ? 'error' : 'idle')
   }
+
+  /** Ancho de la caja de recorte como fracción [0,1] del ancho de la miniatura — mismo cálculo que hace `background-size: cover` para decidir cuánto de la imagen queda tapado por los costados de la pantalla real. */
+  const anchoCajaFraccion = aspectoImagen ? Math.min(1, ASPECTO_TELEFONO / aspectoImagen) : 1
+
+  function calcularPosicionDesdeClientX(clientX: number): PosicionX {
+    const contenedor = contenedorMiniaturaRef.current
+    if (!contenedor) return posicionXActiva
+    const rect = contenedor.getBoundingClientRect()
+    const anchoCajaPx = rect.width * anchoCajaFraccion
+    const rango = rect.width - anchoCajaPx
+    if (rango <= 0) return 50
+    const xCentroCaja = clientX - rect.left
+    const fraccion = (xCentroCaja - anchoCajaPx / 2) / rango
+    return Math.round(Math.min(100, Math.max(0, fraccion * 100)))
+  }
+
+  function handlePointerDownMiniatura(evento: React.PointerEvent<HTMLDivElement>) {
+    evento.currentTarget.setPointerCapture(evento.pointerId)
+    arrastrandoRef.current = true
+    setPosicionArrastre(calcularPosicionDesdeClientX(evento.clientX))
+  }
+
+  function handlePointerMoveMiniatura(evento: React.PointerEvent<HTMLDivElement>) {
+    if (!arrastrandoRef.current) return
+    setPosicionArrastre(calcularPosicionDesdeClientX(evento.clientX))
+  }
+
+  async function handlePointerUpMiniatura(evento: React.PointerEvent<HTMLDivElement>) {
+    if (!arrastrandoRef.current) return
+    arrastrandoRef.current = false
+    try {
+      evento.currentTarget.releasePointerCapture(evento.pointerId)
+    } catch {
+      // El navegador ya pudo haber soltado la captura solo (p. ej. pointercancel) — no hay nada que limpiar.
+    }
+    const posicionFinal = posicionArrastre
+    if (posicionFinal !== null) {
+      await handleSeleccionarPosicionX(posicionFinal)
+    }
+    setPosicionArrastre(null)
+  }
+
+  function handleCargaMiniatura(evento: React.SyntheticEvent<HTMLImageElement>) {
+    const img = evento.currentTarget
+    if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+      setAspectoImagen(img.naturalWidth / img.naturalHeight)
+    }
+  }
+
+  // La miniatura anterior sigue de fondo un instante mientras carga la nueva — reiniciar acá evita que la caja de recorte se dibuje un momento con la proporción de la imagen vieja.
+  useEffect(() => {
+    setAspectoImagen(null)
+  }, [fondoActivo])
+
+  const posicionMostrada = posicionArrastre ?? posicionXActiva
 
   async function handleResyncNotas() {
     if (!onForceNotesResync) return
@@ -351,50 +409,50 @@ export function AjustesScreen({
         <div className="flex flex-col gap-2 pt-2">
           <h3 className="font-mono text-[11px] uppercase tracking-wide text-ink-dim">Posición del fondo</h3>
           <p className="text-[13px] text-ink-dim">
-            El fondo llena la pantalla y puede recortar los costados — elegí qué parte de la imagen queda visible.
+            El fondo llena la pantalla y puede recortar los costados — arrastrá el recuadro sobre la imagen para
+            elegir qué parte queda visible.
           </p>
-          <div className="flex gap-2">
-            {OPCIONES_POSICION_X.map((opcion) => {
-              const activa = opcion.id === posicionXActiva
-              return (
-                <button
-                  key={opcion.id}
-                  type="button"
-                  aria-pressed={activa}
-                  className={['idea-destino', activa ? 'ring-2 ring-accent' : ''].join(' ')}
-                  disabled={estadoPosicionX === 'guardando'}
-                  onClick={() => void handleSeleccionarPosicionX(opcion.id)}
-                >
-                  {opcion.label}
-                </button>
-              )
-            })}
-          </div>
           {/*
-            Antes de esto, tocar Izquierda/Centro/Derecha no mostraba ningún
-            cambio visible porque el panel de Ajustes tapa el fondo real —
-            había que salir de Ajustes para confirmar el recorte. `ruta` y
-            `posicionXActiva` bajan del mismo estado que ya aplica
-            aplicarPosicionX() sobre --room-photo-position-x (ver App.tsx:
-            seleccionarPosicionX actualiza el estado antes del await), así
-            que esta cajita queda en vivo con cada tap, sin esperar el
-            guardado en Supabase.
+            El panel de Ajustes tapa el fondo real, así que esta miniatura ES
+            el preview — mismo motivo por el que antes existía una cajita de
+            preview aparte (ver historial): acá el thumbnail completo (sin
+            recortar, object-fit: contain) muestra la imagen entera, y el
+            recuadro dibuja qué franja quedaría visible en pantalla real con
+            `background-size: cover`. Arrastrar el recuadro solo actualiza el
+            estado local (`posicionArrastre`) en cada pointermove — el guardado
+            remoto (mismo `onSelectPosicionX` que ya usaba el selector viejo)
+            recién se dispara al soltar, para no spamear Supabase con un
+            upsert por cada píxel de arrastre.
           */}
           <div
-            aria-hidden="true"
-            style={{
-              width: '100%',
-              maxWidth: 300,
-              height: 150,
-              borderRadius: 'var(--radius-sm)',
-              border: '1px solid var(--border)',
-              boxShadow: '0 6px 16px -6px rgba(0, 0, 0, 0.5)',
-              backgroundImage: `url('${fondos.find((f) => f.id === fondoActivo)?.ruta ?? ''}')`,
-              backgroundSize: 'cover',
-              backgroundPosition: `${posicionXActiva} center`,
-              backgroundColor: 'var(--canvas)',
-            }}
-          />
+            ref={contenedorMiniaturaRef}
+            className="relative w-full touch-none select-none overflow-hidden rounded-(--radius-sm) border border-border/40 bg-canvas"
+            style={{ aspectRatio: aspectoImagen ? `${aspectoImagen}` : '16 / 9' }}
+            onPointerDown={handlePointerDownMiniatura}
+            onPointerMove={handlePointerMoveMiniatura}
+            onPointerUp={(evento) => void handlePointerUpMiniatura(evento)}
+            onPointerCancel={(evento) => void handlePointerUpMiniatura(evento)}
+          >
+            <img
+              src={fondos.find((f) => f.id === fondoActivo)?.ruta ?? ''}
+              alt=""
+              draggable={false}
+              onLoad={handleCargaMiniatura}
+              className="pointer-events-none h-full w-full object-contain"
+            />
+            <div
+              role="slider"
+              aria-label="Posición horizontal del fondo"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(posicionMostrada)}
+              className="absolute inset-y-0 cursor-grab border-2 border-accent bg-accent/15 active:cursor-grabbing"
+              style={{
+                width: `${anchoCajaFraccion * 100}%`,
+                left: `${(posicionMostrada / 100) * (100 - anchoCajaFraccion * 100)}%`,
+              }}
+            />
+          </div>
           {estadoPosicionX === 'error' && (
             <p className="text-[13px] text-critical">
               La posición quedó aplicada en este dispositivo, pero no se pudo guardar en tu cuenta. Probá de nuevo.
