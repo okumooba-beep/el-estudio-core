@@ -143,15 +143,27 @@ html[data-gaze="escritorio"] body {
   Reemplaza el viejo anclaje por JS del nav inferior (useNavAncladaAlViewportVisual,
   AppShell.tsx): en vez de compensar a mano el desfasaje entre el layout
   viewport y visualViewport cuando el teclado abre, el contenedor raíz de
-  AppShell mide directo el viewport dinámico (100dvh) y el nav pasa a ser un
-  hijo flex más, no position:fixed — el navegador ya reacomoda esa altura
-  solo. 100vh primero como fallback para navegadores sin soporte de dvh
-  (la segunda declaración gana cuando dvh existe; si no, el navegador
+  AppShell mide directo el viewport y la pill flotante (.nav-inferior) pasa
+  a anclarse contra ese contenedor, no contra el viewport crudo — el
+  navegador ya reacomoda esa altura solo.
+
+  100vh primero como fallback para navegadores sin soporte de svh (la
+  última declaración gana cuando existe soporte; si no, el navegador
   ignora esa línea entera y queda la de arriba).
+
+  svh en vez de dvh: dvh recién converge a su valor final una vez que el
+  navegador "asienta" el chrome dinámico (barra de direcciones) después
+  del primer render — en el frame inicial asume el viewport grande (sin
+  chrome), y se achica un instante después. Esa fue la causa exacta del
+  hueco bajo la pill (y antes, bajo el nav docked) visible solo al abrir
+  la app y corregido por el primer scroll (ver rondas de debug con
+  overlay numérico, conversación). svh en cambio asume desde el primer
+  frame que la barra de direcciones está visible — no hay segundo
+  asentamiento que perseguir.
 */
 .h-dvh-safe {
   height: 100vh;
-  height: 100dvh;
+  height: 100svh;
 }
 
 * {
@@ -261,6 +273,12 @@ textarea,
   bottom: 0;
   margin-bottom: env(safe-area-inset-bottom);
   border-radius: 9999px;
+  /* Recorta el fondo de .nav-inferior-item-activo (su propio --radius-sm,
+     no el de la cápsula) para que no asome cuadrado por fuera de la curva
+     de la pill cuando el ítem activo cae cerca del borde izquierdo o
+     derecho. No recorta la sombra de acá abajo: box-shadow es decoración
+     del propio elemento, no contenido, así que overflow no la afecta. */
+  overflow: hidden;
   background: color-mix(in srgb, var(--surface) 90%, black 10%);
   border: 1px solid var(--border);
   box-shadow:
