@@ -265,6 +265,31 @@ textarea,
 }
 
 /*
+  DEBUG TEMPORAL — remover después de la captura, no commitear.
+  Outline rojo: borde real del <nav> tal como lo calcula el navegador
+  (para ver si el elemento termina donde se espera). ::after lima: pinta
+  exactamente la franja de padding-bottom: env(safe-area-inset-bottom)
+  (Tailwind pb-[env(safe-area-inset-bottom)] en AppShell.tsx) como su
+  propia caja, para distinguirla del resto del fondo del nav y de
+  cualquier "hueco" debajo que sea en realidad --canvas o el Room.
+*/
+.nav-inferior {
+  position: relative;
+  outline: 3px solid red;
+  outline-offset: -3px;
+}
+.nav-inferior::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: env(safe-area-inset-bottom);
+  background: lime;
+  pointer-events: none;
+}
+
+/*
   El ítem activo ya cambiaba de color (AppShell.tsx); acá gana además
   un cuerpo propio (--accent-soft, la misma pareja de .accion-primaria)
   para que "estoy acá" se sienta como una pieza tallada en el panel, no
