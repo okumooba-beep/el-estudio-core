@@ -290,6 +290,22 @@ textarea,
 }
 
 /*
+  DEBUG TEMPORAL — segunda vuelta, remover después de la captura, no
+  commitear. La primera vuelta mostró que la lima (padding-bottom real
+  del <nav>) queda AFUERA del outline rojo (caja real del <nav>) — o sea
+  que lo que se ve no es el padding del propio <nav>. Este outline azul
+  en <body> y naranja en el div raíz de AppShell (padre directo de
+  <nav>, ver className h-dvh-safe.../overflow-hidden) sirve para ver si
+  el "hueco" negro final es <body> sin fondo propio, o si el div raíz
+  de AppShell (100dvh, overflow-hidden) termina antes de lo esperado y
+  deja a <body> expuesto debajo.
+*/
+body {
+  outline: 3px solid blue;
+  outline-offset: -3px;
+}
+
+/*
   El ítem activo ya cambiaba de color (AppShell.tsx); acá gana además
   un cuerpo propio (--accent-soft, la misma pareja de .accion-primaria)
   para que "estoy acá" se sienta como una pieza tallada en el panel, no

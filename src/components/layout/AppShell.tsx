@@ -27,7 +27,7 @@ export function AppShell() {
   }
 
   return (
-    <div className="h-dvh-safe mx-auto flex max-w-6xl flex-col overflow-hidden md:flex-row md:gap-6">
+    <div className="h-dvh-safe mx-auto flex max-w-6xl flex-col overflow-hidden outline-[3px] -outline-offset-[3px] outline-orange-500 md:flex-row md:gap-6">
       <aside className="hidden shrink-0 flex-col justify-between border-r border-border/40 px-4 py-6 md:flex md:w-52">
         <div>
           <p className="mb-8 px-3 font-mono text-[11px] tracking-[0.15em] text-ink-faint">EL ESTUDIO</p>
