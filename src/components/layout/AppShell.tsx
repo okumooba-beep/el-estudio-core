@@ -49,6 +49,10 @@ function useDebugMetrics(
         rootHeight: rootRef.current ? `${rootRef.current.offsetHeight}` : '?',
         navHeight: navRef.current ? `${navRef.current.offsetHeight}` : '?',
         safeAreaBottom: sab || '0px',
+        bodyScrollHeight: `${document.body.scrollHeight}`,
+        docScrollHeight: `${document.documentElement.scrollHeight}`,
+        scrollY: `${window.scrollY}`,
+        navRectBottom: `${navRef.current?.getBoundingClientRect().bottom ?? '?'}`,
       })
     }
     medir()
@@ -79,6 +83,10 @@ function DebugMetricsOverlay({ metrics }: { metrics: Record<string, string> }) {
     `root.offsetHeight: ${metrics.rootHeight ?? '?'}`,
     `nav.offsetHeight: ${metrics.navHeight ?? '?'}`,
     `safe-area-bottom: ${metrics.safeAreaBottom ?? '?'}`,
+    `body.scrollHeight: ${metrics.bodyScrollHeight ?? '?'}`,
+    `doc.scrollHeight: ${metrics.docScrollHeight ?? '?'}`,
+    `scrollY: ${metrics.scrollY ?? '?'}`,
+    `nav.rect.bottom: ${metrics.navRectBottom ?? '?'}`,
   ]
   return (
     <div
