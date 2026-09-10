@@ -147,34 +147,29 @@ html[data-gaze="escritorio"] body {
   a anclarse contra ese contenedor, no contra el viewport crudo — el
   navegador ya reacomoda esa altura solo.
 
-  100vh como fallback para navegadores sin soporte de svh, pero puesto
-  a propósito dentro de @supports en vez de como dos declaraciones
-  `height` seguidas en el mismo selector: el minificador de CSS de Vite
-  trata dos declaraciones de la misma propiedad como "la última gana" y
-  descarta la primera como código muerto — de haberlas dejado juntas,
-  el 100vh nunca llega a producción y los navegadores sin soporte de
-  svh se quedan sin altura (verificado con curl contra el bundle real).
-  @supports sí sobrevive la minificación porque cada rama vive en un
-  bloque condicional aparte.
+  Ni dvh ni svh alcanzaron: dvh recién converge a su valor final una vez
+  que el navegador "asienta" el chrome dinámico después del primer
+  render, y svh (pensado para asumir desde el primer frame que la barra
+  de direcciones ya está visible) tampoco resolvió el hueco al abrir la
+  PWA instalada en iOS (probado en dispositivo real) — ahí no hay barra
+  de direcciones de por medio, así que la causa es otra rareza del
+  WKWebView de standalone, no la ya conocida de Safari con pestañas.
 
-  svh en vez de dvh: dvh recién converge a su valor final una vez que el
-  navegador "asienta" el chrome dinámico (barra de direcciones) después
-  del primer render — en el frame inicial asume el viewport grande (sin
-  chrome), y se achica un instante después. Esa fue la causa exacta del
-  hueco bajo la pill (y antes, bajo el nav docked) visible solo al abrir
-  la app y corregido por el primer scroll (ver rondas de debug con
-  overlay numérico, conversación). svh en cambio asume desde el primer
-  frame que la barra de direcciones está visible — no hay segundo
-  asentamiento que perseguir.
+  --vh-real (src/light-bootstrap.ts, corre antes del primer paint de
+  React — mismo mecanismo que applyLight/aplicarFondo ahí mismo) mide
+  visualViewport.height en JS y lo escribe en :root como píxeles
+  exactos. Se recalcula en cada evento visualViewport.resize, nunca
+  scroll (eso era justo lo que desfasaba a useNavAncladaAlViewportVisual),
+  para cubrir tanto el primer render como el instante posterior en el
+  que WKWebView termina de asentar el tamaño real. 100vh como valor por
+  default de var(), no como declaración duplicada de `height`: el
+  minificador de Vite ya demostró (ver commit 87b6859) que colapsa dos
+  declaraciones de la misma propiedad a "la última gana" y descarta la
+  primera — el fallback adentro de var() no tiene ese problema porque
+  es un solo valor computado, no dos declaraciones en cascada.
 */
 .h-dvh-safe {
-  height: 100vh;
-}
-
-@supports (height: 100svh) {
-  .h-dvh-safe {
-    height: 100svh;
-  }
+  height: var(--vh-real, 100vh);
 }
 
 * {
@@ -277,6 +272,20 @@ textarea,
   perimetral en vez de solo top, sombra de cápsula flotante en vez de
   "sube hacia el contenido") se adapta a la nueva forma.
 */
+/*
+  El overflow:hidden de acá abajo no bastó para recortar el fondo de
+  .nav-inferior-item-activo en el borde redondeado — no era un problema
+  de estructura del DOM (el <a> activo es hijo directo de este <nav>,
+  no un hermano ni un elemento anclado contra otro ancestro), sino un
+  bug conocido de WebKit: cuando `overflow: hidden` + `border-radius` +
+  `backdrop-filter` conviven en el mismo elemento, Safari promueve ese
+  elemento a su propia capa compuesta para el blur y a veces deja de
+  aplicar el recorte redondeado sobre el contenido normal (no solo
+  sobre el propio backdrop-filter). La separación de abajo (vidrio en
+  ::before, recorte en el propio .nav-inferior) es el workaround
+  estándar: ningún elemento termina cargando las tres propiedades a la
+  vez.
+*/
 .nav-inferior {
   position: absolute;
   left: calc(1.25rem + env(safe-area-inset-left));
@@ -284,17 +293,20 @@ textarea,
   bottom: 0;
   margin-bottom: env(safe-area-inset-bottom);
   border-radius: 9999px;
-  /* Recorta el fondo de .nav-inferior-item-activo (su propio --radius-sm,
-     no el de la cápsula) para que no asome cuadrado por fuera de la curva
-     de la pill cuando el ítem activo cae cerca del borde izquierdo o
-     derecho. No recorta la sombra de acá abajo: box-shadow es decoración
-     del propio elemento, no contenido, así que overflow no la afecta. */
   overflow: hidden;
-  background: color-mix(in srgb, var(--surface) 90%, black 10%);
+  isolation: isolate;
   border: 1px solid var(--border);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.07),
     0 12px 28px -6px rgba(0, 0, 0, 0.5);
+}
+
+.nav-inferior::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: color-mix(in srgb, var(--surface) 90%, black 10%);
   backdrop-filter: blur(14px);
 }
 

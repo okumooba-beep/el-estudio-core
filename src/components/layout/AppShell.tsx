@@ -82,14 +82,12 @@ export function AppShell() {
 
       {/*
         Pill flotante: position:absolute (ver .nav-inferior en index.css)
-        contra el propio div raíz de AppShell (`relative`, 100dvh/100vh
-        vía .h-dvh-safe) — nunca contra el viewport crudo con
-        position:fixed, para no reintroducir el desfasaje
-        visualViewport/innerHeight que ya se había resuelto sacando el
-        JS de useNavAncladaAlViewportVisual. Al ser absolute, deja de
-        participar del flex del padre — por eso ya no lleva `shrink-0` ni
-        el padding de safe-area que antes tenía (ahora vive en
-        .nav-inferior como margin-bottom/left/right).
+        contra el propio div raíz de AppShell (`relative`, altura real vía
+        --vh-real/.h-dvh-safe, medida en JS por src/light-bootstrap.ts) —
+        nunca contra el viewport crudo con position:fixed. Al ser
+        absolute, deja de participar del flex del padre — por eso ya no
+        lleva `shrink-0` ni el padding de safe-area que antes tenía (ahora
+        vive en .nav-inferior como margin-bottom/left/right).
       */}
       <nav className="nav-inferior z-10 flex items-stretch justify-around md:hidden">
         {MODULES.map((mod) => {
