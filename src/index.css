@@ -237,72 +237,36 @@ textarea,
 }
 
 /*
-  Sprint "Visual Refinement", Prioridad 4 — `bg-surface/95` + `border-t
-  border-border/40` se sentía "plano y transparente" (queja explícita
-  del brief). Esta barra pasa a leerse como una placa tallada aparte de
-  la habitación, no una capa flotando encima: color-mix con negro (no
-  un tono nuevo) la separa un poco de --surface, un filo superior de
-  luz (inset) le da borde, y una sombra que sube hacia el contenido
-  —no hacia abajo, ya toca el borde del viewport— es lo que la separa
-  de la habitación en vez de un simple hairline.
-*/
-/*
-  Sprint "Visual Weight", Prioridad 3 — "objeto tallado, no tira
-  flotante": profundiza lo que ya hizo Threshold V1 (mezcla con negro +
-  sombra + blur) en vez de repensarlo. Más negro en la mezcla y una
-  sombra más oscura/próxima le dan al panel más masa aparente contra el
-  contenido detrás; el filo superior (inset blanco) sube de peso en la
-  misma proporción para que el borde no quede desatendido mientras el
-  cuerpo del panel gana profundidad.
+  Rediseño "nav pill flotante": las tres rondas de debug (outline rojo/
+  lima/azul/naranja, overlay numérico) confirmaron que el hueco negro
+  bajo el nav no era el propio <nav> ni su padding — era el documento
+  siendo más alto que el viewport inicial (scrollY: 0 antes del primer
+  scroll, ver conversación). En vez de perseguir ese hueco, el nav deja
+  de ser una barra docked full-width (con su propio padding-bottom de
+  safe-area y una sombra pensada para "tocar el borde del viewport") y
+  pasa a ser una cápsula flotante, position:absolute contra el propio
+  contenedor de 100dvh de AppShell (ver className `relative` en el div
+  raíz, AppShell.tsx) — nunca contra el viewport crudo, para no
+  reintroducir el desfasaje visualViewport/innerHeight que Sprint
+  "eliminar motor de luz" ya había resuelto sacando el JS de
+  useNavAncladaAlViewportVisual. Mismo tratamiento de vidrio (color-mix
+  sobre --surface + backdrop-filter) que ya tenía; el resto (borde
+  perimetral en vez de solo top, sombra de cápsula flotante en vez de
+  "sube hacia el contenido") se adapta a la nueva forma.
 */
 .nav-inferior {
+  position: absolute;
+  left: calc(1.25rem + env(safe-area-inset-left));
+  right: calc(1.25rem + env(safe-area-inset-right));
+  bottom: 0;
+  margin-bottom: env(safe-area-inset-bottom);
+  border-radius: 9999px;
   background: color-mix(in srgb, var(--surface) 90%, black 10%);
-  border-top: 1px solid var(--border);
+  border: 1px solid var(--border);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.07),
-    0 -20px 32px -20px rgba(0, 0, 0, 0.6);
+    0 12px 28px -6px rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(14px);
-}
-
-/*
-  DEBUG TEMPORAL — remover después de la captura, no commitear.
-  Outline rojo: borde real del <nav> tal como lo calcula el navegador
-  (para ver si el elemento termina donde se espera). ::after lima: pinta
-  exactamente la franja de padding-bottom: env(safe-area-inset-bottom)
-  (Tailwind pb-[env(safe-area-inset-bottom)] en AppShell.tsx) como su
-  propia caja, para distinguirla del resto del fondo del nav y de
-  cualquier "hueco" debajo que sea en realidad --canvas o el Room.
-*/
-.nav-inferior {
-  position: relative;
-  outline: 3px solid red;
-  outline-offset: -3px;
-}
-.nav-inferior::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: env(safe-area-inset-bottom);
-  background: lime;
-  pointer-events: none;
-}
-
-/*
-  DEBUG TEMPORAL — segunda vuelta, remover después de la captura, no
-  commitear. La primera vuelta mostró que la lima (padding-bottom real
-  del <nav>) queda AFUERA del outline rojo (caja real del <nav>) — o sea
-  que lo que se ve no es el padding del propio <nav>. Este outline azul
-  en <body> y naranja en el div raíz de AppShell (padre directo de
-  <nav>, ver className h-dvh-safe.../overflow-hidden) sirve para ver si
-  el "hueco" negro final es <body> sin fondo propio, o si el div raíz
-  de AppShell (100dvh, overflow-hidden) termina antes de lo esperado y
-  deja a <body> expuesto debajo.
-*/
-body {
-  outline: 3px solid blue;
-  outline-offset: -3px;
 }
 
 /*

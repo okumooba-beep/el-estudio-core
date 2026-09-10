@@ -1,7 +1,6 @@
 import { MODULE as today, ESPACIOS_MODULE } from '@modules/today/public'
 import { MODULE as missions } from '@modules/missions/public'
 import { MODULE as habits } from '@modules/habits/public'
-import { MODULE as trading } from '@modules/trading/public'
 import { MODULE as finanzas } from '@modules/finance/public'
 
 export interface ModuleDef {
@@ -27,5 +26,10 @@ export interface ModuleDef {
  * el nav inferior en mobile — el último ítem quedaba fuera del viewport
  * en 390px) y pasa a vivir dentro de Espacios, igual que Agenda/Biblioteca
  * (ver spaceRegistry.ts). El módulo no se elimina, solo su posición acá.
+ *
+ * Sprint "Nav pill flotante": Trading deja el nav de primer nivel (pasa
+ * de 6 a 5 ítems, el nuevo ancho que ocupa cada ítem en la pill flotante
+ * no tiene lugar para 6) y pasa a vivir dentro de Espacios, ya registrado
+ * ahí desde antes (ver spaceRegistry.ts) — mismo patrón que Auditoría.
  */
-export const MODULES: readonly ModuleDef[] = [today, missions, habits, trading, finanzas, ESPACIOS_MODULE]
+export const MODULES: readonly ModuleDef[] = [today, missions, habits, finanzas, ESPACIOS_MODULE]

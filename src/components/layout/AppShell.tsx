@@ -1,4 +1,3 @@
-import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { MODULES } from '@/app/modules'
 import { ESPACIOS_MODULE } from '@modules/today/public'
@@ -12,103 +11,6 @@ function linkClass(isActive: boolean): string {
 }
 
 const TOP_LEVEL_PATHS = new Set(MODULES.map((mod) => mod.path))
-
-/*
-  DEBUG TEMPORAL — remover después de la captura, no commitear.
-  Overlay numérico para la tercera vuelta de diagnóstico del hueco
-  debajo del <nav>: en vez de colores, mide en vivo innerHeight,
-  clientHeight, visualViewport, un probe real de 100dvh, el
-  offsetHeight del div raíz de AppShell y del <nav>, y el valor
-  resuelto de env(safe-area-inset-bottom) (vía una custom property
-  forzada en un probe oculto y leída con getComputedStyle, porque
-  env() no se puede leer directo desde JS).
-*/
-function useDebugMetrics(
-  rootRef: React.RefObject<HTMLDivElement | null>,
-  navRef: React.RefObject<HTMLElement | null>,
-) {
-  const dvhProbeRef = useRef<HTMLDivElement>(null)
-  const sabProbeRef = useRef<HTMLDivElement>(null)
-  const [metrics, setMetrics] = useState<Record<string, string>>({})
-
-  useEffect(() => {
-    function medir() {
-      const vv = window.visualViewport
-      if (sabProbeRef.current) {
-        sabProbeRef.current.style.setProperty('--debug-sab', 'env(safe-area-inset-bottom)')
-      }
-      const sab = sabProbeRef.current
-        ? getComputedStyle(sabProbeRef.current).getPropertyValue('--debug-sab').trim()
-        : '?'
-      setMetrics({
-        innerHeight: `${window.innerHeight}`,
-        clientHeight: `${document.documentElement.clientHeight}`,
-        vvHeight: vv ? `${vv.height}` : 'n/a',
-        vvOffsetTop: vv ? `${vv.offsetTop}` : 'n/a',
-        dvhProbe: dvhProbeRef.current ? `${dvhProbeRef.current.offsetHeight}` : '?',
-        rootHeight: rootRef.current ? `${rootRef.current.offsetHeight}` : '?',
-        navHeight: navRef.current ? `${navRef.current.offsetHeight}` : '?',
-        safeAreaBottom: sab || '0px',
-        bodyScrollHeight: `${document.body.scrollHeight}`,
-        docScrollHeight: `${document.documentElement.scrollHeight}`,
-        scrollY: `${window.scrollY}`,
-        navRectBottom: `${navRef.current?.getBoundingClientRect().bottom ?? '?'}`,
-      })
-    }
-    medir()
-    const id = window.setTimeout(medir, 300)
-    window.addEventListener('resize', medir)
-    window.addEventListener('orientationchange', medir)
-    window.visualViewport?.addEventListener('resize', medir)
-    window.visualViewport?.addEventListener('scroll', medir)
-    return () => {
-      window.clearTimeout(id)
-      window.removeEventListener('resize', medir)
-      window.removeEventListener('orientationchange', medir)
-      window.visualViewport?.removeEventListener('resize', medir)
-      window.visualViewport?.removeEventListener('scroll', medir)
-    }
-  }, [rootRef, navRef])
-
-  return { metrics, dvhProbeRef, sabProbeRef }
-}
-
-function DebugMetricsOverlay({ metrics }: { metrics: Record<string, string> }) {
-  const lineas = [
-    `innerHeight: ${metrics.innerHeight ?? '?'}`,
-    `clientHeight: ${metrics.clientHeight ?? '?'}`,
-    `vv.height: ${metrics.vvHeight ?? '?'}`,
-    `vv.offsetTop: ${metrics.vvOffsetTop ?? '?'}`,
-    `probe 100dvh: ${metrics.dvhProbe ?? '?'}`,
-    `root.offsetHeight: ${metrics.rootHeight ?? '?'}`,
-    `nav.offsetHeight: ${metrics.navHeight ?? '?'}`,
-    `safe-area-bottom: ${metrics.safeAreaBottom ?? '?'}`,
-    `body.scrollHeight: ${metrics.bodyScrollHeight ?? '?'}`,
-    `doc.scrollHeight: ${metrics.docScrollHeight ?? '?'}`,
-    `scrollY: ${metrics.scrollY ?? '?'}`,
-    `nav.rect.bottom: ${metrics.navRectBottom ?? '?'}`,
-  ]
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        zIndex: 9999,
-        background: 'black',
-        color: 'lime',
-        fontSize: 10,
-        lineHeight: 1.4,
-        padding: 4,
-        fontFamily: 'monospace',
-        whiteSpace: 'pre',
-        pointerEvents: 'none',
-      }}
-    >
-      {lineas.join('\n')}
-    </div>
-  )
-}
 
 export function AppShell() {
   // Sprint 036: rutas como /auditoria viven dentro de Espacios pero no
@@ -124,19 +26,8 @@ export function AppShell() {
     return routerActive
   }
 
-  // DEBUG TEMPORAL — ver useDebugMetrics/DebugMetricsOverlay más arriba, remover después de la captura.
-  const rootRef = useRef<HTMLDivElement>(null)
-  const navRef = useRef<HTMLElement>(null)
-  const { metrics, dvhProbeRef, sabProbeRef } = useDebugMetrics(rootRef, navRef)
-
   return (
-    <div
-      ref={rootRef}
-      className="h-dvh-safe mx-auto flex max-w-6xl flex-col overflow-hidden outline-[3px] -outline-offset-[3px] outline-orange-500 md:flex-row md:gap-6"
-    >
-      <DebugMetricsOverlay metrics={metrics} />
-      <div ref={dvhProbeRef} style={{ position: 'absolute', top: 0, left: 0, width: 0, height: '100dvh', visibility: 'hidden' }} />
-      <div ref={sabProbeRef} style={{ position: 'absolute', top: 0, left: 0, width: 0, height: 0, visibility: 'hidden' }} />
+    <div className="h-dvh-safe relative mx-auto flex max-w-6xl flex-col overflow-hidden md:flex-row md:gap-6">
       <aside className="hidden shrink-0 flex-col justify-between border-r border-border/40 px-4 py-6 md:flex md:w-52">
         <div>
           <p className="mb-8 px-3 font-mono text-[11px] tracking-[0.15em] text-ink-faint">EL ESTUDIO</p>
@@ -175,24 +66,32 @@ export function AppShell() {
         `min-h-0` es necesario porque este <main> es un hijo flex dentro de
         un padre flex-column de altura fija (ver arriba): sin él, un hijo
         flex no baja de su min-height de contenido por default y el propio
-        <main> empuja al nav fuera de la pantalla en vez de scrollear puertas
-        adentro.
+        <main> crece más allá de la altura fija de la columna en vez de
+        scrollear puertas adentro.
+
+        `pb-28` (mobile): el nav pasó a ser una pill flotante en overlay
+        (position:absolute, ver .nav-inferior en index.css) — ya no es un
+        hijo flex que reserva su propio espacio, así que el <main> no lo
+        "sabe" y el contenido scrolleable necesita este colchón propio
+        para no terminar tapado detrás de la pill al hacer scroll hasta
+        el final.
       */}
-      <main className="min-h-0 flex-1 overflow-y-auto pt-[calc(1.5rem+env(safe-area-inset-top))] pr-[calc(1.25rem+env(safe-area-inset-right))] pb-6 pl-[calc(1.25rem+env(safe-area-inset-left))] md:px-8 md:pb-10 md:pt-8">
+      <main className="min-h-0 flex-1 overflow-y-auto pt-[calc(1.5rem+env(safe-area-inset-top))] pr-[calc(1.25rem+env(safe-area-inset-right))] pb-28 pl-[calc(1.25rem+env(safe-area-inset-left))] md:px-8 md:pb-10 md:pt-8">
         <Outlet />
       </main>
 
       {/*
-        Sin position:fixed y sin transform por JS (ver .h-dvh-safe en
-        index.css): el nav es simplemente el último hijo flex de un
-        contenedor de 100dvh/100vh — el propio navegador reacomoda esa
-        altura cuando el teclado abre o el chrome dinámico se asienta, sin
-        que haga falta medir visualViewport a mano.
+        Pill flotante: position:absolute (ver .nav-inferior en index.css)
+        contra el propio div raíz de AppShell (`relative`, 100dvh/100vh
+        vía .h-dvh-safe) — nunca contra el viewport crudo con
+        position:fixed, para no reintroducir el desfasaje
+        visualViewport/innerHeight que ya se había resuelto sacando el
+        JS de useNavAncladaAlViewportVisual. Al ser absolute, deja de
+        participar del flex del padre — por eso ya no lleva `shrink-0` ni
+        el padding de safe-area que antes tenía (ahora vive en
+        .nav-inferior como margin-bottom/left/right).
       */}
-      <nav
-        ref={navRef}
-        className="nav-inferior z-10 flex shrink-0 items-stretch justify-around pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] md:hidden"
-      >
+      <nav className="nav-inferior z-10 flex items-stretch justify-around md:hidden">
         {MODULES.map((mod) => {
           const Icon = MODULE_ICONS[mod.path]
           return (
