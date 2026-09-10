@@ -147,9 +147,15 @@ html[data-gaze="escritorio"] body {
   a anclarse contra ese contenedor, no contra el viewport crudo — el
   navegador ya reacomoda esa altura solo.
 
-  100vh primero como fallback para navegadores sin soporte de svh (la
-  última declaración gana cuando existe soporte; si no, el navegador
-  ignora esa línea entera y queda la de arriba).
+  100vh como fallback para navegadores sin soporte de svh, pero puesto
+  a propósito dentro de @supports en vez de como dos declaraciones
+  `height` seguidas en el mismo selector: el minificador de CSS de Vite
+  trata dos declaraciones de la misma propiedad como "la última gana" y
+  descarta la primera como código muerto — de haberlas dejado juntas,
+  el 100vh nunca llega a producción y los navegadores sin soporte de
+  svh se quedan sin altura (verificado con curl contra el bundle real).
+  @supports sí sobrevive la minificación porque cada rama vive en un
+  bloque condicional aparte.
 
   svh en vez de dvh: dvh recién converge a su valor final una vez que el
   navegador "asienta" el chrome dinámico (barra de direcciones) después
@@ -163,7 +169,12 @@ html[data-gaze="escritorio"] body {
 */
 .h-dvh-safe {
   height: 100vh;
-  height: 100svh;
+}
+
+@supports (height: 100svh) {
+  .h-dvh-safe {
+    height: 100svh;
+  }
 }
 
 * {
