@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { MODULES } from '@/app/modules'
 import { ESPACIOS_MODULE } from '@modules/today/public'
@@ -11,6 +12,95 @@ function linkClass(isActive: boolean): string {
 }
 
 const TOP_LEVEL_PATHS = new Set(MODULES.map((mod) => mod.path))
+
+/*
+  DEBUG TEMPORAL — remover después de la captura, no commitear.
+  Overlay numérico para la tercera vuelta de diagnóstico del hueco
+  debajo del <nav>: en vez de colores, mide en vivo innerHeight,
+  clientHeight, visualViewport, un probe real de 100dvh, el
+  offsetHeight del div raíz de AppShell y del <nav>, y el valor
+  resuelto de env(safe-area-inset-bottom) (vía una custom property
+  forzada en un probe oculto y leída con getComputedStyle, porque
+  env() no se puede leer directo desde JS).
+*/
+function useDebugMetrics(
+  rootRef: React.RefObject<HTMLDivElement | null>,
+  navRef: React.RefObject<HTMLElement | null>,
+) {
+  const dvhProbeRef = useRef<HTMLDivElement>(null)
+  const sabProbeRef = useRef<HTMLDivElement>(null)
+  const [metrics, setMetrics] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    function medir() {
+      const vv = window.visualViewport
+      if (sabProbeRef.current) {
+        sabProbeRef.current.style.setProperty('--debug-sab', 'env(safe-area-inset-bottom)')
+      }
+      const sab = sabProbeRef.current
+        ? getComputedStyle(sabProbeRef.current).getPropertyValue('--debug-sab').trim()
+        : '?'
+      setMetrics({
+        innerHeight: `${window.innerHeight}`,
+        clientHeight: `${document.documentElement.clientHeight}`,
+        vvHeight: vv ? `${vv.height}` : 'n/a',
+        vvOffsetTop: vv ? `${vv.offsetTop}` : 'n/a',
+        dvhProbe: dvhProbeRef.current ? `${dvhProbeRef.current.offsetHeight}` : '?',
+        rootHeight: rootRef.current ? `${rootRef.current.offsetHeight}` : '?',
+        navHeight: navRef.current ? `${navRef.current.offsetHeight}` : '?',
+        safeAreaBottom: sab || '0px',
+      })
+    }
+    medir()
+    const id = window.setTimeout(medir, 300)
+    window.addEventListener('resize', medir)
+    window.addEventListener('orientationchange', medir)
+    window.visualViewport?.addEventListener('resize', medir)
+    window.visualViewport?.addEventListener('scroll', medir)
+    return () => {
+      window.clearTimeout(id)
+      window.removeEventListener('resize', medir)
+      window.removeEventListener('orientationchange', medir)
+      window.visualViewport?.removeEventListener('resize', medir)
+      window.visualViewport?.removeEventListener('scroll', medir)
+    }
+  }, [rootRef, navRef])
+
+  return { metrics, dvhProbeRef, sabProbeRef }
+}
+
+function DebugMetricsOverlay({ metrics }: { metrics: Record<string, string> }) {
+  const lineas = [
+    `innerHeight: ${metrics.innerHeight ?? '?'}`,
+    `clientHeight: ${metrics.clientHeight ?? '?'}`,
+    `vv.height: ${metrics.vvHeight ?? '?'}`,
+    `vv.offsetTop: ${metrics.vvOffsetTop ?? '?'}`,
+    `probe 100dvh: ${metrics.dvhProbe ?? '?'}`,
+    `root.offsetHeight: ${metrics.rootHeight ?? '?'}`,
+    `nav.offsetHeight: ${metrics.navHeight ?? '?'}`,
+    `safe-area-bottom: ${metrics.safeAreaBottom ?? '?'}`,
+  ]
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        zIndex: 9999,
+        background: 'black',
+        color: 'lime',
+        fontSize: 10,
+        lineHeight: 1.4,
+        padding: 4,
+        fontFamily: 'monospace',
+        whiteSpace: 'pre',
+        pointerEvents: 'none',
+      }}
+    >
+      {lineas.join('\n')}
+    </div>
+  )
+}
 
 export function AppShell() {
   // Sprint 036: rutas como /auditoria viven dentro de Espacios pero no
@@ -26,8 +116,19 @@ export function AppShell() {
     return routerActive
   }
 
+  // DEBUG TEMPORAL — ver useDebugMetrics/DebugMetricsOverlay más arriba, remover después de la captura.
+  const rootRef = useRef<HTMLDivElement>(null)
+  const navRef = useRef<HTMLElement>(null)
+  const { metrics, dvhProbeRef, sabProbeRef } = useDebugMetrics(rootRef, navRef)
+
   return (
-    <div className="h-dvh-safe mx-auto flex max-w-6xl flex-col overflow-hidden outline-[3px] -outline-offset-[3px] outline-orange-500 md:flex-row md:gap-6">
+    <div
+      ref={rootRef}
+      className="h-dvh-safe mx-auto flex max-w-6xl flex-col overflow-hidden outline-[3px] -outline-offset-[3px] outline-orange-500 md:flex-row md:gap-6"
+    >
+      <DebugMetricsOverlay metrics={metrics} />
+      <div ref={dvhProbeRef} style={{ position: 'absolute', top: 0, left: 0, width: 0, height: '100dvh', visibility: 'hidden' }} />
+      <div ref={sabProbeRef} style={{ position: 'absolute', top: 0, left: 0, width: 0, height: 0, visibility: 'hidden' }} />
       <aside className="hidden shrink-0 flex-col justify-between border-r border-border/40 px-4 py-6 md:flex md:w-52">
         <div>
           <p className="mb-8 px-3 font-mono text-[11px] tracking-[0.15em] text-ink-faint">EL ESTUDIO</p>
@@ -80,7 +181,10 @@ export function AppShell() {
         altura cuando el teclado abre o el chrome dinámico se asienta, sin
         que haga falta medir visualViewport a mano.
       */}
-      <nav className="nav-inferior z-10 flex shrink-0 items-stretch justify-around pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] md:hidden">
+      <nav
+        ref={navRef}
+        className="nav-inferior z-10 flex shrink-0 items-stretch justify-around pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] md:hidden"
+      >
         {MODULES.map((mod) => {
           const Icon = MODULE_ICONS[mod.path]
           return (
