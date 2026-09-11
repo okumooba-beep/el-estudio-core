@@ -15,9 +15,24 @@ export interface NotesEngineScreenProps {
   engine: NotesEngineApi
   titulo: string
   descripcionVacio: string
+  /**
+   * Oculta el <p>{titulo}</p> chico en mayúsculas del header de la lista de
+   * carpetas — pedido de "Mi proyecto" (MiProyectoScreen.tsx), que ya
+   * muestra el nombre del espacio como encabezado de pantalla propio antes
+   * de este componente; mostrarlo de nuevo acá lo duplicaba. Notas no pasa
+   * esto y sigue mostrando su título como siempre.
+   */
+  ocultarTitulo?: boolean | undefined
+  /**
+   * Carpetas en grilla de tarjetas de ancho consistente en vez de lista
+   * apilada a lo ancho completo — mismo pedido: que Mi Proyecto se sienta
+   * como un espacio propio, no como Notas con otro título pegado arriba.
+   * Notas no lo pasa y mantiene su lista de una columna.
+   */
+  carpetasEnGrilla?: boolean | undefined
 }
 
-export function NotesEngineScreen({ engine, titulo, descripcionVacio }: NotesEngineScreenProps) {
+export function NotesEngineScreen({ engine, titulo, descripcionVacio, ocultarTitulo, carpetasEnGrilla }: NotesEngineScreenProps) {
   const [carpetaAbiertaId, setCarpetaAbiertaId] = useState<string | null>(null)
 
   if (!engine.ready) return null
@@ -41,6 +56,8 @@ export function NotesEngineScreen({ engine, titulo, descripcionVacio }: NotesEng
       titulo={titulo}
       descripcionVacio={descripcionVacio}
       onAbrir={setCarpetaAbiertaId}
+      ocultarTitulo={ocultarTitulo}
+      carpetasEnGrilla={carpetasEnGrilla}
     />
   )
 }
@@ -50,9 +67,11 @@ interface FolderListProps {
   titulo: string
   descripcionVacio: string
   onAbrir: (id: string) => void
+  ocultarTitulo?: boolean | undefined
+  carpetasEnGrilla?: boolean | undefined
 }
 
-function FolderList({ engine, titulo, descripcionVacio, onAbrir }: FolderListProps) {
+function FolderList({ engine, titulo, descripcionVacio, onAbrir, ocultarTitulo, carpetasEnGrilla }: FolderListProps) {
   const [creando, setCreando] = useState(false)
   const [nombreNueva, setNombreNueva] = useState('')
 
@@ -67,8 +86,10 @@ function FolderList({ engine, titulo, descripcionVacio, onAbrir }: FolderListPro
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-6 pb-10">
       <div className="flex items-center justify-between">
-        <p className="font-mono text-[11px] uppercase tracking-wide text-accent">{titulo}</p>
-        <button type="button" className="idea-destino" onClick={() => setCreando((v) => !v)}>
+        {ocultarTitulo ? null : (
+          <p className="font-mono text-[11px] uppercase tracking-wide text-accent">{titulo}</p>
+        )}
+        <button type="button" className={`idea-destino ${ocultarTitulo ? 'ml-auto' : ''}`} onClick={() => setCreando((v) => !v)}>
           {creando ? 'Cancelar' : 'Nueva carpeta'}
         </button>
       </div>
@@ -94,7 +115,7 @@ function FolderList({ engine, titulo, descripcionVacio, onAbrir }: FolderListPro
       {engine.folders.length === 0 && !creando ? (
         <EmptyState title="Ninguna carpeta todavía." description={descripcionVacio} />
       ) : (
-        <ul className="flex flex-col gap-3">
+        <ul className={carpetasEnGrilla ? 'grid grid-cols-2 gap-3 sm:grid-cols-3' : 'flex flex-col gap-3'}>
           {engine.folders.map((folder) => (
             <FolderRow key={folder.id} folder={folder} engine={engine} onAbrir={() => onAbrir(folder.id)} />
           ))}

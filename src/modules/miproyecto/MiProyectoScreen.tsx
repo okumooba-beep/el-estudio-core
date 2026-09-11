@@ -23,12 +23,14 @@ export function MiProyectoScreen({ nombre, onRenombrar }: MiProyectoScreenProps)
   const notes = engine.useEngine()
 
   return (
-    <div className="mx-auto flex max-w-xl flex-col gap-4 pb-2">
+    <div className="mx-auto flex max-w-xl flex-col gap-6 pb-2">
       <NombreEspacio nombre={nombre} onRenombrar={onRenombrar} />
       <NotesEngineScreen
         engine={notes}
         titulo={nombre}
         descripcionVacio="Creá una carpeta para empezar a organizar este espacio."
+        ocultarTitulo
+        carpetasEnGrilla
       />
     </div>
   )
@@ -59,11 +61,11 @@ function NombreEspacio({ nombre, onRenombrar }: NombreEspacioProps) {
 
   if (!editando) {
     return (
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-[13px] text-ink-faint">Espacio: {nombre}</p>
+      <header className="flex items-start justify-between gap-3">
+        <h1 className="text-[28px] font-medium tracking-tight text-ink text-balance">{nombre}</h1>
         <button
           type="button"
-          className="idea-destino shrink-0"
+          className="idea-destino mt-1.5 shrink-0"
           onClick={() => {
             setValor(nombre)
             setEditando(true)
@@ -71,7 +73,7 @@ function NombreEspacio({ nombre, onRenombrar }: NombreEspacioProps) {
         >
           Renombrar espacio
         </button>
-      </div>
+      </header>
     )
   }
 
