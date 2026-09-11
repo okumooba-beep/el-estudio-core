@@ -27,9 +27,9 @@ dist-ssr
 .env
 .env.local
 
-# Graphify (local python venv + interpreter pointer, not the graph output)
+# Graphify (regenerable cache + output — rerun /graphify to rebuild)
 .venv-graphify
-graphify-out/.graphify_python
+graphify-out/
 
 .vercel
 .env*
