@@ -1,11 +1,7 @@
-import { useFinance } from './useFinance'
-import { categoriaDe } from './mes'
-import {
-  financeAccountRepository,
-  financeMovimientoRepository,
-  financeGoalRepository,
-  financeIncomePeriodRepository,
-} from './financeRepository'
+import { createFinanceEngine } from '@/components/finance-engine/createFinanceEngine'
+import { createFinanceEngineRepositories } from '@/components/finance-engine/financeEngineRepository'
+import { categoriaDe } from '@/components/finance-engine/mes'
+import { db } from '@/lib/db/db'
 import type { FinanceAccount, FinanceMovimiento, FinanceGoal, FinanceIncomePeriod } from '@/types/finance'
 
 /**
@@ -18,8 +14,17 @@ import type { FinanceAccount, FinanceMovimiento, FinanceGoal, FinanceIncomePerio
  * importada directo en App.tsx (mismo patrón que HoyScreen/MisionesScreen/
  * DiarioScreen: la ruta importa la pantalla de su propio archivo, no de
  * `public.ts` — acá `public.ts` solo expone la identidad de navegación).
+ *
+ * El motor de Finanzas (createFinanceEngine, en
+ * src/components/finance-engine/) es el mismo que instancia
+ * FinanceScreen.tsx, apuntado a las mismas 4 tablas Dexie del Finanzas
+ * general — cada `useEngine()` es una instancia de lectura
+ * independiente sobre el mismo dato persistido, mismo criterio que ya
+ * regía cuando `useFinance()` era un hook no parametrizado.
  */
 export const MODULE = { path: '/finanzas', label: 'Finanzas' }
+
+const engine = createFinanceEngine(db.financeAccounts, db.financeMovimientos, db.financeGoals, db.financeIncomePeriods)
 
 /**
  * Señal de atención para Home (Sprint "Home refleja estado real de los
@@ -30,7 +35,7 @@ export const MODULE = { path: '/finanzas', label: 'Finanzas' }
  * lista de movimientos ni el criterio de categorización.
  */
 export function useAttentionSignal(): { destino: 'finanzas'; mensaje: string } | null {
-  const { movimientos } = useFinance()
+  const { movimientos } = engine.useEngine()
   const hayPorRevisar = movimientos.some((movimiento) => movimiento.tipo === 'egreso' && categoriaDe(movimiento) === null)
   return hayPorRevisar ? { destino: 'finanzas', mensaje: 'Finanzas tiene un movimiento por revisar' } : null
 }
@@ -40,7 +45,7 @@ export function useAttentionSignal(): { destino: 'finanzas'; mensaje: string } |
  * tablas de Finanzas, para que Ajustes arme un backup en JSON sin tocar
  * el interior del módulo (dependency-cruiser, `settings-boundaries`).
  * Nunca escribe nada — mismo motivo por el que expone una función
- * puntual y no `useFinance` completo (que trae altas/bajas).
+ * puntual y no el motor completo (que trae altas/bajas).
  */
 export interface FinanzasExport {
   movimientos: FinanceMovimiento[]
@@ -49,12 +54,19 @@ export interface FinanzasExport {
   goals: FinanceGoal[]
 }
 
+const { accountRepository, movimientoRepository, goalRepository, periodoRepository } = createFinanceEngineRepositories(
+  db.financeAccounts,
+  db.financeMovimientos,
+  db.financeGoals,
+  db.financeIncomePeriods,
+)
+
 export async function obtenerDatosParaExportar(): Promise<FinanzasExport> {
   const [movimientos, periodos, accounts, goals] = await Promise.all([
-    financeMovimientoRepository.list(),
-    financeIncomePeriodRepository.list(),
-    financeAccountRepository.list(),
-    financeGoalRepository.list(),
+    movimientoRepository.list(),
+    periodoRepository.list(),
+    accountRepository.list(),
+    goalRepository.list(),
   ])
   return { movimientos, periodos, accounts, goals }
 }

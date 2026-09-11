@@ -14,18 +14,12 @@ import type { Medio, Moneda } from '@/components/finance-engine/extraccion'
 import type { EntityTable } from 'dexie'
 
 /**
- * Fase 1 (sync Supabase) — el motor de sync vive en `src/lib`, no dentro
- * del módulo Finanzas: opera directo sobre `db` (la misma instancia Dexie
- * compartida que ya usa financeRepository.ts) y sobre el cliente Supabase,
- * dos dependencias que dependency-cruiser ya autoriza fuera de `src/modules`
- * (ver .dependency-cruiser.cjs — `db.ts` es la excepción universal; el
- * cliente de Supabase nunca necesita entrar a un módulo). Esto evita tocar
- * financeRepository.ts más de lo estrictamente necesario (el borrado
- * lógico) y evita agregar una regla de boundaries nueva.
- *
- * Cada tabla mapea su fila Dexie (camelCase) a una fila Supabase
- * (snake_case) — ver supabase/finance_schema.sql para el DDL real. Nunca se
- * sincroniza `pendingSync` (es un flag puramente local).
+ * Finanzas propia de "Mi proyecto" — mismo motor de sync que Finanzas
+ * general (ver financeSync.ts), tabla por tabla propia
+ * (mi_proyecto_finanzas_accounts/movimientos/goals/income_periods, ver
+ * supabase/mi_proyecto_finanzas_schema.sql) para que los dos espacios
+ * nunca compartan datos aunque reutilicen los mismos tipos
+ * FinanceAccount/FinanceMovimiento/FinanceGoal/FinanceIncomePeriod.
  */
 
 interface AccountRow {
@@ -89,8 +83,8 @@ interface TableSync<Local extends { id: string; pendingSync: boolean }, Remote e
 }
 
 const accountsSync: TableSync<FinanceAccount, AccountRow> = {
-  supabaseTable: 'finance_accounts',
-  dexieTable: db.financeAccounts,
+  supabaseTable: 'mi_proyecto_finanzas_accounts',
+  dexieTable: db.miProyectoFinanceAccounts,
   toRow: (userId, a) => ({
     id: a.id,
     user_id: userId,
@@ -112,8 +106,8 @@ const accountsSync: TableSync<FinanceAccount, AccountRow> = {
 }
 
 const movimientosSync: TableSync<FinanceMovimiento, MovimientoRow> = {
-  supabaseTable: 'finance_movimientos',
-  dexieTable: db.financeMovimientos,
+  supabaseTable: 'mi_proyecto_finanzas_movimientos',
+  dexieTable: db.miProyectoFinanceMovimientos,
   toRow: (userId, m) => ({
     id: m.id,
     user_id: userId,
@@ -157,8 +151,8 @@ const movimientosSync: TableSync<FinanceMovimiento, MovimientoRow> = {
 }
 
 const goalsSync: TableSync<FinanceGoal, GoalRow> = {
-  supabaseTable: 'finance_goals',
-  dexieTable: db.financeGoals,
+  supabaseTable: 'mi_proyecto_finanzas_goals',
+  dexieTable: db.miProyectoFinanceGoals,
   toRow: (userId, g) => ({
     id: g.id,
     user_id: userId,
@@ -180,8 +174,8 @@ const goalsSync: TableSync<FinanceGoal, GoalRow> = {
 }
 
 const periodosSync: TableSync<FinanceIncomePeriod, PeriodoRow> = {
-  supabaseTable: 'finance_income_periods',
-  dexieTable: db.financeIncomePeriods,
+  supabaseTable: 'mi_proyecto_finanzas_income_periods',
+  dexieTable: db.miProyectoFinanceIncomePeriods,
   toRow: (userId, p) => ({
     id: p.id,
     user_id: userId,
@@ -209,13 +203,13 @@ const periodosSync: TableSync<FinanceIncomePeriod, PeriodoRow> = {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ALL_TABLES: TableSync<any, any>[] = [accountsSync, movimientosSync, goalsSync, periodosSync]
 
-async function allFinanceTablesEmpty(): Promise<boolean> {
+async function allMiProyectoFinanceTablesEmpty(): Promise<boolean> {
   const counts = await Promise.all(ALL_TABLES.map((t) => t.dexieTable.count()))
   return counts.every((count) => count === 0)
 }
 
 /** Sube todo lo que quedó marcado `pendingSync: true` desde la última corrida. Se llama cada vez que hay conexión y sesión activa. */
-export async function pushFinancePending(userId: string): Promise<void> {
+export async function pushMiProyectoFinancePending(userId: string): Promise<void> {
   if (!supabase) return
   for (const table of ALL_TABLES) {
     const pendientes = await readPending(table.dexieTable)
@@ -236,11 +230,9 @@ export async function pushFinancePending(userId: string): Promise<void> {
 /**
  * Dispositivo nuevo / reinstalación: Dexie está vacía pero la cuenta puede
  * tener datos reales en Supabase. Devuelve solo las tablas que realmente
- * confirmaron su lectura (mismo contrato que migrateFinanceOnFirstLogin) —
- * el llamador usa esto para saber si puede marcar la migración completa o
- * si tiene que reintentar en el próximo inicio.
+ * confirmaron su lectura (mismo contrato que migrateMiProyectoFinanceOnFirstLogin).
  */
-export async function hydrateFinanceFromSupabase(userId: string): Promise<string[]> {
+export async function hydrateMiProyectoFinanceFromSupabase(userId: string): Promise<string[]> {
   if (!supabase) return []
   const tablasConfirmadas: string[] = []
   for (const table of ALL_TABLES) {
@@ -259,7 +251,7 @@ export async function hydrateFinanceFromSupabase(userId: string): Promise<string
 }
 
 /** Primer login con datos locales previos (creados sin sesión): sube todo lo que ya existe en Dexie, tabla por tabla. */
-export async function migrateFinanceOnFirstLogin(userId: string): Promise<string[]> {
+export async function migrateMiProyectoFinanceOnFirstLogin(userId: string): Promise<string[]> {
   if (!supabase) return []
   const tablasConfirmadas: string[] = []
   for (const table of ALL_TABLES) {
@@ -283,4 +275,4 @@ export async function migrateFinanceOnFirstLogin(userId: string): Promise<string
   return tablasConfirmadas
 }
 
-export { allFinanceTablesEmpty }
+export { allMiProyectoFinanceTablesEmpty }

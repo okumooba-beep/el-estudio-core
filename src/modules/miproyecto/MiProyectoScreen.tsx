@@ -1,14 +1,24 @@
 import { useState } from 'react'
+import { createFinanceEngine } from '@/components/finance-engine/createFinanceEngine'
+import { FinanceEngineScreen } from '@/components/finance-engine/FinanceEngineScreen'
 import { createNotesEngine } from '@/components/notes-engine/createNotesEngine'
 import { NotesEngineScreen } from '@/components/notes-engine/NotesEngineScreen'
 import { db } from '@/lib/db/db'
 
 const engine = createNotesEngine(db.miProyectoFolders, db.miProyectoNotes)
+const financeEngine = createFinanceEngine(
+  db.miProyectoFinanceAccounts,
+  db.miProyectoFinanceMovimientos,
+  db.miProyectoFinanceGoals,
+  db.miProyectoFinanceIncomePeriods,
+)
 
 export interface MiProyectoScreenProps {
   nombre: string
   onRenombrar: (nombre: string) => Promise<'ok' | 'error'>
 }
+
+type Seccion = 'carpetas' | 'finanzas'
 
 /**
  * Espacio genérico reutilizable (pedido del sprint: "que cualquier
@@ -18,20 +28,46 @@ export interface MiProyectoScreenProps {
  * nombre del espacio es una preferencia por usuario (ver
  * src/lib/miproyecto/), pasada como prop desde App.tsx igual que el fondo
  * de la habitación.
+ *
+ * Finanzas (pedido: "Finanzas como módulo propio de Mi proyecto") suma
+ * una segunda pestaña, mismo motor compartido que Finanzas general (ver
+ * finance-engine/), sobre sus propias 4 tablas Dexie/Supabase
+ * (mi_proyecto_finanzas_*) — nunca mezclado con el Finanzas general del
+ * usuario. Sin `ideaCapture`: este espacio no tiene Umbral propio.
  */
 export function MiProyectoScreen({ nombre, onRenombrar }: MiProyectoScreenProps) {
   const notes = engine.useEngine()
+  const finance = financeEngine.useEngine()
+  const [seccion, setSeccion] = useState<Seccion>('carpetas')
 
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-6 pb-2">
       <NombreEspacio nombre={nombre} onRenombrar={onRenombrar} />
-      <NotesEngineScreen
-        engine={notes}
-        titulo={nombre}
-        descripcionVacio="Creá una carpeta para empezar a organizar este espacio."
-        ocultarTitulo
-        carpetasEnGrilla
-      />
+      <div className="idea-destinos" role="group" aria-label="Sección">
+        {(['carpetas', 'finanzas'] as const).map((opcion) => (
+          <button
+            key={opcion}
+            type="button"
+            className="idea-destino"
+            aria-pressed={seccion === opcion}
+            style={seccion === opcion ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
+            onClick={() => setSeccion(opcion)}
+          >
+            {opcion === 'carpetas' ? 'Carpetas' : 'Finanzas'}
+          </button>
+        ))}
+      </div>
+      {seccion === 'carpetas' ? (
+        <NotesEngineScreen
+          engine={notes}
+          titulo={nombre}
+          descripcionVacio="Creá una carpeta para empezar a organizar este espacio."
+          ocultarTitulo
+          carpetasEnGrilla
+        />
+      ) : (
+        <FinanceEngineScreen engine={finance} />
+      )}
     </div>
   )
 }

@@ -7,7 +7,7 @@ import type { AgendaEvento, AgendaBloque } from '@/types/agenda'
 import type { AuditRuptura, AuditPremortem, AuditCorreccionSemanal, AuditConfig } from '@/types/auditoria'
 import type { NotesFolder, NotesNote } from '@/types/notes'
 import type { Recordatorio } from '@/types/recordatorio'
-import { extraerCategoria } from '@modules/finance/extraccion'
+import { extraerCategoria } from '@/components/finance-engine/extraccion'
 
 interface LegacyNota {
   id: string
@@ -33,8 +33,10 @@ export interface SyncMeta {
    * Fase 4), 'habits-sync' = Hábitos (habitChecks), 'trading-sync' =
    * Trading (operaciones), 'agenda-sync' = Agenda (eventos + bloques),
    * 'auditoria-sync' = Auditoría (rupturas + premortems + correcciones +
-   * config), 'recordatorios-sync' = Recordatorios (Fase 2, push real) —
-   * una fila propia por módulo sincronizado.
+   * config), 'recordatorios-sync' = Recordatorios (Fase 2, push real),
+   * 'miproyecto-sync' = Mi Proyecto (carpetas + notas),
+   * 'miproyecto-finanzas-sync' = Finanzas propia de Mi Proyecto — una
+   * fila propia por módulo sincronizado.
    */
   id:
     | 'sync'
@@ -47,6 +49,7 @@ export interface SyncMeta {
     | 'auditoria-sync'
     | 'recordatorios-sync'
     | 'miproyecto-sync'
+    | 'miproyecto-finanzas-sync'
   userId: string
   migratedAt: string | null
   migratedTables: string[]
@@ -84,6 +87,10 @@ class LifeosDB extends Dexie {
   notesNotes!: EntityTable<NotesNote, 'id'>
   miProyectoFolders!: EntityTable<NotesFolder, 'id'>
   miProyectoNotes!: EntityTable<NotesNote, 'id'>
+  miProyectoFinanceAccounts!: EntityTable<FinanceAccount, 'id'>
+  miProyectoFinanceMovimientos!: EntityTable<FinanceMovimiento, 'id'>
+  miProyectoFinanceGoals!: EntityTable<FinanceGoal, 'id'>
+  miProyectoFinanceIncomePeriods!: EntityTable<FinanceIncomePeriod, 'id'>
   syncMeta!: EntityTable<SyncMeta, 'id'>
   recordatorios!: EntityTable<Recordatorio, 'id'>
 
@@ -557,6 +564,23 @@ class LifeosDB extends Dexie {
     this.version(23).stores({
       miProyectoFolders: 'id, createdAt',
       miProyectoNotes: 'id, folderId, createdAt',
+    })
+
+    /**
+     * "Mi proyecto" — Finanzas propia, mismo motor que el Finanzas
+     * general (ver src/components/finance-engine/), reutilizado tal cual
+     * sobre 4 tablas propias en vez de compartir las de Finanzas —
+     * mismo criterio que v23 con Notas: cada espacio genérico necesita
+     * su propio silo de datos, nunca mezclado con el Finanzas del
+     * usuario. Mismos índices que las tablas `finance*` generales (ver
+     * v18/v20 más arriba) por el mismo motivo: cada uno respalda un
+     * filtro que la pantalla ya hace sobre el Finanzas general.
+     */
+    this.version(24).stores({
+      miProyectoFinanceAccounts: 'id, createdAt',
+      miProyectoFinanceMovimientos: 'id, createdAt, categoria, ideaId, moneda, medio, compraId, periodoId',
+      miProyectoFinanceGoals: 'id, createdAt',
+      miProyectoFinanceIncomePeriods: 'id, createdAt, orden, fechaInicio',
     })
   }
 }

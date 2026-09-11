@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { CATEGORIAS, CATEGORIA_LABEL, type FinanceCategoria } from './categorias'
 import { dividirEnCuotas, parsearMontoManual, type Medio, type Moneda } from './extraccion'
-import type { NuevaCompraEnCuotas, NuevaFinanceMovimiento } from './financeRepository'
+import type { NuevaCompraEnCuotas, NuevaFinanceMovimiento } from './financeEngineRepository'
 import { etiquetaSemana, formatearMonto, mesDe, rangoSemana, semanaDelMes } from './mes'
 import { fechaEfectivaSemana, numeroDeSemana } from './semanaCobro'
 import type { FinanceIncomePeriod, FinanceMovimientoTipo } from '@/types/finance'

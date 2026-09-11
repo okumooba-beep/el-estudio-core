@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto'
 import Dexie from 'dexie'
 import { afterEach, describe, expect, it } from 'vitest'
-import { extraerCategoria } from '@modules/finance/extraccion'
+import { extraerCategoria } from '@/components/finance-engine/extraccion'
 
 /**
  * Sprint 027 — prueba la migración v13 (backfill de Finanzas) contra una

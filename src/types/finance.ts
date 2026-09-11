@@ -12,8 +12,8 @@
  * (FinanceMovimiento) porque un saldo por sí solo no dice nada sobre lo
  * que entró/salió este mes. Goals es lo único que no se deriva de nada.
  */
-import type { FinanceCategoria } from '@modules/finance/categorias'
-import type { Medio, Moneda } from '@modules/finance/extraccion'
+import type { FinanceCategoria } from '@/components/finance-engine/categorias'
+import type { Medio, Moneda } from '@/components/finance-engine/extraccion'
 
 export type FinanceAccountTipo = 'liquidez' | 'inversion' | 'deuda'
 

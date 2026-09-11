@@ -18,6 +18,12 @@ import {
   pushMiProyectoPending,
 } from './miProyectoSync'
 import {
+  allMiProyectoFinanceTablesEmpty,
+  hydrateMiProyectoFinanceFromSupabase,
+  migrateMiProyectoFinanceOnFirstLogin,
+  pushMiProyectoFinancePending,
+} from './miProyectoFinanceSync'
+import {
   allMissionsEmpty,
   hydrateMissionsFromSupabase,
   migrateMissionsOnFirstLogin,
@@ -55,6 +61,12 @@ const PUSH_INTERVAL_MS = 20_000
 const FINANCE_TABLES = ['finance_accounts', 'finance_movimientos', 'finance_goals', 'finance_income_periods']
 const NOTES_TABLES = ['notes_folders', 'notes_notes']
 const MI_PROYECTO_TABLES = ['mi_proyecto_folders', 'mi_proyecto_notes']
+const MI_PROYECTO_FINANZAS_TABLES = [
+  'mi_proyecto_finanzas_accounts',
+  'mi_proyecto_finanzas_movimientos',
+  'mi_proyecto_finanzas_goals',
+  'mi_proyecto_finanzas_income_periods',
+]
 const MISSIONS_TABLES = ['missions']
 const IDEAS_TABLES = ['ideas']
 const HABITS_TABLES = ['habit_checks']
@@ -74,6 +86,10 @@ let notesBootstrappedUserId: string | null = null
 let miProyectoPushIntervalId: ReturnType<typeof setInterval> | null = null
 let miProyectoOnlineListener: (() => void) | null = null
 let miProyectoBootstrappedUserId: string | null = null
+
+let miProyectoFinancePushIntervalId: ReturnType<typeof setInterval> | null = null
+let miProyectoFinanceOnlineListener: (() => void) | null = null
+let miProyectoFinanceBootstrappedUserId: string | null = null
 
 let missionsPushIntervalId: ReturnType<typeof setInterval> | null = null
 let missionsOnlineListener: (() => void) | null = null
@@ -127,6 +143,16 @@ async function markMiProyectoMigrated(userId: string, tablasConfirmadas: string[
   const completo = MI_PROYECTO_TABLES.every((tabla) => tablasConfirmadas.includes(tabla))
   await db.syncMeta.put({
     id: 'miproyecto-sync',
+    userId,
+    migratedAt: completo ? new Date().toISOString() : null,
+    migratedTables: tablasConfirmadas,
+  })
+}
+
+async function markMiProyectoFinanceMigrated(userId: string, tablasConfirmadas: string[]): Promise<void> {
+  const completo = MI_PROYECTO_FINANZAS_TABLES.every((tabla) => tablasConfirmadas.includes(tabla))
+  await db.syncMeta.put({
+    id: 'miproyecto-finanzas-sync',
     userId,
     migratedAt: completo ? new Date().toISOString() : null,
     migratedTables: tablasConfirmadas,
@@ -236,6 +262,17 @@ function startMiProyectoPushLoop(userId: string): void {
   push()
 }
 
+function startMiProyectoFinancePushLoop(userId: string): void {
+  stopMiProyectoFinanceSync()
+  const push = () => {
+    void pushMiProyectoFinancePending(userId)
+  }
+  miProyectoFinancePushIntervalId = setInterval(push, PUSH_INTERVAL_MS)
+  miProyectoFinanceOnlineListener = push
+  window.addEventListener('online', miProyectoFinanceOnlineListener)
+  push()
+}
+
 function startMissionsPushLoop(userId: string): void {
   stopMissionsSync()
   const push = () => {
@@ -338,6 +375,15 @@ export function stopMiProyectoSync(): void {
   miProyectoPushIntervalId = null
   miProyectoOnlineListener = null
   miProyectoBootstrappedUserId = null
+}
+
+/** Se llama al cerrar sesión: no tiene sentido seguir subiendo datos sin un usuario activo. */
+export function stopMiProyectoFinanceSync(): void {
+  if (miProyectoFinancePushIntervalId) clearInterval(miProyectoFinancePushIntervalId)
+  if (miProyectoFinanceOnlineListener) window.removeEventListener('online', miProyectoFinanceOnlineListener)
+  miProyectoFinancePushIntervalId = null
+  miProyectoFinanceOnlineListener = null
+  miProyectoFinanceBootstrappedUserId = null
 }
 
 /** Se llama al cerrar sesión: no tiene sentido seguir subiendo datos sin un usuario activo. */
@@ -498,6 +544,38 @@ export async function bootstrapMiProyectoSync(userId: string): Promise<void> {
 
   miProyectoBootstrappedUserId = userId
   startMiProyectoPushLoop(userId)
+}
+
+/**
+ * Se llama una vez por sesión nueva (ver src/lib/auth/AuthContext.tsx),
+ * junto a bootstrapMiProyectoSync. Mismo mecanismo, fila propia en
+ * `syncMeta` (`id: 'miproyecto-finanzas-sync'`) — Finanzas de "Mi
+ * proyecto" nunca comparte progreso de migración con Finanzas general
+ * ni con Notas de "Mi proyecto", aunque reutilicen el mismo motor de
+ * Finanzas (ver miProyectoFinanceSync.ts).
+ */
+export async function bootstrapMiProyectoFinanceSync(userId: string): Promise<void> {
+  if (miProyectoFinanceBootstrappedUserId === userId) return
+
+  const meta = await db.syncMeta.get('miproyecto-finanzas-sync')
+  if (meta && meta.userId !== userId) {
+    console.warn('[sync] syncMeta (finanzas de mi proyecto) pertenece a otro usuario — no se migra ni se hidrata automáticamente.')
+    return
+  }
+
+  if (!meta?.migratedAt) {
+    const vacia = await allMiProyectoFinanceTablesEmpty()
+    if (vacia) {
+      const tablasConfirmadas = await hydrateMiProyectoFinanceFromSupabase(userId)
+      await markMiProyectoFinanceMigrated(userId, tablasConfirmadas)
+    } else {
+      const tablasConfirmadas = await migrateMiProyectoFinanceOnFirstLogin(userId)
+      await markMiProyectoFinanceMigrated(userId, tablasConfirmadas)
+    }
+  }
+
+  miProyectoFinanceBootstrappedUserId = userId
+  startMiProyectoFinancePushLoop(userId)
 }
 
 /**

@@ -8,6 +8,8 @@ import {
   stopNotesSync,
   bootstrapMiProyectoSync,
   stopMiProyectoSync,
+  bootstrapMiProyectoFinanceSync,
+  stopMiProyectoFinanceSync,
   bootstrapMissionsSync,
   stopMissionsSync,
   bootstrapIdeasSync,
@@ -88,6 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           ['finance', () => bootstrapFinanceSync(userId)],
           ['notes', () => bootstrapNotesSync(userId)],
           ['miproyecto', () => bootstrapMiProyectoSync(userId)],
+          ['miproyecto-finanzas', () => bootstrapMiProyectoFinanceSync(userId)],
           ['missions', () => bootstrapMissionsSync(userId)],
           ['ideas', () => bootstrapIdeasSync(userId)],
           ['habits', () => bootstrapHabitsSync(userId)],
@@ -109,6 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         stopFinanceSync()
         stopNotesSync()
         stopMiProyectoSync()
+        stopMiProyectoFinanceSync()
         stopMissionsSync()
         stopIdeasSync()
         stopHabitsSync()
