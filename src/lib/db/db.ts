@@ -46,6 +46,7 @@ export interface SyncMeta {
     | 'agenda-sync'
     | 'auditoria-sync'
     | 'recordatorios-sync'
+    | 'miproyecto-sync'
   userId: string
   migratedAt: string | null
   migratedTables: string[]
@@ -81,6 +82,8 @@ class LifeosDB extends Dexie {
   auditConfig!: EntityTable<AuditConfig, 'id'>
   notesFolders!: EntityTable<NotesFolder, 'id'>
   notesNotes!: EntityTable<NotesNote, 'id'>
+  miProyectoFolders!: EntityTable<NotesFolder, 'id'>
+  miProyectoNotes!: EntityTable<NotesNote, 'id'>
   syncMeta!: EntityTable<SyncMeta, 'id'>
   recordatorios!: EntityTable<Recordatorio, 'id'>
 
@@ -540,6 +543,20 @@ class LifeosDB extends Dexie {
      */
     this.version(22).stores({
       recordatorios: 'id, createdAt, dispararEn, origenId',
+    })
+
+    /**
+     * "Mi proyecto" — mismo motor de carpetas+notas que Notas (ver
+     * src/components/notes-engine/), reutilizado tal cual sobre un par de
+     * tablas propio en vez de compartir las de Notas: cada espacio genérico
+     * (uno por usuario, nombre elegido por esa persona — ver
+     * src/lib/miproyecto/) necesita su propio silo de datos, nunca
+     * mezclado con Notas. Mismos índices que v19 (notesFolders/notesNotes)
+     * por el mismo motivo: `folderId` para listar por carpeta.
+     */
+    this.version(23).stores({
+      miProyectoFolders: 'id, createdAt',
+      miProyectoNotes: 'id, folderId, createdAt',
     })
   }
 }

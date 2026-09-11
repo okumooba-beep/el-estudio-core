@@ -13,6 +13,7 @@ import { FinanceScreen } from '@modules/finance/FinanceScreen'
 import { AgendaScreen } from '@modules/agenda/AgendaScreen'
 import { AuditoriaScreen } from '@modules/auditoria/AuditoriaScreen'
 import { NotesScreen } from '@modules/notes/NotesScreen'
+import { MiProyectoScreen } from '@modules/miproyecto/MiProyectoScreen'
 import { AjustesScreen } from '@modules/settings/AjustesScreen'
 import { FrasesScreen } from '@modules/frases/public'
 import { MaterialInspector } from '@/dev-tools/material-inspector/MaterialInspector'
@@ -41,6 +42,12 @@ import {
   obtenerPosicionXSeleccionada,
   setPosicionXSeleccionada,
 } from '@/lib/room/roomBackgroundClient'
+import { leerNombreGuardado, guardarNombreLocal } from '@/lib/miproyecto/miProyectoPrefs'
+import { obtenerNombreMiProyecto, setNombreMiProyecto } from '@/lib/miproyecto/miProyectoPrefsClient'
+import { leerOcultosGuardados, guardarOcultosLocal } from '@/lib/modules/modulePreferences'
+import { obtenerOcultosModulos, setOcultosModulos } from '@/lib/modules/modulePreferencesClient'
+import { SPACES } from '@modules/today/components/spaceRegistry'
+import { MODULE as ajustes } from '@modules/settings/public'
 
 /**
  * Sprint 018 ("Home: recuperar el lugar"): RoomBackground se monta una
@@ -116,11 +123,93 @@ function useFondoDeHabitacion(userId: string | undefined) {
   return { fondoActivo, seleccionarFondo, posicionXActiva, seleccionarPosicionX }
 }
 
+/**
+ * Nombre del espacio "Mi proyecto" (sprint "Mi proyecto — módulo
+ * genérico"): mismo patrón que useFondoDeHabitacion — el cache local ya
+ * pintó antes de tener sesión, esto solo lo reconcilia contra Supabase.
+ */
+function useNombreMiProyecto(userId: string | undefined) {
+  const [nombre, setNombre] = useState<string>(() => leerNombreGuardado())
+
+  useEffect(() => {
+    if (!userId) return
+    let cancelado = false
+    void obtenerNombreMiProyecto(userId).then((remoto) => {
+      if (cancelado || !remoto) return
+      guardarNombreLocal(remoto)
+      setNombre(remoto)
+    })
+    return () => {
+      cancelado = true
+    }
+  }, [userId])
+
+  async function renombrar(nuevoNombre: string): Promise<'ok' | 'error'> {
+    guardarNombreLocal(nuevoNombre)
+    setNombre(nuevoNombre)
+    if (!userId) return 'ok'
+    return setNombreMiProyecto(userId, nuevoNombre)
+  }
+
+  return { nombre, renombrar }
+}
+
+/**
+ * Ajustes → Módulos (sprint "Ajustes → Módulos"; unificado con la pill de
+ * nav en sprint "Unificar toggle de Módulos"): qué Espacios oculta el
+ * usuario, aplicado a la vez a la grilla (Spaces.tsx) y, para los que
+ * también viven ahí, a la pill de navegación inferior/sidebar
+ * (AppShell.tsx) — un único Set (`espaciosOcultos`, abajo) es la fuente de
+ * verdad para ambos registros, así que nunca pueden desincronizarse. Mismo
+ * patrón de hook que useNombreMiProyecto/useFondoDeHabitacion.
+ *
+ * `espaciosDisponibles` excluye a Ajustes a propósito: si un usuario
+ * pudiera ocultarlo, perdería la única pantalla desde la que puede volver a
+ * mostrarlo (Ajustes no vive en el nav inferior, solo en la grilla de
+ * Espacios o por URL directa). Hoy y Espacios ni siquiera hace falta
+ * excluirlos acá: spaceRegistry.ts nunca los declaró como Space (son la
+ * pantalla de inicio y el propio selector, no un destino), así que jamás
+ * aparecen en SPACES ni, por lo tanto, como tildables en Ajustes.
+ */
+const ESPACIOS_CONFIGURABLES = SPACES.filter((espacio) => espacio.path !== ajustes.path)
+
+function useEspaciosOcultos(userId: string | undefined) {
+  const [ocultos, setOcultos] = useState<Set<string>>(() => new Set(leerOcultosGuardados()))
+
+  useEffect(() => {
+    if (!userId) return
+    let cancelado = false
+    void obtenerOcultosModulos(userId).then((remoto) => {
+      if (cancelado || !remoto) return
+      guardarOcultosLocal(remoto)
+      setOcultos(new Set(remoto))
+    })
+    return () => {
+      cancelado = true
+    }
+  }, [userId])
+
+  async function alternarEspacio(path: string, oculto: boolean): Promise<'ok' | 'error'> {
+    const siguiente = new Set(ocultos)
+    if (oculto) siguiente.add(path)
+    else siguiente.delete(path)
+    const lista = Array.from(siguiente)
+    guardarOcultosLocal(lista)
+    setOcultos(siguiente)
+    if (!userId) return 'ok'
+    return setOcultosModulos(userId, lista)
+  }
+
+  return { ocultos, alternarEspacio }
+}
+
 function App() {
   useAmbientLight()
   useRouteAttribute()
   const { user, signOut } = useAuth()
   const { fondoActivo, seleccionarFondo, posicionXActiva, seleccionarPosicionX } = useFondoDeHabitacion(user?.id)
+  const { nombre: nombreMiProyecto, renombrar: renombrarMiProyecto } = useNombreMiProyecto(user?.id)
+  const { ocultos: espaciosOcultos, alternarEspacio } = useEspaciosOcultos(user?.id)
 
   return (
     <>
@@ -131,7 +220,7 @@ function App() {
         <Route path="olvide-password" element={<ForgotPasswordScreen />} />
         <Route path="restablecer-password" element={<ResetPasswordScreen />} />
         <Route element={<RequireAuth />}>
-          <Route element={<AppShell />}>
+          <Route element={<AppShell espaciosOcultos={espaciosOcultos} />}>
             <Route index element={<HoyScreen />} />
             <Route path="misiones" element={<MisionesScreen />} />
             <Route path="asuntos" element={<AsuntosScreen />} />
@@ -143,6 +232,10 @@ function App() {
             <Route path="agenda" element={<AgendaScreen />} />
             <Route path="auditoria" element={<AuditoriaScreen />} />
             <Route path="notas" element={<NotesScreen />} />
+            <Route
+              path="mi-proyecto"
+              element={<MiProyectoScreen nombre={nombreMiProyecto} onRenombrar={renombrarMiProyecto} />}
+            />
             <Route
               path="ajustes"
               element={
@@ -159,10 +252,13 @@ function App() {
                   onSelectFondo={seleccionarFondo}
                   posicionXActiva={posicionXActiva}
                   onSelectPosicionX={seleccionarPosicionX}
+                  espaciosDisponibles={ESPACIOS_CONFIGURABLES}
+                  espaciosOcultos={espaciosOcultos}
+                  onToggleEspacio={alternarEspacio}
                 />
               }
             />
-            <Route path="espacios" element={<EspaciosScreen />} />
+            <Route path="espacios" element={<EspaciosScreen espaciosOcultos={espaciosOcultos} />} />
           </Route>
         </Route>
         {/* Material Inspector (Sprint 2.4, punto 07): fuera de AppShell a propósito — no es un lugar del Estudio, es una herramienta de desarrollo. Nunca existe en producción. */}

@@ -12,6 +12,12 @@ import {
   pushNotesPending,
 } from './notesSync'
 import {
+  allMiProyectoTablesEmpty,
+  hydrateMiProyectoFromSupabase,
+  migrateMiProyectoOnFirstLogin,
+  pushMiProyectoPending,
+} from './miProyectoSync'
+import {
   allMissionsEmpty,
   hydrateMissionsFromSupabase,
   migrateMissionsOnFirstLogin,
@@ -48,6 +54,7 @@ import {
 const PUSH_INTERVAL_MS = 20_000
 const FINANCE_TABLES = ['finance_accounts', 'finance_movimientos', 'finance_goals', 'finance_income_periods']
 const NOTES_TABLES = ['notes_folders', 'notes_notes']
+const MI_PROYECTO_TABLES = ['mi_proyecto_folders', 'mi_proyecto_notes']
 const MISSIONS_TABLES = ['missions']
 const IDEAS_TABLES = ['ideas']
 const HABITS_TABLES = ['habit_checks']
@@ -63,6 +70,10 @@ let bootstrappedUserId: string | null = null
 let notesPushIntervalId: ReturnType<typeof setInterval> | null = null
 let notesOnlineListener: (() => void) | null = null
 let notesBootstrappedUserId: string | null = null
+
+let miProyectoPushIntervalId: ReturnType<typeof setInterval> | null = null
+let miProyectoOnlineListener: (() => void) | null = null
+let miProyectoBootstrappedUserId: string | null = null
 
 let missionsPushIntervalId: ReturnType<typeof setInterval> | null = null
 let missionsOnlineListener: (() => void) | null = null
@@ -106,6 +117,16 @@ async function markNotesMigrated(userId: string, tablasConfirmadas: string[]): P
   const completo = NOTES_TABLES.every((tabla) => tablasConfirmadas.includes(tabla))
   await db.syncMeta.put({
     id: 'notes-sync',
+    userId,
+    migratedAt: completo ? new Date().toISOString() : null,
+    migratedTables: tablasConfirmadas,
+  })
+}
+
+async function markMiProyectoMigrated(userId: string, tablasConfirmadas: string[]): Promise<void> {
+  const completo = MI_PROYECTO_TABLES.every((tabla) => tablasConfirmadas.includes(tabla))
+  await db.syncMeta.put({
+    id: 'miproyecto-sync',
     userId,
     migratedAt: completo ? new Date().toISOString() : null,
     migratedTables: tablasConfirmadas,
@@ -204,6 +225,17 @@ function startNotesPushLoop(userId: string): void {
   push()
 }
 
+function startMiProyectoPushLoop(userId: string): void {
+  stopMiProyectoSync()
+  const push = () => {
+    void pushMiProyectoPending(userId)
+  }
+  miProyectoPushIntervalId = setInterval(push, PUSH_INTERVAL_MS)
+  miProyectoOnlineListener = push
+  window.addEventListener('online', miProyectoOnlineListener)
+  push()
+}
+
 function startMissionsPushLoop(userId: string): void {
   stopMissionsSync()
   const push = () => {
@@ -297,6 +329,15 @@ export function stopNotesSync(): void {
   notesPushIntervalId = null
   notesOnlineListener = null
   notesBootstrappedUserId = null
+}
+
+/** Se llama al cerrar sesión: no tiene sentido seguir subiendo datos sin un usuario activo. */
+export function stopMiProyectoSync(): void {
+  if (miProyectoPushIntervalId) clearInterval(miProyectoPushIntervalId)
+  if (miProyectoOnlineListener) window.removeEventListener('online', miProyectoOnlineListener)
+  miProyectoPushIntervalId = null
+  miProyectoOnlineListener = null
+  miProyectoBootstrappedUserId = null
 }
 
 /** Se llama al cerrar sesión: no tiene sentido seguir subiendo datos sin un usuario activo. */
@@ -427,6 +468,36 @@ export async function bootstrapNotesSync(userId: string): Promise<void> {
 
   notesBootstrappedUserId = userId
   startNotesPushLoop(userId)
+}
+
+/**
+ * Se llama una vez por sesión nueva (ver src/lib/auth/AuthContext.tsx),
+ * junto a bootstrapNotesSync. Mismo mecanismo, fila propia en `syncMeta`
+ * (`id: 'miproyecto-sync'`) — "Mi proyecto" nunca comparte progreso de
+ * migración con Notas aunque reutilicen el mismo motor de carpetas+notas.
+ */
+export async function bootstrapMiProyectoSync(userId: string): Promise<void> {
+  if (miProyectoBootstrappedUserId === userId) return
+
+  const meta = await db.syncMeta.get('miproyecto-sync')
+  if (meta && meta.userId !== userId) {
+    console.warn('[sync] syncMeta (mi proyecto) pertenece a otro usuario — no se migra ni se hidrata automáticamente.')
+    return
+  }
+
+  if (!meta?.migratedAt) {
+    const vacia = await allMiProyectoTablesEmpty()
+    if (vacia) {
+      const tablasConfirmadas = await hydrateMiProyectoFromSupabase(userId)
+      await markMiProyectoMigrated(userId, tablasConfirmadas)
+    } else {
+      const tablasConfirmadas = await migrateMiProyectoOnFirstLogin(userId)
+      await markMiProyectoMigrated(userId, tablasConfirmadas)
+    }
+  }
+
+  miProyectoBootstrappedUserId = userId
+  startMiProyectoPushLoop(userId)
 }
 
 /**

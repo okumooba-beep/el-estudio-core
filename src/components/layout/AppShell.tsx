@@ -12,7 +12,21 @@ function linkClass(isActive: boolean): string {
 
 const TOP_LEVEL_PATHS = new Set(MODULES.map((mod) => mod.path))
 
-export function AppShell() {
+export interface AppShellProps {
+  /**
+   * Paths (Space.path) que el usuario ocultó desde Ajustes → Módulos — ver
+   * App.tsx/useEspaciosOcultos. Sprint "Unificar toggle de Módulos": antes
+   * solo filtraba la grilla de Espacios (Spaces.tsx); ahora el mismo Set
+   * también filtra acá qué ítems de MODULES (Misiones/Hábitos/Finanzas)
+   * aparecen en el sidebar y la pill inferior, para que un solo toggle
+   * controle ambos registros a la vez. Hoy y Espacios nunca llegan a este
+   * Set: spaceRegistry.ts no los declara como Space, así que Ajustes nunca
+   * ofrece tildarlos/destildarlos (ver App.tsx, ESPACIOS_CONFIGURABLES).
+   */
+  espaciosOcultos: Set<string>
+}
+
+export function AppShell({ espaciosOcultos }: AppShellProps) {
   // Sprint 036: rutas como /auditoria viven dentro de Espacios pero no
   // tienen ítem propio en el nav — cualquier ruta que no sea de primer
   // nivel se considera "absorbida" por Espacios a efectos del ítem activo.
@@ -20,6 +34,13 @@ export function AppShell() {
   // booleano local duplicado.
   const { pathname } = useLocation()
   const espaciosAbsorbeRuta = pathname !== '/' && !TOP_LEVEL_PATHS.has(pathname)
+  // TOP_LEVEL_PATHS (arriba) se calcula sobre el registro completo a
+  // propósito — la ruta de un módulo oculto sigue existiendo (Ajustes solo
+  // esconde el acceso, nunca la ruta ni el dato), así que la lógica de
+  // "¿esta ruta la absorbe Espacios?" no debe cambiar según lo que el
+  // usuario haya tildado. Solo lo que se pinta abajo (modulosVisibles) se
+  // recalcula según espaciosOcultos, sin dejar huecos en la pill.
+  const modulosVisibles = MODULES.filter((mod) => !espaciosOcultos.has(mod.path))
 
   function isModuleActive(mod: (typeof MODULES)[number], routerActive: boolean): boolean {
     if (mod.path === ESPACIOS_MODULE.path && espaciosAbsorbeRuta) return true
@@ -32,7 +53,7 @@ export function AppShell() {
         <div>
           <p className="mb-8 px-3 font-mono text-[11px] tracking-[0.15em] text-ink-faint">EL ESTUDIO</p>
           <nav className="flex flex-col gap-1">
-            {MODULES.map((mod) => {
+            {modulosVisibles.map((mod) => {
               const Icon = MODULE_ICONS[mod.path]
               return (
                 <NavLink
@@ -90,7 +111,7 @@ export function AppShell() {
         vive en .nav-inferior como margin-bottom/left/right).
       */}
       <nav className="nav-inferior z-10 flex items-stretch justify-around md:hidden">
-        {MODULES.map((mod) => {
+        {modulosVisibles.map((mod) => {
           const Icon = MODULE_ICONS[mod.path]
           return (
             <NavLink

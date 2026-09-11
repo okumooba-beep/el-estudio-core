@@ -170,6 +170,19 @@ export function NotasIcon(props: IconProps) {
 }
 
 /**
+ * Mi proyecto — espacio genérico reutilizable (mismo motor que Notas):
+ * una carpeta lisa, sin el detalle de renglones de NotasIcon, para marcar
+ * que es un contenedor de propósito libre en vez de "notas de texto".
+ */
+export function MiProyectoIcon(props: IconProps) {
+  return (
+    <svg {...BASE} {...props}>
+      <path d="M4 7.5a1 1 0 0 1 1-1h4.5l1.5 2h8a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1Z" />
+    </svg>
+  )
+}
+
+/**
  * Espacios (Sprint 015.4 — "Navegación global de El Estudio Core"): la
  * planta del Estudio, mismo lenguaje arquitectónico que el vano de
  * `HoyIcon` — un plano dividido en varios cuartos, nunca la grilla de
@@ -203,4 +216,5 @@ export const MODULE_ICONS: Record<string, ComponentType<IconProps>> = {
   '/ajustes': AjustesIcon,
   '/espacios': EspaciosIcon,
   '/notas': NotasIcon,
+  '/mi-proyecto': MiProyectoIcon,
 }

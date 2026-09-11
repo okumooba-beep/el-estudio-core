@@ -1,5 +1,10 @@
 import { Spaces } from './components/Spaces'
 
+export interface EspaciosScreenProps {
+  /** Paths (Space.path) que el usuario ocultó desde Ajustes → Módulos — ver App.tsx/useEspaciosOcultos. */
+  espaciosOcultos: Set<string>
+}
+
 /**
  * Sprint 015.4 ("Navegación global de El Estudio Core"): pantalla propia
  * para `Spaces` (components/Spaces.tsx) — el mismo componente que Sprint
@@ -7,10 +12,10 @@ import { Spaces } from './components/Spaces'
  * ruta (`/espacios`, nav inferior/sidebar) en vez de forzarlo de vuelta
  * al contenido de Home.
  */
-export function EspaciosScreen() {
+export function EspaciosScreen({ espaciosOcultos }: EspaciosScreenProps) {
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-6 pb-10">
-      <Spaces />
+      <Spaces espaciosOcultos={espaciosOcultos} />
     </div>
   )
 }

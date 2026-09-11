@@ -2,6 +2,11 @@ import { Link } from 'react-router-dom'
 import { MODULE_ICONS } from '@design-system/icons/ModuleIcons'
 import { SPACES } from './spaceRegistry'
 
+export interface SpacesProps {
+  /** Paths (Space.path) que el usuario ocultó desde Ajustes → Módulos — nunca borra datos, solo filtra qué fila se muestra acá (ver App.tsx/useEspaciosOcultos). */
+  espaciosOcultos?: Set<string>
+}
+
 /**
  * Build Core V1: reemplaza a ModuleGrid (Sprint "Build V1"). Mismo
  * fondo, mismos divisores finos (Bible cap. 11 — nunca tarjetas), pero
@@ -12,12 +17,13 @@ import { SPACES } from './spaceRegistry'
  * nombre. Cuando esa tabla no define una fila propia (Misiones), la
  * fila simplemente no muestra propósito: nunca se inventa uno.
  */
-export function Spaces() {
+export function Spaces({ espaciosOcultos }: SpacesProps) {
+  const espaciosVisibles = espaciosOcultos ? SPACES.filter((espacio) => !espaciosOcultos.has(espacio.path)) : SPACES
   return (
     <section>
       <h2 className="mb-2 font-mono text-[11px] uppercase tracking-wide text-accent">Espacios</h2>
       <nav aria-label="Espacios del Estudio" className="flex flex-col divide-y divide-border/40 border-t border-border/40">
-        {SPACES.map((espacio) => {
+        {espaciosVisibles.map((espacio) => {
           const Icon = MODULE_ICONS[espacio.path]
           return (
             <Link

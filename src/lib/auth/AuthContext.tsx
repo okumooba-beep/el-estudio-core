@@ -6,6 +6,8 @@ import {
   stopFinanceSync,
   bootstrapNotesSync,
   stopNotesSync,
+  bootstrapMiProyectoSync,
+  stopMiProyectoSync,
   bootstrapMissionsSync,
   stopMissionsSync,
   bootstrapIdeasSync,
@@ -85,6 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const bootstraps: Array<[string, () => Promise<void>]> = [
           ['finance', () => bootstrapFinanceSync(userId)],
           ['notes', () => bootstrapNotesSync(userId)],
+          ['miproyecto', () => bootstrapMiProyectoSync(userId)],
           ['missions', () => bootstrapMissionsSync(userId)],
           ['ideas', () => bootstrapIdeasSync(userId)],
           ['habits', () => bootstrapHabitsSync(userId)],
@@ -105,6 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         bootstrapping.current = null
         stopFinanceSync()
         stopNotesSync()
+        stopMiProyectoSync()
         stopMissionsSync()
         stopIdeasSync()
         stopHabitsSync()

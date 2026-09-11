@@ -9,6 +9,7 @@ import { MODULE as auditoria } from '@modules/auditoria/public'
 import { MODULE as ajustes } from '@modules/settings/public'
 import { MODULE as biblioteca } from '@modules/frases/public'
 import { MODULE as notas } from '@modules/notes/public'
+import { MODULE as miProyecto } from '@modules/miproyecto/public'
 import type { IdeaDestino } from '@/types/idea'
 
 export interface Space {
@@ -83,6 +84,12 @@ export const SPACES: readonly Space[] = [
     path: notas.path,
     label: notas.label,
     proposito: 'Lo que no es asunto ni misión.',
+  },
+  {
+    destino: null,
+    path: miProyecto.path,
+    label: miProyecto.label,
+    proposito: 'Tu espacio, a tu manera.',
   },
 ]
 

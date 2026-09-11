@@ -9,7 +9,7 @@ type EstadoSuscripcionPush = 'ok' | 'sin-soporte' | 'sin-permiso' | 'sin-vapid-k
 type EstadoPush = 'idle' | 'suscribiendo' | EstadoSuscripcionPush
 type EstadoTestPush = 'idle' | 'enviando' | 'enviado' | 'error'
 type EstadoFondo = 'idle' | 'guardando' | 'error'
-type EstadoPosicionX = 'idle' | 'guardando' | 'error'
+type EstadoPosicionX = 'idle' | 'guardando' | 'guardado' | 'error'
 
 /** Duplicado a propósito de FondoOption (src/lib/room/roomBackgrounds.ts) — `settings-boundaries` en .dependency-cruiser.cjs no permite importar de src/lib, mismo motivo por el que EstadoSuscripcionPush está duplicado acá abajo en vez de importado de pushClient.ts. */
 interface FondoOption {
@@ -21,6 +21,14 @@ interface FondoOption {
 
 /** Duplicado a propósito de PosicionX (src/lib/room/roomBackgrounds.ts) — mismo motivo que FondoOption arriba. Porcentaje 0–100 (0 = borde izquierdo de la imagen, 100 = borde derecho). */
 type PosicionX = number
+
+/** Un Espacio configurable — subconjunto de Space (spaceRegistry.ts) duplicado a propósito, mismo motivo que FondoOption: settings-boundaries no permite importar el interior de `today`. Ajustes nunca aparece en esta lista (ver App.tsx/ESPACIOS_CONFIGURABLES) — si un usuario pudiera ocultarlo, perdería la única pantalla desde la que puede volver a mostrarlo. */
+interface EspacioConfigurable {
+  path: string
+  label: string
+}
+
+type EstadoToggleEspacio = 'idle' | 'guardando' | 'ok' | 'error'
 
 /** Proporción de pantalla de teléfono usada para dibujar la caja de recorte sobre la miniatura — mismo valor que asume `background-size: cover` al llenar la pantalla real. */
 const ASPECTO_TELEFONO = 390 / 844
@@ -58,6 +66,12 @@ interface AjustesScreenProps {
   posicionXActiva: PosicionX
   /** Aplica la posición (CSS var + caché local) y, si hay sesión, la sube a Supabase. Mismo contrato que onSelectFondo. */
   onSelectPosicionX: (posicionX: PosicionX) => Promise<'ok' | 'sin-sesion' | 'error'>
+  /** Todos los Espacios que el usuario puede activar/desactivar — ya excluye a Ajustes (ver App.tsx). */
+  espaciosDisponibles: EspacioConfigurable[]
+  /** Paths actualmente ocultos de la grilla de Espacios de este usuario. */
+  espaciosOcultos: Set<string>
+  /** Alterna un Espacio oculto/visible (CSS/estado local + Supabase si hay sesión). Nunca borra datos, solo el acceso desde la grilla. */
+  onToggleEspacio: (path: string, oculto: boolean) => Promise<'ok' | 'error'>
 }
 
 export function AjustesScreen({
@@ -73,6 +87,9 @@ export function AjustesScreen({
   onSelectFondo,
   posicionXActiva,
   onSelectPosicionX,
+  espaciosDisponibles,
+  espaciosOcultos,
+  onToggleEspacio,
 }: AjustesScreenProps) {
   const [estadoExportar, setEstadoExportar] = useState<EstadoExportar>('idle')
   const [estadoActualizar, setEstadoActualizar] = useState<EstadoActualizar>('idle')
@@ -90,6 +107,10 @@ export function AjustesScreen({
   const [aspectoImagen, setAspectoImagen] = useState<number | null>(null)
   const contenedorMiniaturaRef = useRef<HTMLDivElement>(null)
   const arrastrandoRef = useRef(false)
+  /** Timeout del "Posición guardada" transitorio — se cancela si llega un guardado nuevo antes de que termine de mostrarse. */
+  const confirmacionPosicionXRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /** Estado de guardado por Espacio (clave = path) — así un toggle en curso no bloquea los demás. */
+  const [estadosToggleEspacio, setEstadosToggleEspacio] = useState<Record<string, EstadoToggleEspacio>>({})
 
   async function handleExportar() {
     setEstadoExportar('exportando')
@@ -157,10 +178,22 @@ export function AjustesScreen({
   }
 
   async function handleSeleccionarPosicionX(posicionX: PosicionX) {
+    if (confirmacionPosicionXRef.current) clearTimeout(confirmacionPosicionXRef.current)
     setEstadoPosicionX('guardando')
     const resultado = await onSelectPosicionX(posicionX)
-    setEstadoPosicionX(resultado === 'error' ? 'error' : 'idle')
+    if (resultado === 'error') {
+      setEstadoPosicionX('error')
+      return
+    }
+    setEstadoPosicionX('guardado')
+    confirmacionPosicionXRef.current = setTimeout(() => setEstadoPosicionX('idle'), 2000)
   }
+
+  useEffect(() => {
+    return () => {
+      if (confirmacionPosicionXRef.current) clearTimeout(confirmacionPosicionXRef.current)
+    }
+  }, [])
 
   /** Ancho de la caja de recorte como fracción [0,1] del ancho de la miniatura — mismo cálculo que hace `background-size: cover` para decidir cuánto de la imagen queda tapado por los costados de la pantalla real. */
   const anchoCajaFraccion = aspectoImagen ? Math.min(1, ASPECTO_TELEFONO / aspectoImagen) : 1
@@ -226,6 +259,12 @@ export function AjustesScreen({
     } catch {
       setEstadoResyncNotas('error')
     }
+  }
+
+  async function handleToggleEspacio(path: string, oculto: boolean) {
+    setEstadosToggleEspacio((estados) => ({ ...estados, [path]: 'guardando' }))
+    const resultado = await onToggleEspacio(path, oculto)
+    setEstadosToggleEspacio((estados) => ({ ...estados, [path]: resultado }))
   }
 
   async function handleResyncAgenda() {
@@ -453,11 +492,55 @@ export function AjustesScreen({
               }}
             />
           </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="idea-destino self-start"
+              onClick={() => void handleSeleccionarPosicionX(posicionMostrada)}
+              disabled={estadoPosicionX === 'guardando'}
+            >
+              {estadoPosicionX === 'guardando' ? 'Guardando…' : 'Guardar posición'}
+            </button>
+            {estadoPosicionX === 'guardado' && (
+              <span className="text-[13px] text-ink-dim">✓ Posición guardada</span>
+            )}
+          </div>
           {estadoPosicionX === 'error' && (
             <p className="text-[13px] text-critical">
               La posición quedó aplicada en este dispositivo, pero no se pudo guardar en tu cuenta. Probá de nuevo.
             </p>
           )}
+        </div>
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <h2 className="font-mono text-[11px] uppercase tracking-wide text-accent">Módulos</h2>
+        <p className="text-[13px] text-ink-dim">
+          Elegí qué Espacios ver en tu grilla. Desactivar uno solo oculta el acceso — nada de lo que tenga guardado
+          se borra, y podés volver a activarlo cuando quieras.
+        </p>
+        <div className="flex flex-col divide-y divide-border/40 border-t border-border/40">
+          {espaciosDisponibles.map((espacio) => {
+            const oculto = espaciosOcultos.has(espacio.path)
+            const estado = estadosToggleEspacio[espacio.path] ?? 'idle'
+            return (
+              <label
+                key={espacio.path}
+                className="flex min-h-12 items-center justify-between gap-3 py-2 text-[14px] text-ink-dim"
+              >
+                <span>{espacio.label}</span>
+                <span className="flex items-center gap-2">
+                  {estado === 'error' && <span className="text-[12px] text-critical">No se pudo guardar.</span>}
+                  <input
+                    type="checkbox"
+                    checked={!oculto}
+                    disabled={estado === 'guardando'}
+                    onChange={(e) => void handleToggleEspacio(espacio.path, !e.target.checked)}
+                  />
+                </span>
+              </label>
+            )
+          })}
         </div>
       </section>
 
