@@ -495,12 +495,12 @@ function FolderView({ folder, engine, titulo, onVolver, financeEngine }: FolderV
 
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-6 pb-10">
-      <div className="flex items-center justify-between">
+      <div className="carpeta-barra-superior flex flex-col items-start gap-2">
         <button type="button" className="idea-destino self-start" onClick={onVolver}>
           ← Volver a {titulo}
         </button>
+        <p className="font-mono text-[11px] uppercase tracking-wide text-accent">{folder.nombre}</p>
       </div>
-      <p className="font-mono text-[11px] uppercase tracking-wide text-accent">{folder.nombre}</p>
 
       {desbloqueada ? (
         financeEngine ? (
@@ -536,7 +536,7 @@ function FolderFinanceSwitch({ folder, notesEngine, financeEngine }: FolderFinan
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="idea-destinos" role="group" aria-label="Sección">
+      <div className="carpeta-barra-acciones idea-destinos" role="group" aria-label="Sección">
         {(['notas', 'finanzas'] as const).map((opcion) => (
           <button
             key={opcion}
@@ -628,7 +628,7 @@ function FolderContent({ folder, engine }: FolderContentProps) {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="carpeta-barra-acciones flex flex-wrap items-center gap-3">
         <button type="button" className="idea-destino" onClick={() => setCreando((v) => !v)}>
           {creando ? 'Cancelar' : 'Nueva nota'}
         </button>

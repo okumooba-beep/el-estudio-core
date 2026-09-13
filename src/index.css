@@ -4143,6 +4143,25 @@ html[data-route='notas'] .room-layer-photo {
 }
 
 /*
+  Dentro de una carpeta abierta (FolderView), el botón "Volver", el
+  nombre de carpeta y las filas de acciones (Notas/Finanzas, Nueva
+  nota, Bloquear con PIN) son texto suelto sin fondo — se leían bien
+  sobre el escritorio plano, pero se pierden sobre la foto de la
+  habitación (fondo global, ver App.tsx). Mismo vidrio esmerilado que
+  .carpeta-tarjeta-grilla/.ajustes-superficie en vez de tocar
+  .idea-destino/.idea-destinos, que son la voz baja intencional del
+  resto de la app.
+*/
+.carpeta-barra-superior,
+.carpeta-barra-acciones {
+  padding: 0.7rem 0.9rem;
+  background: color-mix(in srgb, var(--surface) 90%, black 10%);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+/*
   Chips de categoría (fix: opciones antes eran texto plano de
   .idea-destino sin separación visual). Se agregan clases propias de
   Finanzas en vez de tocar .idea-destino/.idea-destinos, que son
@@ -4217,6 +4236,8 @@ html[data-route='notas'] .room-layer-photo {
 
 .finanzas-tipo-boton {
   flex: 1;
+  min-width: 0;
+  max-width: 100%;
   padding: 0.85rem 1rem;
   border-radius: var(--radius-md, 14px);
   border: 1px solid color-mix(in srgb, var(--ink-faint) 25%, transparent);
