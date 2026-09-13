@@ -1,9 +1,11 @@
 import { useIdeas } from '@modules/work-table/public'
 import { createFinanceEngine } from '@/components/finance-engine/createFinanceEngine'
+import { createGastosFijosEngine } from '@/components/finance-engine/createGastosFijosEngine'
 import { FinanceEngineScreen } from '@/components/finance-engine/FinanceEngineScreen'
 import { db } from '@/lib/db/db'
 
 const engine = createFinanceEngine(db.financeAccounts, db.financeMovimientos, db.financeGoals, db.financeIncomePeriods)
+const gastosFijosEngine = createGastosFijosEngine(db.financeGastosFijos)
 
 /**
  * Finanzas general del usuario — thin wrapper sobre el motor compartido
@@ -12,9 +14,15 @@ const engine = createFinanceEngine(db.financeAccounts, db.financeMovimientos, db
  * tiene es la captura automática Umbral→Finanzas: arma `ideaCapture` a
  * partir de `useIdeas()` y se lo pasa al motor; "Mi proyecto" no tiene
  * Umbral propio, así que instancia el mismo motor sin ese prop.
+ *
+ * "Gastos fijos mensuales" es del mismo modo exclusivo de Finanzas
+ * general: `gastosFijosEngine` es su propia fábrica sobre su propia
+ * tabla (`financeGastosFijos`), pasada como `gastosFijos` — MiProyectoScreen
+ * no la instancia ni la pasa.
  */
 export function FinanceScreen() {
   const finance = engine.useEngine()
+  const gastosFijos = gastosFijosEngine.useEngine()
   const { ideas, moveSheet } = useIdeas()
 
   return (
@@ -27,6 +35,7 @@ export function FinanceScreen() {
           if (idea) void moveSheet(idea, 'archivador')
         },
       }}
+      gastosFijos={gastosFijos}
     />
   )
 }

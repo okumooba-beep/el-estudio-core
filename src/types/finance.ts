@@ -106,6 +106,32 @@ export interface FinanceMovimiento {
   periodoId?: string
   /** Finanzas por carpeta (Mi Proyecto): a qué carpeta pertenece. `undefined` en Finanzas general. */
   carpetaId?: string
+  /**
+   * Gastos fijos mensuales — a qué gasto fijo corresponde este movimiento,
+   * cuando lo pagó (a mano por el checklist o por auto-detección al cargar
+   * un egreso normal). `undefined` = movimiento sin relación a un gasto fijo.
+   */
+  gastoFijoId?: string
+}
+
+/**
+ * Gastos fijos mensuales — exclusivo de Finanzas general (sin `carpetaId`,
+ * no existe en Mi Proyecto). Un gasto fijo no se borra, solo se desactiva
+ * (`activo`): el brief nunca pide eliminarlos, sólo dejar de verlos en el
+ * checklist. Si "pagado este mes" está resuelto o no se deriva de ningún
+ * campo acá: se calcula en tiempo real buscando un FinanceMovimiento con
+ * `gastoFijoId === this.id` y `fecha` en el mes en curso (ver mes.ts).
+ */
+export interface FinanceGastoFijo {
+  id: string
+  nombre: string
+  palabraClave: string
+  categoria: FinanceCategoria | null
+  montoEsperado?: number
+  activo: boolean
+  createdAt: string
+  updatedAt: string
+  pendingSync: boolean
 }
 
 /**

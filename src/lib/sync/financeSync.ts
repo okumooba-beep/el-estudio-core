@@ -8,6 +8,7 @@ import type {
   FinanceMovimientoTipo,
   FinanceGoal,
   FinanceIncomePeriod,
+  FinanceGastoFijo,
 } from '@/types/finance'
 import type { FinanceCategoria } from '@/components/finance-engine/categorias'
 import type { Medio, Moneda } from '@/components/finance-engine/extraccion'
@@ -57,6 +58,7 @@ interface MovimientoRow {
   cuota_total: number | null
   monto_original: number | null
   periodo_id: string | null
+  gasto_fijo_id: string | null
 }
 
 interface GoalRow {
@@ -79,6 +81,18 @@ interface PeriodoRow {
   created_at: string
   updated_at: string
   deleted_at: string | null
+}
+
+interface GastoFijoRow {
+  id: string
+  user_id: string
+  nombre: string
+  palabra_clave: string
+  categoria: FinanceCategoria | null
+  monto_esperado: number | null
+  activo: boolean
+  created_at: string
+  updated_at: string
 }
 
 interface TableSync<Local extends { id: string; pendingSync: boolean }, Remote extends { id: string }> {
@@ -133,6 +147,7 @@ const movimientosSync: TableSync<FinanceMovimiento, MovimientoRow> = {
     cuota_total: m.cuotaTotal ?? null,
     monto_original: m.montoOriginal ?? null,
     periodo_id: m.periodoId ?? null,
+    gasto_fijo_id: m.gastoFijoId ?? null,
   }),
   fromRow: (row) => ({
     id: row.id,
@@ -153,6 +168,7 @@ const movimientosSync: TableSync<FinanceMovimiento, MovimientoRow> = {
     ...(row.cuota_total != null ? { cuotaTotal: row.cuota_total } : {}),
     ...(row.monto_original != null ? { montoOriginal: row.monto_original } : {}),
     ...(row.periodo_id ? { periodoId: row.periodo_id } : {}),
+    ...(row.gasto_fijo_id ? { gastoFijoId: row.gasto_fijo_id } : {}),
   }),
 }
 
@@ -206,8 +222,35 @@ const periodosSync: TableSync<FinanceIncomePeriod, PeriodoRow> = {
   }),
 }
 
+const gastosFijosSync: TableSync<FinanceGastoFijo, GastoFijoRow> = {
+  supabaseTable: 'finance_gastos_fijos',
+  dexieTable: db.financeGastosFijos,
+  toRow: (userId, gf) => ({
+    id: gf.id,
+    user_id: userId,
+    nombre: gf.nombre,
+    palabra_clave: gf.palabraClave,
+    categoria: gf.categoria,
+    monto_esperado: gf.montoEsperado ?? null,
+    activo: gf.activo,
+    created_at: gf.createdAt,
+    updated_at: gf.updatedAt,
+  }),
+  fromRow: (row) => ({
+    id: row.id,
+    nombre: row.nombre,
+    palabraClave: row.palabra_clave,
+    categoria: row.categoria,
+    ...(row.monto_esperado != null ? { montoEsperado: row.monto_esperado } : {}),
+    activo: row.activo,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    pendingSync: false,
+  }),
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const ALL_TABLES: TableSync<any, any>[] = [accountsSync, movimientosSync, goalsSync, periodosSync]
+const ALL_TABLES: TableSync<any, any>[] = [accountsSync, movimientosSync, goalsSync, periodosSync, gastosFijosSync]
 
 async function allFinanceTablesEmpty(): Promise<boolean> {
   const counts = await Promise.all(ALL_TABLES.map((t) => t.dexieTable.count()))

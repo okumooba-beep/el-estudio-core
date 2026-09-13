@@ -50,6 +50,8 @@ export interface NuevaFinanceMovimiento {
   fecha?: string
   /** Sprint 036 — a qué período pertenece, cuando nace ya asociado a uno (p. ej. "+ Agregar ingreso" de una Semana puntual). */
   periodoId?: string
+  /** Gastos fijos mensuales — a qué gasto fijo paga, cuando nace ya asociado a uno (checklist "tildar"). */
+  gastoFijoId?: string
 }
 
 /**
@@ -202,6 +204,7 @@ export function createFinanceEngineRepositories(
         medio: input.medio,
         ...(input.ideaId ? { ideaId: input.ideaId } : {}),
         ...(input.periodoId ? { periodoId: input.periodoId } : {}),
+        ...(input.gastoFijoId ? { gastoFijoId: input.gastoFijoId } : {}),
         fecha: input.fecha ?? fechaLocalISO(now),
         createdAt: now.toISOString(),
         updatedAt: now.toISOString(),

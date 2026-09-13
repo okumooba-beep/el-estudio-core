@@ -4,10 +4,13 @@ import type { FinanceEngineApi } from './createFinanceEngine'
 import { AnilloCategorias } from './AnilloCategorias'
 import { EntroDetalle } from './EntroDetalle'
 import { SeFueDetalle } from './SeFueDetalle'
+import { GastosFijosDetalle } from './GastosFijosDetalle'
 import { MovimientoRow } from './MovimientoRow'
 import { NuevoMovimiento } from './NuevoMovimiento'
 import { CATEGORIA_COLOR, CATEGORIA_LABEL, type FinanceCategoria } from './categorias'
 import { extraerMovimiento, type Moneda } from './extraccion'
+import { contienePalabraClave } from './gastoFijoMatch'
+import type { GastosFijosEngineApi } from './createGastosFijosEngine'
 import {
   estaEnCurso,
   etiquetaMesEnCurso,
@@ -21,13 +24,13 @@ import {
   sumarMeses,
 } from './mes'
 import { etiquetaSemanaCobro, fechaEnSemana, semanaActual as semanaCobroActual } from './semanaCobro'
-import type { FinanceMovimiento } from '@/types/finance'
+import type { FinanceGastoFijo, FinanceMovimiento } from '@/types/finance'
 import type { NuevaCompraEnCuotas, NuevaFinanceMovimiento } from './financeEngineRepository'
 import type { PatchMovimiento } from './MovimientoRow'
 import { fechaLocalISO } from '@shared-kernel/date/fechaLocal'
 
 type Vista = 'semana' | 'mes'
-type Detalle = 'entro' | 'sefue' | 'nuevo' | null
+type Detalle = 'entro' | 'sefue' | 'nuevo' | 'gastosfijos' | null
 
 /**
  * Motor de Finanzas compartido entre `finance/` y `miproyecto/` (mismo
@@ -51,6 +54,13 @@ export interface FinanceEngineIdeaCapture {
 export interface FinanceEngineScreenProps {
   engine: FinanceEngineApi
   ideaCapture?: FinanceEngineIdeaCapture | undefined
+  /**
+   * "Gastos fijos mensuales" — exclusivo de Finanzas general (Mi Proyecto
+   * no lo pasa), mismo criterio que `ideaCapture`: opcional, y cuando se
+   * omite ni el botón "Gastos fijos" ni el efecto de auto-detección de
+   * abajo existen.
+   */
+  gastosFijos?: GastosFijosEngineApi | undefined
 }
 
 /**
@@ -84,7 +94,7 @@ export interface FinanceEngineScreenProps {
  * nunca un listado de cada movimiento (eso es la planilla que el brief
  * rechaza).
  */
-export function FinanceEngineScreen({ engine, ideaCapture }: FinanceEngineScreenProps) {
+export function FinanceEngineScreen({ engine, ideaCapture, gastosFijos }: FinanceEngineScreenProps) {
   const {
     movimientos,
     periodos,
@@ -114,6 +124,7 @@ export function FinanceEngineScreen({ engine, ideaCapture }: FinanceEngineScreen
    */
   const [abriendoIngresoGlobal, setAbriendoIngresoGlobal] = useState(false)
   const [avisoSemanaExpandido, setAvisoSemanaExpandido] = useState(false)
+  const [recientesAbierto, setRecientesAbierto] = useState(false)
 
   const convertidas = useMemo(
     () => new Set(movimientos.map((movimiento) => movimiento.ideaId).filter(Boolean)),
@@ -210,6 +221,40 @@ export function FinanceEngineScreen({ engine, ideaCapture }: FinanceEngineScreen
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, ideaCapture, movimientos])
 
+  /**
+   * "Gastos fijos mensuales" — auto-detección: mismo patrón que el efecto
+   * de arriba (Umbral→Finanzas), pero mirando `movimientos` en vez de
+   * `ideaCapture.ideas`. Un egreso que ya nace con `gastoFijoId` (el
+   * checklist "tildar" lo pone al crearlo, ver `FinanceMovimientoRepository.add`)
+   * nunca entra acá — así nunca hay una escritura duplicada entre el
+   * camino manual y el automático. `vinculandoGastoFijo` es la misma
+   * protección que `enConversion`: sin ella, una segunda pasada del
+   * efecto antes de que `updateMovimiento` (async) termine podría vincular
+   * dos movimientos distintos al mismo gasto fijo en el mismo mes.
+   */
+  const vinculandoGastoFijo = useRef<Set<string>>(new Set())
+  useEffect(() => {
+    if (!ready || !gastosFijos?.ready) return
+    const mesActualGf = mesDe(new Date())
+    const activos = gastosFijos.gastosFijos.filter((gf) => gf.activo)
+    const pagadosEsteMes = new Set(
+      movimientos.filter((m) => m.gastoFijoId && m.fecha.startsWith(mesActualGf)).map((m) => m.gastoFijoId as string),
+    )
+    for (const movimiento of movimientos) {
+      if (movimiento.tipo !== 'egreso' || movimiento.gastoFijoId !== undefined || vinculandoGastoFijo.current.has(movimiento.id)) {
+        continue
+      }
+      const gastoFijo = activos.find(
+        (gf) => !pagadosEsteMes.has(gf.id) && contienePalabraClave(movimiento.concepto, gf.palabraClave),
+      )
+      if (!gastoFijo) continue
+      pagadosEsteMes.add(gastoFijo.id)
+      vinculandoGastoFijo.current.add(movimiento.id)
+      void updateMovimiento(movimiento.id, { gastoFijoId: gastoFijo.id })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, gastosFijos, movimientos])
+
   const semanaActual = useMemo(() => semanaDelMes(fechaLocalISO()), [])
   const resumen = useMemo(
     () => resumirMes(movimientos, mesSeleccionado, moneda),
@@ -301,6 +346,26 @@ export function FinanceEngineScreen({ engine, ideaCapture }: FinanceEngineScreen
   function abrirNuevoIngreso() {
     setAbriendoIngresoGlobal(true)
     setDetalle('nuevo')
+  }
+
+  /**
+   * "Gastos fijos mensuales" — tildar a mano: mismo `addMovimiento` que
+   * usa "+ Movimiento" (ninguna escritura paralela), con `gastoFijoId` ya
+   * puesto desde que nace — así el efecto de auto-detección de arriba
+   * nunca lo vuelve a tocar. `medio`/`moneda` no los pide el brief para
+   * esta acción: mismo default silencioso que ya usa "+ Movimiento"
+   * (`medio: 'transferencia'`), acá también en pesos.
+   */
+  function tildarGastoFijo(gastoFijo: FinanceGastoFijo, monto: number) {
+    void addMovimiento({
+      tipo: 'egreso',
+      monto,
+      concepto: gastoFijo.nombre,
+      categoria: gastoFijo.categoria,
+      moneda: 'ars',
+      medio: 'transferencia',
+      gastoFijoId: gastoFijo.id,
+    })
   }
 
   /**
@@ -413,6 +478,25 @@ export function FinanceEngineScreen({ engine, ideaCapture }: FinanceEngineScreen
     )
   }
 
+  /**
+   * "Gastos fijos mensuales" — mismo criterio que el bloque de "entro" de
+   * arriba: se resuelve antes del gate de `sinNada`, así un Finanzas
+   * recién estrenado (0 movimientos) igual puede cargar su primer gasto
+   * fijo sin quedar atrapado en el EmptyState de "+ Movimiento".
+   */
+  if (detalle === 'gastosfijos' && gastosFijos) {
+    return (
+      <GastosFijosDetalle
+        gastosFijos={gastosFijos.gastosFijos}
+        movimientos={movimientos}
+        onTildar={tildarGastoFijo}
+        onCrear={(input) => void gastosFijos.addGastoFijo(input)}
+        onEditar={(id, patch) => void gastosFijos.updateGastoFijo(id, patch)}
+        onCerrar={cerrarDetalle}
+      />
+    )
+  }
+
   const nombreMes = new Date(`${mesSeleccionado}-02`).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
   /** Sprint 016.1, punto 15: mismo texto que ya arma el header acá abajo, para que Entró/Se fue nunca pierdan de vista qué período están mostrando al entrar en un detalle. */
   const periodoLabel = vista === 'semana' ? `Semana ${semanaActual} · ${etiquetaSemana(mesActual, semanaActual)}` : nombreMes
@@ -442,6 +526,11 @@ export function FinanceEngineScreen({ engine, ideaCapture }: FinanceEngineScreen
           <button type="button" className="idea-destino" onClick={() => setDetalle('entro')}>
             Ingresos
           </button>
+          {gastosFijos ? (
+            <button type="button" className="idea-destino" onClick={() => setDetalle('gastosfijos')}>
+              Gastos fijos
+            </button>
+          ) : null}
         </div>
       </div>
     )
@@ -674,19 +763,36 @@ export function FinanceEngineScreen({ engine, ideaCapture }: FinanceEngineScreen
 
       {movimientosRecientes.length > 0 ? (
         <section className="finanzas-tarjeta flex flex-col gap-1.5">
-          <h2 className="mb-1 font-mono text-[11px] uppercase tracking-wide text-accent">Movimientos recientes</h2>
-          <ul className="flex flex-col">
-            {movimientosRecientes.map((movimiento) => (
-              <MovimientoRow key={movimiento.id} movimiento={movimiento} moneda={moneda} />
-            ))}
-          </ul>
+          <button
+            type="button"
+            className="mb-1 flex items-center justify-between gap-2 text-left"
+            aria-expanded={recientesAbierto}
+            onClick={() => setRecientesAbierto((abierto) => !abierto)}
+          >
+            <h2 className="font-mono text-[11px] uppercase tracking-wide text-accent">Movimientos recientes</h2>
+            <span aria-hidden className="font-mono text-[11px] text-ink-dim">
+              {recientesAbierto ? '−' : '+'}
+            </span>
+          </button>
+          {recientesAbierto && (
+            <ul className="flex flex-col">
+              {movimientosRecientes.map((movimiento) => (
+                <MovimientoRow key={movimiento.id} movimiento={movimiento} moneda={moneda} />
+              ))}
+            </ul>
+          )}
         </section>
       ) : null}
 
-      <section className="flex justify-center pt-1">
+      <section className="flex justify-center gap-3 pt-1">
         <button type="button" className="idea-destino" onClick={() => setDetalle('nuevo')}>
           + Movimiento
         </button>
+        {gastosFijos ? (
+          <button type="button" className="idea-destino" onClick={() => setDetalle('gastosfijos')}>
+            Gastos fijos
+          </button>
+        ) : null}
       </section>
     </div>
   )

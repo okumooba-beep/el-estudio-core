@@ -2,7 +2,7 @@ import Dexie, { type EntityTable } from 'dexie'
 import type { Idea } from '@/types/idea'
 import type { Operacion } from '@/types/operacion'
 import type { HabitCheck } from '@/types/habitCheck'
-import type { FinanceAccount, FinanceMovimiento, FinanceGoal, FinanceIncomePeriod } from '@/types/finance'
+import type { FinanceAccount, FinanceMovimiento, FinanceGoal, FinanceIncomePeriod, FinanceGastoFijo } from '@/types/finance'
 import type { AgendaEvento, AgendaBloque } from '@/types/agenda'
 import type { AuditRuptura, AuditPremortem, AuditCorreccionSemanal, AuditConfig } from '@/types/auditoria'
 import type { NotesFolder, NotesNote } from '@/types/notes'
@@ -77,6 +77,7 @@ class LifeosDB extends Dexie {
   financeMovimientos!: EntityTable<FinanceMovimiento, 'id'>
   financeGoals!: EntityTable<FinanceGoal, 'id'>
   financeIncomePeriods!: EntityTable<FinanceIncomePeriod, 'id'>
+  financeGastosFijos!: EntityTable<FinanceGastoFijo, 'id'>
   agendaEventos!: EntityTable<AgendaEvento, 'id'>
   agendaBloques!: EntityTable<AgendaBloque, 'id'>
   auditRupturas!: EntityTable<AuditRuptura, 'id'>
@@ -581,6 +582,17 @@ class LifeosDB extends Dexie {
       miProyectoFinanceMovimientos: 'id, createdAt, categoria, ideaId, moneda, medio, compraId, periodoId',
       miProyectoFinanceGoals: 'id, createdAt',
       miProyectoFinanceIncomePeriods: 'id, createdAt, orden, fechaInicio',
+    })
+
+    /**
+     * "Gastos fijos mensuales" — exclusivo de Finanzas general (no existe
+     * versión Mi Proyecto). Tabla nueva y vacía: sin `.upgrade()`, mismo
+     * criterio que v19/v23. Sin índice para `activo` ni `palabraClave`:
+     * el checklist filtra sobre la lista ya cargada en memoria (Regla
+     * 4/8: no indexar especulativamente).
+     */
+    this.version(25).stores({
+      financeGastosFijos: 'id, createdAt',
     })
   }
 }

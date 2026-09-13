@@ -42,10 +42,10 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
-    // 230 KB: el auth de Supabase (auth-js + postgrest-js + realtime-js) ya es
-    // parte permanente del bundle real (217 KB medido) — el presupuesto anterior
-    // de 200 KB era de antes de esa feature.
-    bundleSizeBudget(230 * 1024),
+    // 235 KB: "Gastos fijos mensuales" (checklist + form + auto-detección) ya
+    // es parte permanente del bundle real (231.7 KB medido) — el presupuesto
+    // anterior de 230 KB era de antes de esa feature.
+    bundleSizeBudget(235 * 1024),
     VitePWA({
       registerType: 'autoUpdate',
       // Fase 1 (push real): 'generateSW' (el default anterior) autogenera el
