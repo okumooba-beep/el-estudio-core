@@ -5,6 +5,30 @@ import type { NotesEngineApi } from './createNotesEngine'
 import type { NotesFolder, NotesNote } from '@/types/notes'
 
 /**
+ * Paleta chica para el color de acento de carpeta (grilla premium de Mi
+ * Proyecto) — mismos tonos apagados que ya usa Finanzas para categorías
+ * (ver CATEGORIA_COLOR en finance-engine/categorias.ts: "maderas, ocres y
+ * verdes apagados, nunca colores chillones"), no una paleta nueva.
+ */
+const CARPETA_COLORES = [
+  { valor: '#D8A24A', etiqueta: 'Dorado' },
+  { valor: '#B5563A', etiqueta: 'Cobre' },
+  { valor: '#8A9A5B', etiqueta: 'Verde salvia' },
+  { valor: '#6FAE85', etiqueta: 'Verde inversión' },
+  { valor: '#556074', etiqueta: 'Azul pizarra' },
+  { valor: '#8B6FA0', etiqueta: 'Violeta' },
+] as const
+
+const CARPETA_COLOR_DEFECTO = CARPETA_COLORES[0].valor
+
+function formatoEditado(iso: string): string {
+  const dias = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000)
+  if (dias <= 0) return 'editado hoy'
+  if (dias === 1) return 'editado ayer'
+  return `editado hace ${dias} días`
+}
+
+/**
  * UI del motor de carpetas+notas, parametrizada por título y copy del
  * estado vacío — usada tal cual por Notas (`notes/NotesScreen.tsx`) y por
  * Mi proyecto (`miproyecto/MiProyectoScreen.tsx`), cada uno con su propio
@@ -74,13 +98,85 @@ interface FolderListProps {
 function FolderList({ engine, titulo, descripcionVacio, onAbrir, ocultarTitulo, carpetasEnGrilla }: FolderListProps) {
   const [creando, setCreando] = useState(false)
   const [nombreNueva, setNombreNueva] = useState('')
+  const [colorNueva, setColorNueva] = useState<string>(CARPETA_COLOR_DEFECTO)
+  const [notasMeta, setNotasMeta] = useState<Record<string, { cantidad: number; ultimaEdicion: string }>>({})
+
+  // Grilla premium (Mi Proyecto): "N notas · editado hace X" por carpeta sin
+  // persistir un contador aparte — se cargan todas las notas del espacio una
+  // sola vez y se agregan acá, en vez de sumar un campo denormalizado que
+  // habría que mantener en cada alta/baja de nota + su columna en Supabase.
+  useEffect(() => {
+    if (!carpetasEnGrilla) return
+    let cancelado = false
+    engine.listAllNotes().then((notas) => {
+      if (cancelado) return
+      const porCarpeta: Record<string, { cantidad: number; ultimaEdicion: string }> = {}
+      for (const nota of notas) {
+        const actual = porCarpeta[nota.folderId]
+        if (!actual) {
+          porCarpeta[nota.folderId] = { cantidad: 1, ultimaEdicion: nota.updatedAt }
+        } else {
+          actual.cantidad += 1
+          if (nota.updatedAt > actual.ultimaEdicion) actual.ultimaEdicion = nota.updatedAt
+        }
+      }
+      setNotasMeta(porCarpeta)
+    })
+    return () => {
+      cancelado = true
+    }
+  }, [carpetasEnGrilla, engine, engine.folders])
 
   async function crearCarpeta() {
     const nombre = nombreNueva.trim()
     if (!nombre) return
-    await engine.addFolder(nombre)
+    await engine.addFolder(nombre, carpetasEnGrilla ? colorNueva : undefined)
     setNombreNueva('')
+    setColorNueva(CARPETA_COLOR_DEFECTO)
     setCreando(false)
+  }
+
+  if (carpetasEnGrilla) {
+    const columnas = engine.folders.length <= 1 ? 'grid-cols-1' : 'grid-cols-2'
+    return (
+      <div className="flex flex-col gap-6 pb-10">
+        {creando ? (
+          <NuevaCarpetaForm
+            nombre={nombreNueva}
+            onNombre={setNombreNueva}
+            color={colorNueva}
+            onColor={setColorNueva}
+            onGuardar={crearCarpeta}
+            onCancelar={() => setCreando(false)}
+          />
+        ) : engine.folders.length === 0 ? (
+          <div className="carpeta-tarjeta-grilla flex flex-col items-center gap-3 py-8 text-center">
+            <p className="text-[15px] text-ink">Este espacio todavía no tiene carpetas.</p>
+            <p className="max-w-[38ch] text-[13.5px] text-ink-faint">{descripcionVacio}</p>
+            <button type="button" className="idea-destino" onClick={() => setCreando(true)}>
+              Crear la primera carpeta
+            </button>
+          </div>
+        ) : (
+          <ul className={`grid ${columnas} gap-3`}>
+            {engine.folders.map((folder) => (
+              <FolderCardGrande
+                key={folder.id}
+                folder={folder}
+                engine={engine}
+                meta={notasMeta[folder.id]}
+                onAbrir={() => onAbrir(folder.id)}
+              />
+            ))}
+            <li>
+              <button type="button" className="carpeta-tarjeta-nueva w-full" onClick={() => setCreando(true)} aria-label="Nueva carpeta">
+                +
+              </button>
+            </li>
+          </ul>
+        )}
+      </div>
+    )
   }
 
   return (
@@ -115,12 +211,59 @@ function FolderList({ engine, titulo, descripcionVacio, onAbrir, ocultarTitulo, 
       {engine.folders.length === 0 && !creando ? (
         <EmptyState title="Ninguna carpeta todavía." description={descripcionVacio} />
       ) : (
-        <ul className={carpetasEnGrilla ? 'grid grid-cols-2 gap-3 sm:grid-cols-3' : 'flex flex-col gap-3'}>
+        <ul className="flex flex-col gap-3">
           {engine.folders.map((folder) => (
             <FolderRow key={folder.id} folder={folder} engine={engine} onAbrir={() => onAbrir(folder.id)} />
           ))}
         </ul>
       )}
+    </div>
+  )
+}
+
+interface NuevaCarpetaFormProps {
+  nombre: string
+  onNombre: (v: string) => void
+  color: string
+  onColor: (v: string) => void
+  onGuardar: () => void
+  onCancelar: () => void
+}
+
+function NuevaCarpetaForm({ nombre, onNombre, color, onColor, onGuardar, onCancelar }: NuevaCarpetaFormProps) {
+  return (
+    <div className="carpeta-tarjeta-grilla flex flex-col gap-3">
+      <input
+        autoFocus
+        value={nombre}
+        onChange={(e) => onNombre(e.target.value)}
+        placeholder="Nombre de la carpeta"
+        className="border-b border-border/60 bg-transparent px-1 py-1.5 text-[15px] text-ink outline-none placeholder:text-ink-dim"
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') onGuardar()
+        }}
+      />
+      <div className="flex items-center gap-2">
+        {CARPETA_COLORES.map((opcion) => (
+          <button
+            key={opcion.valor}
+            type="button"
+            className="carpeta-color-swatch"
+            style={{ background: opcion.valor }}
+            aria-label={opcion.etiqueta}
+            aria-pressed={color === opcion.valor}
+            onClick={() => onColor(opcion.valor)}
+          />
+        ))}
+      </div>
+      <div className="flex gap-3">
+        <button type="button" className="idea-destino disabled:opacity-40" disabled={!nombre.trim()} onClick={onGuardar}>
+          Guardar
+        </button>
+        <button type="button" className="idea-destino" onClick={onCancelar}>
+          Cancelar
+        </button>
+      </div>
     </div>
   )
 }
@@ -200,6 +343,114 @@ function FolderRow({ folder, engine, onAbrir }: FolderRowProps) {
 
       {confirmandoBorrado ? (
         <div className="flex items-center gap-3">
+          <span className="text-[13px] text-ink-faint">{folder.pinHash !== null ? '¿Eliminar carpeta y todo su contenido bloqueado?' : '¿Eliminar carpeta y sus notas?'}</span>
+          <button
+            type="button"
+            className="idea-destino"
+            style={{ color: 'var(--critical)', borderColor: 'var(--critical)' }}
+            onClick={() => {
+              void engine.deleteFolder(folder.id)
+              setConfirmandoBorrado(false)
+            }}
+          >
+            Eliminar
+          </button>
+          <button type="button" className="idea-destino" onClick={() => setConfirmandoBorrado(false)}>
+            Cancelar
+          </button>
+        </div>
+      ) : null}
+    </li>
+  )
+}
+
+interface FolderCardGrandeProps {
+  folder: NotesFolder
+  engine: NotesEngineApi
+  meta: { cantidad: number; ultimaEdicion: string } | undefined
+  onAbrir: () => void
+}
+
+function FolderCardGrande({ folder, engine, meta, onAbrir }: FolderCardGrandeProps) {
+  const [interactuando, setInteractuando] = useState(false)
+  const [renombrando, setRenombrando] = useState(false)
+  const [nombre, setNombre] = useState(folder.nombre)
+  const [confirmandoBorrado, setConfirmandoBorrado] = useState(false)
+
+  function alternarInteraccion() {
+    setInteractuando((actual) => {
+      if (actual) {
+        setRenombrando(false)
+        setConfirmandoBorrado(false)
+      }
+      return !actual
+    })
+  }
+
+  async function guardarNombre() {
+    const nuevo = nombre.trim()
+    if (!nuevo) return
+    await engine.renameFolder(folder.id, nuevo)
+    setRenombrando(false)
+    setInteractuando(false)
+  }
+
+  const color = folder.color ?? CARPETA_COLOR_DEFECTO
+  const descripcionMeta = meta
+    ? `${meta.cantidad} nota${meta.cantidad === 1 ? '' : 's'} · ${formatoEditado(meta.ultimaEdicion)}`
+    : `Sin notas · ${formatoEditado(folder.updatedAt)}`
+
+  return (
+    <li className="carpeta-tarjeta-grilla">
+      <div className="flex items-start justify-between gap-2">
+        <button type="button" className="flex min-w-0 flex-1 flex-col items-start gap-2 appearance-none border-0 bg-transparent p-0 text-left" onClick={onAbrir}>
+          <svg viewBox="0 0 24 24" className="carpeta-tarjeta-icono" style={{ color }} fill="currentColor" aria-hidden="true">
+            <path d="M3 5.5C3 4.67 3.67 4 4.5 4h4.4c.5 0 .97.24 1.26.65L11.3 6.5H19.5c.83 0 1.5.67 1.5 1.5v10c0 .83-.67 1.5-1.5 1.5h-15C3.67 19.5 3 18.83 3 18V5.5z" />
+          </svg>
+          <span className="flex min-w-0 items-center gap-2">
+            <span className="truncate text-[15px] text-ink">{folder.nombre}</span>
+            {folder.pinHash !== null ? (
+              <span aria-label="Carpeta bloqueada con PIN" className="shrink-0 text-[12px] text-ink-faint">
+                🔒
+              </span>
+            ) : null}
+          </span>
+          <span className="carpeta-tarjeta-meta">{descripcionMeta}</span>
+        </button>
+        <button type="button" className="idea-destino shrink-0" onClick={alternarInteraccion} aria-expanded={interactuando}>
+          ⋯
+        </button>
+      </div>
+
+      {interactuando ? (
+        <div className="mt-3 flex flex-wrap gap-3">
+          <button type="button" className="idea-destino" onClick={() => (renombrando ? setRenombrando(false) : (setNombre(folder.nombre), setRenombrando(true)))}>
+            {renombrando ? 'Cancelar' : 'Editar'}
+          </button>
+          <button type="button" className="idea-destino" onClick={() => setConfirmandoBorrado((v) => !v)}>
+            Eliminar
+          </button>
+        </div>
+      ) : null}
+
+      {renombrando ? (
+        <div className="mt-3 flex flex-col gap-2">
+          <input
+            value={nombre}
+            onChange={(e) => setNombre(e.target.value)}
+            className="border-b border-border/60 bg-transparent px-1 py-1.5 text-[15px] text-ink outline-none"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') void guardarNombre()
+            }}
+          />
+          <button type="button" className="idea-destino self-start disabled:opacity-40" disabled={!nombre.trim()} onClick={guardarNombre}>
+            Guardar
+          </button>
+        </div>
+      ) : null}
+
+      {confirmandoBorrado ? (
+        <div className="mt-3 flex items-center gap-3">
           <span className="text-[13px] text-ink-faint">{folder.pinHash !== null ? '¿Eliminar carpeta y todo su contenido bloqueado?' : '¿Eliminar carpeta y sus notas?'}</span>
           <button
             type="button"

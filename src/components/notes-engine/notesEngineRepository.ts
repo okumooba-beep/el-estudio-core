@@ -10,7 +10,7 @@ import type { EntityTable } from 'dexie'
  * propio par de tablas Dexie sin duplicar esta lógica de CRUD.
  */
 export interface NotesFolderRepository extends Repository<NotesFolder> {
-  add(nombre: string): Promise<NotesFolder>
+  add(nombre: string, color?: string): Promise<NotesFolder>
   update(id: string, patch: Partial<Omit<NotesFolder, 'id' | 'createdAt'>>): Promise<NotesFolder>
   delete(id: string): Promise<void>
 }
@@ -37,7 +37,7 @@ export function createNotesEngineRepositories(
       return carpetas.filter((c) => !c.deletedAt).sort((a, b) => a.createdAt.localeCompare(b.createdAt))
     },
 
-    async add(nombre: string): Promise<NotesFolder> {
+    async add(nombre: string, color?: string): Promise<NotesFolder> {
       const now = new Date().toISOString()
       const carpeta: NotesFolder = {
         id: generateId(),
@@ -46,6 +46,7 @@ export function createNotesEngineRepositories(
         createdAt: now,
         updatedAt: now,
         pendingSync: true,
+        ...(color ? { color } : {}),
       }
       await folderTable.add(carpeta)
       return carpeta

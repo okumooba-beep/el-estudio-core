@@ -14,6 +14,8 @@ export interface NotesFolder {
   pendingSync: boolean
   /** Fase 1 (sync Supabase) — tombstone. Ausente = viva, igual que FinanceMovimiento.deletedAt. */
   deletedAt?: string
+  /** Color de acento elegido al crear la carpeta (grilla premium de Mi Proyecto). Ausente = carpeta creada antes de esta feature, o vista de Notas general que no lo ofrece. */
+  color?: string
 }
 
 export interface NotesNote {

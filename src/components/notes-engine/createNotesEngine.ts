@@ -11,7 +11,8 @@ export interface NotesEngineApi {
   unlockedVersion: number
   isUnlocked(folder: NotesFolder): boolean
   cargarNotas(folderId: string): Promise<void>
-  addFolder(nombre: string): Promise<void>
+  listAllNotes(): Promise<NotesNote[]>
+  addFolder(nombre: string, color?: string): Promise<void>
   renameFolder(id: string, nombre: string): Promise<void>
   deleteFolder(id: string): Promise<void>
   addNote(folderId: string, titulo: string, contenido: string): Promise<void>
@@ -60,8 +61,12 @@ export function createNotesEngine(
       setNotesByFolder((current) => ({ ...current, [folderId]: notas }))
     }
 
-    async function addFolder(nombre: string): Promise<void> {
-      const created = await folderRepository.add(nombre)
+    async function listAllNotes(): Promise<NotesNote[]> {
+      return noteRepository.list()
+    }
+
+    async function addFolder(nombre: string, color?: string): Promise<void> {
+      const created = await folderRepository.add(nombre, color)
       setFolders((current) => [...current, created])
     }
 
@@ -139,6 +144,7 @@ export function createNotesEngine(
       unlockedVersion,
       isUnlocked,
       cargarNotas,
+      listAllNotes,
       addFolder,
       renameFolder,
       deleteFolder,

@@ -23,6 +23,7 @@ interface FolderRow {
   created_at: string
   updated_at: string
   deleted_at: string | null
+  color: string | null
 }
 
 interface NoteRow {
@@ -54,6 +55,7 @@ const foldersSync: TableSync<NotesFolder, FolderRow> = {
     created_at: f.createdAt,
     updated_at: f.updatedAt,
     deleted_at: f.deletedAt ?? null,
+    color: f.color ?? null,
   }),
   fromRow: (row) => ({
     id: row.id,
@@ -63,6 +65,7 @@ const foldersSync: TableSync<NotesFolder, FolderRow> = {
     updatedAt: row.updated_at,
     pendingSync: false,
     ...(row.deleted_at ? { deletedAt: row.deleted_at } : {}),
+    ...(row.color ? { color: row.color } : {}),
   }),
 }
 

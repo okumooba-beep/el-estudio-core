@@ -41,21 +41,31 @@ export function MiProyectoScreen({ nombre, onRenombrar }: MiProyectoScreenProps)
   const [seccion, setSeccion] = useState<Seccion>('carpetas')
 
   return (
-    <div className="mx-auto flex max-w-xl flex-col gap-6 pb-2">
-      <NombreEspacio nombre={nombre} onRenombrar={onRenombrar} />
-      <div className="idea-destinos" role="group" aria-label="Sección">
-        {(['carpetas', 'finanzas'] as const).map((opcion) => (
-          <button
-            key={opcion}
-            type="button"
-            className="idea-destino"
-            aria-pressed={seccion === opcion}
-            style={seccion === opcion ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
-            onClick={() => setSeccion(opcion)}
-          >
-            {opcion === 'carpetas' ? 'Carpetas' : 'Finanzas'}
-          </button>
-        ))}
+    // Sin max-w-xl acá afuera: tanto NotesEngineScreen como
+    // FinanceEngineScreen ya traen su propio `mx-auto max-w-xl` interno
+    // (mismo que usan NotesScreen.tsx/FinanceScreen.tsx generales, que las
+    // montan sin ningún wrapper propio) — envolverlas otra vez acá las
+    // anidaba dentro de un segundo contenedor de igual ancho máximo, el
+    // único punto de este árbol que no calca cómo las monta el módulo
+    // general. El header y el switcher sí necesitan su propio ancho, así
+    // que lo mantienen en un contenedor chico aparte.
+    <div className="flex flex-col gap-6 pb-2">
+      <div className="mx-auto flex w-full max-w-xl flex-col gap-6">
+        <NombreEspacio nombre={nombre} onRenombrar={onRenombrar} />
+        <div className="idea-destinos" role="group" aria-label="Sección">
+          {(['carpetas', 'finanzas'] as const).map((opcion) => (
+            <button
+              key={opcion}
+              type="button"
+              className="idea-destino"
+              aria-pressed={seccion === opcion}
+              style={seccion === opcion ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
+              onClick={() => setSeccion(opcion)}
+            >
+              {opcion === 'carpetas' ? 'Carpetas' : 'Finanzas'}
+            </button>
+          ))}
+        </div>
       </div>
       {seccion === 'carpetas' ? (
         <NotesEngineScreen
