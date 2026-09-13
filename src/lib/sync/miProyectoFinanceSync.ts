@@ -30,6 +30,7 @@ interface AccountRow {
   saldo: number
   created_at: string
   updated_at: string
+  carpeta_id: string | null
 }
 
 interface MovimientoRow {
@@ -51,6 +52,7 @@ interface MovimientoRow {
   cuota_total: number | null
   monto_original: number | null
   periodo_id: string | null
+  carpeta_id: string | null
 }
 
 interface GoalRow {
@@ -61,6 +63,7 @@ interface GoalRow {
   actual: number
   created_at: string
   updated_at: string
+  carpeta_id: string | null
 }
 
 interface PeriodoRow {
@@ -73,6 +76,7 @@ interface PeriodoRow {
   created_at: string
   updated_at: string
   deleted_at: string | null
+  carpeta_id: string | null
 }
 
 interface TableSync<Local extends { id: string; pendingSync: boolean }, Remote extends { id: string }> {
@@ -93,6 +97,7 @@ const accountsSync: TableSync<FinanceAccount, AccountRow> = {
     saldo: a.saldo,
     created_at: a.createdAt,
     updated_at: a.updatedAt,
+    carpeta_id: a.carpetaId ?? null,
   }),
   fromRow: (row) => ({
     id: row.id,
@@ -102,6 +107,7 @@ const accountsSync: TableSync<FinanceAccount, AccountRow> = {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     pendingSync: false,
+    ...(row.carpeta_id ? { carpetaId: row.carpeta_id } : {}),
   }),
 }
 
@@ -127,6 +133,7 @@ const movimientosSync: TableSync<FinanceMovimiento, MovimientoRow> = {
     cuota_total: m.cuotaTotal ?? null,
     monto_original: m.montoOriginal ?? null,
     periodo_id: m.periodoId ?? null,
+    carpeta_id: m.carpetaId ?? null,
   }),
   fromRow: (row) => ({
     id: row.id,
@@ -147,6 +154,7 @@ const movimientosSync: TableSync<FinanceMovimiento, MovimientoRow> = {
     ...(row.cuota_total != null ? { cuotaTotal: row.cuota_total } : {}),
     ...(row.monto_original != null ? { montoOriginal: row.monto_original } : {}),
     ...(row.periodo_id ? { periodoId: row.periodo_id } : {}),
+    ...(row.carpeta_id ? { carpetaId: row.carpeta_id } : {}),
   }),
 }
 
@@ -161,6 +169,7 @@ const goalsSync: TableSync<FinanceGoal, GoalRow> = {
     actual: g.actual,
     created_at: g.createdAt,
     updated_at: g.updatedAt,
+    carpeta_id: g.carpetaId ?? null,
   }),
   fromRow: (row) => ({
     id: row.id,
@@ -170,6 +179,7 @@ const goalsSync: TableSync<FinanceGoal, GoalRow> = {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     pendingSync: false,
+    ...(row.carpeta_id ? { carpetaId: row.carpeta_id } : {}),
   }),
 }
 
@@ -186,6 +196,7 @@ const periodosSync: TableSync<FinanceIncomePeriod, PeriodoRow> = {
     created_at: p.createdAt,
     updated_at: p.updatedAt,
     deleted_at: p.deletedAt ?? null,
+    carpeta_id: p.carpetaId ?? null,
   }),
   fromRow: (row) => ({
     id: row.id,
@@ -197,6 +208,7 @@ const periodosSync: TableSync<FinanceIncomePeriod, PeriodoRow> = {
     updatedAt: row.updated_at,
     pendingSync: false,
     ...(row.deleted_at ? { deletedAt: row.deleted_at } : {}),
+    ...(row.carpeta_id ? { carpetaId: row.carpeta_id } : {}),
   }),
 }
 

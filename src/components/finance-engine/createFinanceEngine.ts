@@ -50,7 +50,7 @@ export function createFinanceEngine(
     periodoTable,
   )
 
-  function useEngine(): FinanceEngineApi {
+  function useEngine(carpetaId?: string): FinanceEngineApi {
     const [accounts, setAccounts] = useState<FinanceAccount[]>([])
     const [movimientos, setMovimientos] = useState<FinanceMovimiento[]>([])
     const [goals, setGoals] = useState<FinanceGoal[]>([])
@@ -58,11 +58,12 @@ export function createFinanceEngine(
     const [ready, setReady] = useState(false)
 
     useEffect(() => {
+      setReady(false)
       Promise.all([
-        accountRepository.list(),
-        movimientoRepository.list(),
-        goalRepository.list(),
-        periodoRepository.list(),
+        accountRepository.list(carpetaId),
+        movimientoRepository.list(carpetaId),
+        goalRepository.list(carpetaId),
+        periodoRepository.list(carpetaId),
       ]).then(([loadedAccounts, loadedMovimientos, loadedGoals, loadedPeriodos]) => {
         setAccounts(loadedAccounts)
         setMovimientos(loadedMovimientos)
@@ -70,10 +71,10 @@ export function createFinanceEngine(
         setPeriodos(loadedPeriodos)
         setReady(true)
       })
-    }, [])
+    }, [carpetaId])
 
     async function addAccount(input: NuevaFinanceAccount): Promise<void> {
-      const created = await accountRepository.add(input)
+      const created = await accountRepository.add(input, carpetaId)
       setAccounts((current) => [created, ...current])
     }
 
@@ -83,13 +84,13 @@ export function createFinanceEngine(
     }
 
     async function addMovimiento(input: NuevaFinanceMovimiento): Promise<void> {
-      const created = await movimientoRepository.add(input)
+      const created = await movimientoRepository.add(input, carpetaId)
       setMovimientos((current) => [created, ...current])
     }
 
     /** Sprint 028 — misma alta que `addMovimiento`, pero arma N cuotas de una compra financiada. */
     async function addCompra(input: NuevaCompraEnCuotas): Promise<void> {
-      const creadas = await movimientoRepository.addCompra(input)
+      const creadas = await movimientoRepository.addCompra(input, carpetaId)
       setMovimientos((current) => [...creadas, ...current])
     }
 
@@ -112,7 +113,7 @@ export function createFinanceEngine(
     }
 
     async function addGoal(input: NuevaFinanceGoal): Promise<void> {
-      const created = await goalRepository.add(input)
+      const created = await goalRepository.add(input, carpetaId)
       setGoals((current) => [created, ...current])
     }
 
@@ -123,7 +124,7 @@ export function createFinanceEngine(
 
     /** Sprint 036 — crea un período de ingresos ("+ Nueva semana"). */
     async function addPeriodo(input: NuevoFinanceIncomePeriod): Promise<void> {
-      const created = await periodoRepository.add(input)
+      const created = await periodoRepository.add(input, carpetaId)
       setPeriodos((current) => [...current, created])
     }
 
@@ -138,7 +139,7 @@ export function createFinanceEngine(
      * período que ya estaba en `periodos`.
      */
     async function obtenerOCrearPeriodo(input: NuevoFinanceIncomePeriod): Promise<FinanceIncomePeriod> {
-      const periodo = await periodoRepository.add(input)
+      const periodo = await periodoRepository.add(input, carpetaId)
       setPeriodos((current) => (current.some((p) => p.id === periodo.id) ? current : [...current, periodo]))
       return periodo
     }

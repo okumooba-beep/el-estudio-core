@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { esPinValido } from './pin'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { FinanceEngineScreen } from '@/components/finance-engine/FinanceEngineScreen'
+import type { FinanceEngine } from '@/components/finance-engine/createFinanceEngine'
 import type { NotesEngineApi } from './createNotesEngine'
 import type { NotesFolder, NotesNote } from '@/types/notes'
 
@@ -54,9 +56,16 @@ export interface NotesEngineScreenProps {
    * Notas no lo pasa y mantiene su lista de una columna.
    */
   carpetasEnGrilla?: boolean | undefined
+  /**
+   * Finanzas por carpeta (Mi Proyecto): cuando se pasa, cada carpeta
+   * abierta muestra un switcher "Notas / Finanzas" y esta fábrica se
+   * instancia scopeada al id de esa carpeta (ver FolderFinanceSwitch).
+   * Notas general no lo pasa y sigue mostrando solo sus notas.
+   */
+  financeEngine?: FinanceEngine | undefined
 }
 
-export function NotesEngineScreen({ engine, titulo, descripcionVacio, ocultarTitulo, carpetasEnGrilla }: NotesEngineScreenProps) {
+export function NotesEngineScreen({ engine, titulo, descripcionVacio, ocultarTitulo, carpetasEnGrilla, financeEngine }: NotesEngineScreenProps) {
   const [carpetaAbiertaId, setCarpetaAbiertaId] = useState<string | null>(null)
 
   if (!engine.ready) return null
@@ -70,6 +79,7 @@ export function NotesEngineScreen({ engine, titulo, descripcionVacio, ocultarTit
         engine={engine}
         titulo={titulo}
         onVolver={() => setCarpetaAbiertaId(null)}
+        financeEngine={financeEngine}
       />
     )
   }
@@ -477,9 +487,10 @@ interface FolderViewProps {
   engine: NotesEngineApi
   titulo: string
   onVolver: () => void
+  financeEngine?: FinanceEngine | undefined
 }
 
-function FolderView({ folder, engine, titulo, onVolver }: FolderViewProps) {
+function FolderView({ folder, engine, titulo, onVolver, financeEngine }: FolderViewProps) {
   const desbloqueada = engine.isUnlocked(folder)
 
   return (
@@ -492,9 +503,57 @@ function FolderView({ folder, engine, titulo, onVolver }: FolderViewProps) {
       <p className="font-mono text-[11px] uppercase tracking-wide text-accent">{folder.nombre}</p>
 
       {desbloqueada ? (
-        <FolderContent folder={folder} engine={engine} />
+        financeEngine ? (
+          <FolderFinanceSwitch folder={folder} notesEngine={engine} financeEngine={financeEngine} />
+        ) : (
+          <FolderContent folder={folder} engine={engine} />
+        )
       ) : (
         <PinGate folder={folder} engine={engine} />
+      )}
+    </div>
+  )
+}
+
+type SeccionCarpeta = 'notas' | 'finanzas'
+
+interface FolderFinanceSwitchProps {
+  folder: NotesFolder
+  notesEngine: NotesEngineApi
+  financeEngine: FinanceEngine
+}
+
+/**
+ * Switcher "Notas / Finanzas" dentro de una carpeta abierta — misma
+ * estructura que el switcher "Carpetas / Finanzas" que antes vivía un
+ * nivel arriba, en MiProyectoScreen.tsx. `financeEngine.useEngine` acá
+ * queda scopeado al id de esta carpeta, así que sus cuentas/movimientos/
+ * metas/períodos nunca se mezclan con los de otra carpeta.
+ */
+function FolderFinanceSwitch({ folder, notesEngine, financeEngine }: FolderFinanceSwitchProps) {
+  const finance = financeEngine.useEngine(folder.id)
+  const [seccion, setSeccion] = useState<SeccionCarpeta>('notas')
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="idea-destinos" role="group" aria-label="Sección">
+        {(['notas', 'finanzas'] as const).map((opcion) => (
+          <button
+            key={opcion}
+            type="button"
+            className="idea-destino"
+            aria-pressed={seccion === opcion}
+            style={seccion === opcion ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
+            onClick={() => setSeccion(opcion)}
+          >
+            {opcion === 'notas' ? 'Notas' : 'Finanzas'}
+          </button>
+        ))}
+      </div>
+      {seccion === 'notas' ? (
+        <FolderContent folder={folder} engine={notesEngine} />
+      ) : (
+        <FinanceEngineScreen engine={finance} />
       )}
     </div>
   )

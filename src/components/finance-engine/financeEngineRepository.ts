@@ -31,7 +31,8 @@ export interface NuevaFinanceAccount {
 }
 
 export interface FinanceAccountRepository extends Repository<FinanceAccount> {
-  add(input: NuevaFinanceAccount): Promise<FinanceAccount>
+  list(carpetaId?: string): Promise<FinanceAccount[]>
+  add(input: NuevaFinanceAccount, carpetaId?: string): Promise<FinanceAccount>
   update(id: string, patch: Partial<Omit<FinanceAccount, 'id' | 'createdAt'>>): Promise<FinanceAccount>
 }
 
@@ -72,9 +73,10 @@ export interface NuevaCompraEnCuotas {
 }
 
 export interface FinanceMovimientoRepository extends Repository<FinanceMovimiento> {
-  add(input: NuevaFinanceMovimiento): Promise<FinanceMovimiento>
+  list(carpetaId?: string): Promise<FinanceMovimiento[]>
+  add(input: NuevaFinanceMovimiento, carpetaId?: string): Promise<FinanceMovimiento>
   /** Sprint 028 — una compra en cuotas nace como N movimientos, uno por mes, todos con el mismo compraId. */
-  addCompra(input: NuevaCompraEnCuotas): Promise<FinanceMovimiento[]>
+  addCompra(input: NuevaCompraEnCuotas, carpetaId?: string): Promise<FinanceMovimiento[]>
   /**
    * Sprint 007 — corrige la categoría de un movimiento "Por revisar"
    * con una interacción simple.
@@ -107,7 +109,8 @@ export interface NuevaFinanceGoal {
 }
 
 export interface FinanceGoalRepository extends Repository<FinanceGoal> {
-  add(input: NuevaFinanceGoal): Promise<FinanceGoal>
+  list(carpetaId?: string): Promise<FinanceGoal[]>
+  add(input: NuevaFinanceGoal, carpetaId?: string): Promise<FinanceGoal>
   update(id: string, patch: Partial<Omit<FinanceGoal, 'id' | 'createdAt'>>): Promise<FinanceGoal>
 }
 
@@ -127,7 +130,8 @@ export interface NuevoFinanceIncomePeriod {
  * ("24 → 30 ago"), nunca por un número arbitrario ("Semana 4").
  */
 export interface FinanceIncomePeriodRepository extends Repository<FinanceIncomePeriod> {
-  add(input: NuevoFinanceIncomePeriod): Promise<FinanceIncomePeriod>
+  list(carpetaId?: string): Promise<FinanceIncomePeriod[]>
+  add(input: NuevoFinanceIncomePeriod, carpetaId?: string): Promise<FinanceIncomePeriod>
   /** Borra un período. Quien llama decide si corresponde (la UI no ofrece esto para un período que todavía tiene ingresos asignados). */
   delete(id: string): Promise<void>
 }
@@ -146,12 +150,14 @@ export function createFinanceEngineRepositories(
   periodoTable: EntityTable<FinanceIncomePeriod, 'id'>,
 ): FinanceEngineRepositories {
   const accountRepository: FinanceAccountRepository = {
-    async list(): Promise<FinanceAccount[]> {
+    async list(carpetaId?: string): Promise<FinanceAccount[]> {
       const cuentas = await accountTable.toArray()
-      return cuentas.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      return cuentas
+        .filter((c) => (carpetaId ? c.carpetaId === carpetaId : true))
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     },
 
-    async add(input: NuevaFinanceAccount): Promise<FinanceAccount> {
+    async add(input: NuevaFinanceAccount, carpetaId?: string): Promise<FinanceAccount> {
       const now = new Date().toISOString()
       const cuenta: FinanceAccount = {
         id: generateId(),
@@ -161,6 +167,7 @@ export function createFinanceEngineRepositories(
         createdAt: now,
         updatedAt: now,
         pendingSync: true,
+        ...(carpetaId ? { carpetaId } : {}),
       }
       await accountTable.add(cuenta)
       return cuenta
@@ -175,12 +182,15 @@ export function createFinanceEngineRepositories(
   }
 
   const movimientoRepository: FinanceMovimientoRepository = {
-    async list(): Promise<FinanceMovimiento[]> {
-      const movimientos = await movimientoTable.toCollection().filter((m) => !m.deletedAt).toArray()
+    async list(carpetaId?: string): Promise<FinanceMovimiento[]> {
+      const movimientos = await movimientoTable
+        .toCollection()
+        .filter((m) => !m.deletedAt && (carpetaId ? m.carpetaId === carpetaId : true))
+        .toArray()
       return movimientos.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     },
 
-    async add(input: NuevaFinanceMovimiento): Promise<FinanceMovimiento> {
+    async add(input: NuevaFinanceMovimiento, carpetaId?: string): Promise<FinanceMovimiento> {
       const now = new Date()
       const movimiento: FinanceMovimiento = {
         id: generateId(),
@@ -196,12 +206,13 @@ export function createFinanceEngineRepositories(
         createdAt: now.toISOString(),
         updatedAt: now.toISOString(),
         pendingSync: true,
+        ...(carpetaId ? { carpetaId } : {}),
       }
       await movimientoTable.add(movimiento)
       return movimiento
     },
 
-    async addCompra(input: NuevaCompraEnCuotas): Promise<FinanceMovimiento[]> {
+    async addCompra(input: NuevaCompraEnCuotas, carpetaId?: string): Promise<FinanceMovimiento[]> {
       const compraId = generateId()
       const fechaCompra = input.fecha ?? fechaLocalISO()
       const montos = dividirEnCuotas(input.montoTotal, input.cantidadCuotas)
@@ -223,6 +234,7 @@ export function createFinanceEngineRepositories(
         cuotaNumero: indice + 1,
         cuotaTotal: input.cantidadCuotas,
         montoOriginal: input.montoTotal,
+        ...(carpetaId ? { carpetaId } : {}),
       }))
       await movimientoTable.bulkAdd(movimientos)
       return movimientos
@@ -262,12 +274,14 @@ export function createFinanceEngineRepositories(
   }
 
   const goalRepository: FinanceGoalRepository = {
-    async list(): Promise<FinanceGoal[]> {
+    async list(carpetaId?: string): Promise<FinanceGoal[]> {
       const goals = await goalTable.toArray()
-      return goals.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      return goals
+        .filter((g) => (carpetaId ? g.carpetaId === carpetaId : true))
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     },
 
-    async add(input: NuevaFinanceGoal): Promise<FinanceGoal> {
+    async add(input: NuevaFinanceGoal, carpetaId?: string): Promise<FinanceGoal> {
       const now = new Date().toISOString()
       const goal: FinanceGoal = {
         id: generateId(),
@@ -277,6 +291,7 @@ export function createFinanceEngineRepositories(
         createdAt: now,
         updatedAt: now,
         pendingSync: true,
+        ...(carpetaId ? { carpetaId } : {}),
       }
       await goalTable.add(goal)
       return goal
@@ -291,8 +306,11 @@ export function createFinanceEngineRepositories(
   }
 
   const periodoRepository: FinanceIncomePeriodRepository = {
-    async list(): Promise<FinanceIncomePeriod[]> {
-      const periodos = await periodoTable.toCollection().filter((p) => !p.deletedAt).toArray()
+    async list(carpetaId?: string): Promise<FinanceIncomePeriod[]> {
+      const periodos = await periodoTable
+        .toCollection()
+        .filter((p) => !p.deletedAt && (carpetaId ? p.carpetaId === carpetaId : true))
+        .toArray()
       return periodos.sort((a, b) => a.fechaInicio.localeCompare(b.fechaInicio) || a.orden - b.orden)
     },
 
@@ -301,10 +319,18 @@ export function createFinanceEngineRepositories(
      * para el mismo lunes real, se devuelve ese en vez de crear uno
      * nuevo (misma identidad de semana, sin importar cuántas veces se
      * pida crearla).
+     *
+     * Finanzas por carpeta — la existencia también filtra por carpetaId:
+     * dos carpetas distintas nunca comparten la "Semana 1", cada una
+     * tiene la suya aunque arranque el mismo lunes.
      */
-    async add(input: NuevoFinanceIncomePeriod): Promise<FinanceIncomePeriod> {
+    async add(input: NuevoFinanceIncomePeriod, carpetaId?: string): Promise<FinanceIncomePeriod> {
       const { fechaInicio, fechaFin } = normalizarSemana(input.fechaCualquiera)
-      const existente = await periodoTable.where('fechaInicio').equals(fechaInicio).first()
+      const existente = await periodoTable
+        .where('fechaInicio')
+        .equals(fechaInicio)
+        .and((p) => (carpetaId ? p.carpetaId === carpetaId : true))
+        .first()
       if (existente && !existente.deletedAt) return existente
       if (existente) {
         // Fase 1 (sync Supabase) — la semana ya existía pero estaba borrada
@@ -331,6 +357,7 @@ export function createFinanceEngineRepositories(
         createdAt: now,
         updatedAt: now,
         pendingSync: true,
+        ...(carpetaId ? { carpetaId } : {}),
       }
       await periodoTable.add(periodo)
       return periodo

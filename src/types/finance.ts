@@ -26,6 +26,8 @@ export interface FinanceAccount {
   updatedAt: string
   /** F5 (ARCHITECTURE_RATIFIED.md): marcado inerte — ver shared-kernel/persistence/Repository. */
   pendingSync: boolean
+  /** Finanzas por carpeta (Mi Proyecto): a qué carpeta pertenece. `undefined` en Finanzas general, que no scopea por carpeta. */
+  carpetaId?: string
 }
 
 export type FinanceMovimientoTipo = 'ingreso' | 'egreso'
@@ -102,6 +104,8 @@ export interface FinanceMovimiento {
    * ningún período (p. ej. recién llegado del Umbral).
    */
   periodoId?: string
+  /** Finanzas por carpeta (Mi Proyecto): a qué carpeta pertenece. `undefined` en Finanzas general. */
+  carpetaId?: string
 }
 
 /**
@@ -124,6 +128,8 @@ export interface FinanceIncomePeriod {
   pendingSync: boolean
   /** Fase 1 (sync Supabase) — mismo tombstone que FinanceMovimiento.deletedAt. */
   deletedAt?: string
+  /** Finanzas por carpeta (Mi Proyecto): a qué carpeta pertenece. `undefined` en Finanzas general. */
+  carpetaId?: string
 }
 
 export interface FinanceGoal {
@@ -134,4 +140,6 @@ export interface FinanceGoal {
   createdAt: string
   updatedAt: string
   pendingSync: boolean
+  /** Finanzas por carpeta (Mi Proyecto): a qué carpeta pertenece. `undefined` en Finanzas general. */
+  carpetaId?: string
 }

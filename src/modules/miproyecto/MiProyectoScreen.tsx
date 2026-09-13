@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { createFinanceEngine } from '@/components/finance-engine/createFinanceEngine'
-import { FinanceEngineScreen } from '@/components/finance-engine/FinanceEngineScreen'
 import { createNotesEngine } from '@/components/notes-engine/createNotesEngine'
 import { NotesEngineScreen } from '@/components/notes-engine/NotesEngineScreen'
 import { db } from '@/lib/db/db'
@@ -18,8 +17,6 @@ export interface MiProyectoScreenProps {
   onRenombrar: (nombre: string) => Promise<'ok' | 'error'>
 }
 
-type Seccion = 'carpetas' | 'finanzas'
-
 /**
  * Espacio genérico reutilizable (pedido del sprint: "que cualquier
  * persona pueda crear su propio espacio de trabajo con nombre propio"),
@@ -29,55 +26,29 @@ type Seccion = 'carpetas' | 'finanzas'
  * src/lib/miproyecto/), pasada como prop desde App.tsx igual que el fondo
  * de la habitación.
  *
- * Finanzas (pedido: "Finanzas como módulo propio de Mi proyecto") suma
- * una segunda pestaña, mismo motor compartido que Finanzas general (ver
- * finance-engine/), sobre sus propias 4 tablas Dexie/Supabase
- * (mi_proyecto_finanzas_*) — nunca mezclado con el Finanzas general del
- * usuario. Sin `ideaCapture`: este espacio no tiene Umbral propio.
+ * Finanzas ya no es una pestaña de espacio: cada carpeta tiene la suya
+ * propia (switcher "Notas / Finanzas" dentro de NotesEngineScreen, ver
+ * `financeEngine` prop ahí) — mismo motor compartido que Finanzas general
+ * (ver finance-engine/), sobre sus propias 4 tablas Dexie/Supabase
+ * (mi_proyecto_finanzas_*), scopeadas por carpeta. Sin `ideaCapture`: este
+ * espacio no tiene Umbral propio.
  */
 export function MiProyectoScreen({ nombre, onRenombrar }: MiProyectoScreenProps) {
   const notes = engine.useEngine()
-  const finance = financeEngine.useEngine()
-  const [seccion, setSeccion] = useState<Seccion>('carpetas')
 
   return (
-    // Sin max-w-xl acá afuera: tanto NotesEngineScreen como
-    // FinanceEngineScreen ya traen su propio `mx-auto max-w-xl` interno
-    // (mismo que usan NotesScreen.tsx/FinanceScreen.tsx generales, que las
-    // montan sin ningún wrapper propio) — envolverlas otra vez acá las
-    // anidaba dentro de un segundo contenedor de igual ancho máximo, el
-    // único punto de este árbol que no calca cómo las monta el módulo
-    // general. El header y el switcher sí necesitan su propio ancho, así
-    // que lo mantienen en un contenedor chico aparte.
     <div className="flex flex-col gap-6 pb-2">
       <div className="mx-auto flex w-full max-w-xl flex-col gap-6">
         <NombreEspacio nombre={nombre} onRenombrar={onRenombrar} />
-        <div className="idea-destinos" role="group" aria-label="Sección">
-          {(['carpetas', 'finanzas'] as const).map((opcion) => (
-            <button
-              key={opcion}
-              type="button"
-              className="idea-destino"
-              aria-pressed={seccion === opcion}
-              style={seccion === opcion ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
-              onClick={() => setSeccion(opcion)}
-            >
-              {opcion === 'carpetas' ? 'Carpetas' : 'Finanzas'}
-            </button>
-          ))}
-        </div>
       </div>
-      {seccion === 'carpetas' ? (
-        <NotesEngineScreen
-          engine={notes}
-          titulo={nombre}
-          descripcionVacio="Creá una carpeta para empezar a organizar este espacio."
-          ocultarTitulo
-          carpetasEnGrilla
-        />
-      ) : (
-        <FinanceEngineScreen engine={finance} />
-      )}
+      <NotesEngineScreen
+        engine={notes}
+        titulo={nombre}
+        descripcionVacio="Creá una carpeta para empezar a organizar este espacio."
+        ocultarTitulo
+        carpetasEnGrilla
+        financeEngine={financeEngine}
+      />
     </div>
   )
 }
