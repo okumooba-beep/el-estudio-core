@@ -125,6 +125,7 @@ export function FinanceEngineScreen({ engine, ideaCapture, gastosFijos }: Financ
   const [abriendoIngresoGlobal, setAbriendoIngresoGlobal] = useState(false)
   const [avisoSemanaExpandido, setAvisoSemanaExpandido] = useState(false)
   const [recientesAbierto, setRecientesAbierto] = useState(false)
+  const [gastosFijosAbierto, setGastosFijosAbierto] = useState(false)
 
   const convertidas = useMemo(
     () => new Set(movimientos.map((movimiento) => movimiento.ideaId).filter(Boolean)),
@@ -254,6 +255,21 @@ export function FinanceEngineScreen({ engine, ideaCapture, gastosFijos }: Financ
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, gastosFijos, movimientos])
+
+  /** Resumen para la sección colapsable "Gastos fijos" acá abajo — mismo cálculo en vivo (nunca guardado) que usa GastosFijosDetalle.tsx para "pagado este mes". */
+  const resumenGastosFijos = useMemo(() => {
+    if (!gastosFijos) return null
+    const mesActualGf = mesDe(new Date())
+    const activos = gastosFijos.gastosFijos.filter((gf) => gf.activo)
+    const pagados = new Set(
+      movimientos.filter((m) => m.gastoFijoId && m.fecha.startsWith(mesActualGf)).map((m) => m.gastoFijoId as string),
+    )
+    const totalEsperado = activos.reduce((acc, gf) => acc + (gf.montoEsperado ?? 0), 0)
+    const totalPagado = movimientos
+      .filter((m) => m.gastoFijoId && pagados.has(m.gastoFijoId) && m.fecha.startsWith(mesActualGf))
+      .reduce((acc, m) => acc + m.monto, 0)
+    return { activos: activos.length, pagados: pagados.size, totalEsperado, totalPagado }
+  }, [gastosFijos, movimientos])
 
   const semanaActual = useMemo(() => semanaDelMes(fechaLocalISO()), [])
   const resumen = useMemo(
@@ -784,15 +800,39 @@ export function FinanceEngineScreen({ engine, ideaCapture, gastosFijos }: Financ
         </section>
       ) : null}
 
-      <section className="flex justify-center gap-3 pt-1">
+      {resumenGastosFijos ? (
+        <section className="finanzas-tarjeta flex flex-col gap-1.5">
+          <button
+            type="button"
+            className="mb-1 flex items-center justify-between gap-2 text-left"
+            aria-expanded={gastosFijosAbierto}
+            onClick={() => setGastosFijosAbierto((abierto) => !abierto)}
+          >
+            <h2 className="font-mono text-[11px] uppercase tracking-wide text-accent">Gastos fijos</h2>
+            <span aria-hidden className="font-mono text-[11px] text-ink-dim">
+              {gastosFijosAbierto ? '−' : '+'}
+            </span>
+          </button>
+          {gastosFijosAbierto && (
+            <div className="flex flex-col gap-2">
+              <p className="text-[13px] text-ink-dim">
+                {resumenGastosFijos.pagados} de {resumenGastosFijos.activos} pagados este mes
+                {resumenGastosFijos.totalEsperado > 0
+                  ? ` · ${formatearMonto(resumenGastosFijos.totalPagado, moneda)} de ${formatearMonto(resumenGastosFijos.totalEsperado, moneda)}`
+                  : ''}
+              </p>
+              <button type="button" className="idea-destino self-start" onClick={() => setDetalle('gastosfijos')}>
+                Abrir gastos fijos
+              </button>
+            </div>
+          )}
+        </section>
+      ) : null}
+
+      <section className="flex justify-center pt-1">
         <button type="button" className="idea-destino" onClick={() => setDetalle('nuevo')}>
           + Movimiento
         </button>
-        {gastosFijos ? (
-          <button type="button" className="idea-destino" onClick={() => setDetalle('gastosfijos')}>
-            Gastos fijos
-          </button>
-        ) : null}
       </section>
     </div>
   )

@@ -494,8 +494,14 @@ function FolderView({ folder, engine, titulo, onVolver, financeEngine }: FolderV
   const desbloqueada = engine.isUnlocked(folder)
 
   return (
-    <div className="mx-auto flex max-w-xl flex-col gap-6 pb-10">
-      <div className="carpeta-barra-superior flex flex-col items-start gap-2">
+    // Sin max-w-xl acá afuera: mismo bug que MiProyectoScreen.tsx (ver ese
+    // comentario), un nivel más adentro — cuando la sección es Finanzas,
+    // FinanceEngineScreen ya trae su propio mx-auto max-w-xl interno, y
+    // envolverlo acá lo anidaba en un segundo contenedor de igual ancho
+    // máximo. El resto (header, switcher, FolderContent, PinGate) no trae
+    // ancho propio, así que lo mantienen en su propio contenedor chico.
+    <div className="flex flex-col gap-6 pb-10">
+      <div className="carpeta-barra-superior mx-auto flex w-full max-w-xl flex-col items-start gap-2">
         <button type="button" className="idea-destino self-start" onClick={onVolver}>
           ← Volver a {titulo}
         </button>
@@ -506,10 +512,14 @@ function FolderView({ folder, engine, titulo, onVolver, financeEngine }: FolderV
         financeEngine ? (
           <FolderFinanceSwitch folder={folder} notesEngine={engine} financeEngine={financeEngine} />
         ) : (
-          <FolderContent folder={folder} engine={engine} />
+          <div className="mx-auto w-full max-w-xl">
+            <FolderContent folder={folder} engine={engine} />
+          </div>
         )
       ) : (
-        <PinGate folder={folder} engine={engine} />
+        <div className="mx-auto w-full max-w-xl">
+          <PinGate folder={folder} engine={engine} />
+        </div>
       )}
     </div>
   )
@@ -536,7 +546,7 @@ function FolderFinanceSwitch({ folder, notesEngine, financeEngine }: FolderFinan
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="carpeta-barra-acciones idea-destinos" role="group" aria-label="Sección">
+      <div className="carpeta-barra-acciones idea-destinos mx-auto w-full max-w-xl" role="group" aria-label="Sección">
         {(['notas', 'finanzas'] as const).map((opcion) => (
           <button
             key={opcion}
@@ -551,7 +561,9 @@ function FolderFinanceSwitch({ folder, notesEngine, financeEngine }: FolderFinan
         ))}
       </div>
       {seccion === 'notas' ? (
-        <FolderContent folder={folder} engine={notesEngine} />
+        <div className="mx-auto w-full max-w-xl">
+          <FolderContent folder={folder} engine={notesEngine} />
+        </div>
       ) : (
         <FinanceEngineScreen engine={finance} />
       )}
