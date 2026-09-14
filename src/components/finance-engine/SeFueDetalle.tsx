@@ -1,6 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { CATEGORIA_COLOR, CATEGORIA_LABEL, type FinanceCategoria } from './categorias'
-import { DebugOverlay } from './DebugOverlay'
 import { MovimientoRow, type PatchMovimiento } from './MovimientoRow'
 import { categoriaDe, formatearMonto, type GrupoCategoria } from './mes'
 import type { FinanceMovimiento } from '@/types/finance'
@@ -48,6 +47,23 @@ export function SeFueDetalle({
 }: SeFueDetalleProps) {
   const [categoria, setCategoria] = useState<FinanceCategoria | null>(categoriaInicial)
 
+  /**
+   * Diagnóstico temporal (aislar si el problema es DebugOverlay o algo más
+   * profundo): sin componente aparte, sin import — mide directo el mismo
+   * div raíz de este archivo (data-debug="naranja") vía ref, hardcodeado acá.
+   */
+  const raizDebugRef = useRef<HTMLDivElement>(null)
+  const [anchoVentanaDebug, setAnchoVentanaDebug] = useState(window.innerWidth)
+  const [anchoRaizDebug, setAnchoRaizDebug] = useState<number | null>(null)
+  useEffect(() => {
+    console.log('[SeFueDetalle] diagnóstico inline montado')
+    const id = window.setInterval(() => {
+      setAnchoVentanaDebug(window.innerWidth)
+      setAnchoRaizDebug(raizDebugRef.current?.offsetWidth ?? null)
+    }, 300)
+    return () => window.clearInterval(id)
+  }, [])
+
   if (categoria) {
     const deLaCategoria = movimientos
       .filter((m) => m.tipo === 'egreso' && categoriaDe(m) === categoria)
@@ -55,8 +71,10 @@ export function SeFueDetalle({
     const totalCategoria = deLaCategoria.reduce((suma, m) => suma + m.monto, 0)
 
     return (
-      <div className="flex flex-col gap-6" data-debug="naranja">
-        <DebugOverlay />
+      <div className="flex flex-col gap-6" data-debug="naranja" ref={raizDebugRef}>
+        <div style={{ background: 'lime', color: 'black', fontSize: '10px', padding: '2px 4px' }}>
+          {`[inline] innerWidth=${anchoVentanaDebug} offsetWidth(raiz naranja)=${anchoRaizDebug ?? '-'}`}
+        </div>
         <button type="button" className="idea-destino self-start" onClick={() => setCategoria(null)}>
           ‹ Categorías
         </button>
@@ -82,8 +100,10 @@ export function SeFueDetalle({
   }
 
   return (
-    <div className="flex flex-col gap-6" data-debug="naranja">
-      <DebugOverlay />
+    <div className="flex flex-col gap-6" data-debug="naranja" ref={raizDebugRef}>
+      <div style={{ background: 'lime', color: 'black', fontSize: '10px', padding: '2px 4px' }}>
+        {`[inline] innerWidth=${anchoVentanaDebug} offsetWidth(raiz naranja)=${anchoRaizDebug ?? '-'}`}
+      </div>
       <button type="button" className="idea-destino self-start" onClick={onCerrar}>
         ‹ Finanzas
       </button>
