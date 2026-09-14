@@ -589,6 +589,9 @@ export function FinanceEngineScreen({ engine, ideaCapture, gastosFijos }: Financ
 
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10" data-debug="verde">
+      <div style={{ background: 'lime', color: 'black', fontSize: '20px', fontWeight: 'bold', padding: '16px' }}>
+        ESTE ES EL DASHBOARD — FinanceEngineScreen.tsx (detalle=null)
+      </div>
       <section className="flex flex-col items-center gap-3">
         {vista === 'mes' ? (
           <div className="flex items-center gap-3">
