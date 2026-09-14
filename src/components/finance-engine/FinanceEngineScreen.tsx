@@ -94,7 +94,25 @@ export interface FinanceEngineScreenProps {
  * nunca un listado de cada movimiento (eso es la planilla que el brief
  * rechaza).
  */
-export function FinanceEngineScreen({ engine, ideaCapture, gastosFijos }: FinanceEngineScreenProps) {
+/**
+ * Diagnostico temporal (Q-FIX Finanzas): banner incondicional, literalmente
+ * lo primero que este archivo renderiza, antes de que corra CUALQUIER hook o
+ * `if` de `detalle` — envuelve el contenido real (sin tocarlo) para confirmar
+ * si el chunk de JS de este archivo llega actualizado al dispositivo, sin
+ * depender de en que rama de `detalle` caiga el usuario.
+ */
+export function FinanceEngineScreen(props: FinanceEngineScreenProps) {
+  return (
+    <>
+      <div style={{ background: 'lime', color: 'black', fontSize: 20, padding: 20 }}>
+        FINANCE ENGINE SCREEN — SIEMPRE VISIBLE
+      </div>
+      <FinanceEngineScreenContenido {...props} />
+    </>
+  )
+}
+
+function FinanceEngineScreenContenido({ engine, ideaCapture, gastosFijos }: FinanceEngineScreenProps) {
   const {
     movimientos,
     periodos,
