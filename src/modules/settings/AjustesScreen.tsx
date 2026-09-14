@@ -100,6 +100,7 @@ export function AjustesScreen({
   const [estadoFondo, setEstadoFondo] = useState<EstadoFondo>('idle')
   const [fondoConError, setFondoConError] = useState<string | null>(null)
   const [grillaFondosAbierta, setGrillaFondosAbierta] = useState(false)
+  const [modulosAbierto, setModulosAbierto] = useState(false)
   const [estadoPosicionX, setEstadoPosicionX] = useState<EstadoPosicionX>('idle')
   /** Posición en vivo mientras se arrastra la caja sobre la miniatura — `null` cuando no se está arrastrando, y el control cae a `posicionXActiva` (la ya guardada). Evita disparar el guardado remoto en cada pointermove. */
   const [posicionArrastre, setPosicionArrastre] = useState<number | null>(null)
@@ -514,34 +515,46 @@ export function AjustesScreen({
       </section>
 
       <section className="flex flex-col gap-2">
-        <h2 className="font-mono text-[11px] uppercase tracking-wide text-accent">Módulos</h2>
+        <button
+          type="button"
+          className="flex items-center justify-between gap-2 text-left"
+          aria-expanded={modulosAbierto}
+          onClick={() => setModulosAbierto((abierto) => !abierto)}
+        >
+          <h2 className="font-mono text-[11px] uppercase tracking-wide text-accent">Módulos</h2>
+          <span aria-hidden className="font-mono text-[11px] text-ink-dim">
+            {modulosAbierto ? '−' : '+'}
+          </span>
+        </button>
         <p className="text-[13px] text-ink-dim">
           Elegí qué Espacios ver en tu grilla. Desactivar uno solo oculta el acceso — nada de lo que tenga guardado
           se borra, y podés volver a activarlo cuando quieras.
         </p>
-        <div className="flex flex-col divide-y divide-border/40 border-t border-border/40">
-          {espaciosDisponibles.map((espacio) => {
-            const oculto = espaciosOcultos.has(espacio.path)
-            const estado = estadosToggleEspacio[espacio.path] ?? 'idle'
-            return (
-              <label
-                key={espacio.path}
-                className="flex min-h-12 items-center justify-between gap-3 py-2 text-[14px] text-ink-dim"
-              >
-                <span>{espacio.label}</span>
-                <span className="flex items-center gap-2">
-                  {estado === 'error' && <span className="text-[12px] text-critical">No se pudo guardar.</span>}
-                  <input
-                    type="checkbox"
-                    checked={!oculto}
-                    disabled={estado === 'guardando'}
-                    onChange={(e) => void handleToggleEspacio(espacio.path, !e.target.checked)}
-                  />
-                </span>
-              </label>
-            )
-          })}
-        </div>
+        {modulosAbierto && (
+          <div className="flex flex-col divide-y divide-border/40 border-t border-border/40">
+            {espaciosDisponibles.map((espacio) => {
+              const oculto = espaciosOcultos.has(espacio.path)
+              const estado = estadosToggleEspacio[espacio.path] ?? 'idle'
+              return (
+                <label
+                  key={espacio.path}
+                  className="flex min-h-12 items-center justify-between gap-3 py-2 text-[14px] text-ink-dim"
+                >
+                  <span>{espacio.label}</span>
+                  <span className="flex items-center gap-2">
+                    {estado === 'error' && <span className="text-[12px] text-critical">No se pudo guardar.</span>}
+                    <input
+                      type="checkbox"
+                      checked={!oculto}
+                      disabled={estado === 'guardando'}
+                      onChange={(e) => void handleToggleEspacio(espacio.path, !e.target.checked)}
+                    />
+                  </span>
+                </label>
+              )
+            })}
+          </div>
+        )}
       </section>
 
       {onForceNotesResync && (
