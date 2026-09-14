@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { CATEGORIA_COLOR, CATEGORIA_LABEL, type FinanceCategoria } from './categorias'
+import { DebugOverlay } from './DebugOverlay'
 import { MovimientoRow, type PatchMovimiento } from './MovimientoRow'
 import { categoriaDe, formatearMonto, type GrupoCategoria } from './mes'
 import type { FinanceMovimiento } from '@/types/finance'
@@ -54,7 +55,8 @@ export function SeFueDetalle({
     const totalCategoria = deLaCategoria.reduce((suma, m) => suma + m.monto, 0)
 
     return (
-      <div className="flex flex-col gap-6" style={{ outline: '2px solid orange', outlineOffset: '-8px' }}>
+      <div className="flex flex-col gap-6" data-debug="naranja">
+        <DebugOverlay />
         <button type="button" className="idea-destino self-start" onClick={() => setCategoria(null)}>
           ‹ Categorías
         </button>
@@ -80,7 +82,8 @@ export function SeFueDetalle({
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6" data-debug="naranja">
+      <DebugOverlay />
       <button type="button" className="idea-destino self-start" onClick={onCerrar}>
         ‹ Finanzas
       </button>

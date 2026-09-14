@@ -455,7 +455,7 @@ export function FinanceEngineScreen({ engine, ideaCapture, gastosFijos }: Financ
         }
       : {}
     return (
-      <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10" style={{ outline: '2px solid green', outlineOffset: '-6px' }}>
+      <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10" data-debug="verde">
         <NuevoMovimiento
           monedaDefault={moneda}
           {...propsDePeriodo}
@@ -479,7 +479,7 @@ export function FinanceEngineScreen({ engine, ideaCapture, gastosFijos }: Financ
    */
   if (detalle === 'entro') {
     return (
-      <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10" style={{ outline: '2px solid green', outlineOffset: '-6px' }}>
+      <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10" data-debug="verde">
         <EntroDetalle
           ingresos={movimientos.filter((movimiento) => movimiento.tipo === 'ingreso')}
           periodos={periodos}
@@ -570,7 +570,7 @@ export function FinanceEngineScreen({ engine, ideaCapture, gastosFijos }: Financ
 
   if (detalle === 'sefue') {
     return (
-      <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10" style={{ outline: '2px solid green', outlineOffset: '-6px' }}>
+      <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10" data-debug="verde">
         <SeFueDetalle
           moneda={moneda}
           periodoLabel={periodoLabel}
@@ -588,7 +588,7 @@ export function FinanceEngineScreen({ engine, ideaCapture, gastosFijos }: Financ
   }
 
   return (
-    <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10" style={{ outline: '2px solid green', outlineOffset: '-6px' }}>
+    <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10" data-debug="verde">
       <section className="flex flex-col items-center gap-3">
         {vista === 'mes' ? (
           <div className="flex items-center gap-3">

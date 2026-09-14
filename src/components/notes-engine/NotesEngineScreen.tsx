@@ -500,7 +500,7 @@ function FolderView({ folder, engine, titulo, onVolver, financeEngine }: FolderV
     // envolverlo acá lo anidaba en un segundo contenedor de igual ancho
     // máximo. El resto (header, switcher, FolderContent, PinGate) no trae
     // ancho propio, así que lo mantienen en su propio contenedor chico.
-    <div className="flex flex-col gap-6 pb-10" style={{ outline: '2px solid red', outlineOffset: '-2px' }}>
+    <div className="flex flex-col gap-6 pb-10" data-debug="rojo">
       <div className="carpeta-barra-superior mx-auto flex w-full max-w-xl flex-col items-start gap-2">
         <button type="button" className="idea-destino self-start" onClick={onVolver}>
           ← Volver a {titulo}
@@ -545,7 +545,7 @@ function FolderFinanceSwitch({ folder, notesEngine, financeEngine }: FolderFinan
   const [seccion, setSeccion] = useState<SeccionCarpeta>('notas')
 
   return (
-    <div className="flex flex-col gap-5" style={{ outline: '2px solid blue', outlineOffset: '-4px' }}>
+    <div className="flex flex-col gap-5" data-debug="azul">
       <div className="carpeta-barra-acciones idea-destinos mx-auto w-full max-w-xl" role="group" aria-label="Sección">
         {(['notas', 'finanzas'] as const).map((opcion) => (
           <button
