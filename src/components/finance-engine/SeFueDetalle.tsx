@@ -54,7 +54,7 @@ export function SeFueDetalle({
     const totalCategoria = deLaCategoria.reduce((suma, m) => suma + m.monto, 0)
 
     return (
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-6" style={{ outline: '2px solid orange', outlineOffset: '-8px' }}>
         <button type="button" className="idea-destino self-start" onClick={() => setCategoria(null)}>
           ‹ Categorías
         </button>
