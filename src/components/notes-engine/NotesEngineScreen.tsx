@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { esPinValido } from './pin'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { FinanceEngineScreen } from '@/components/finance-engine/FinanceEngineScreen'
@@ -676,22 +676,38 @@ interface NoteFormProps {
 function NoteForm({ tituloInicial = '', contenidoInicial = '', onGuardar, onCancelar }: NoteFormProps) {
   const [titulo, setTitulo] = useState(tituloInicial)
   const [contenido, setContenido] = useState(contenidoInicial)
+  const tituloRef = useRef<HTMLInputElement>(null)
+
+  // scroll-mb-28 (colchón contra la pill, ver .nav-inferior/AppShell.tsx) no
+  // alcanzaba en Mi Proyecto: `autoFocus` dispara el scroll-into-view nativo
+  // apenas monta, ANTES de que el teclado termine de abrirse — y --vh-real
+  // (light-bootstrap.ts) recién se recalcula en el evento `resize` de
+  // visualViewport que el teclado dispara después, momento en el que
+  // .h-dvh-safe (el contenedor raíz) se achica y la pill (position:absolute;
+  // bottom:0 contra ese contenedor) sube. El scroll ya había quedado hecho
+  // contra el layout viejo (más alto, pill más abajo), así que en formularios
+  // que aparecen más abajo en la página (este, dentro de una carpeta de Mi
+  // Proyecto con el switcher Notas/Finanzas encima) ese desfasaje alcanza a
+  // dejar el input tapado. Acá se repite el scroll a mano una vez que el
+  // resize real del teclado ya se asentó, en vez de confiar en el timing del
+  // autofocus nativo.
+  useEffect(() => {
+    tituloRef.current?.focus()
+    const reencuadrar = () => {
+      const input = tituloRef.current
+      if (input && document.activeElement === input) input.scrollIntoView({ block: 'center' })
+    }
+    window.visualViewport?.addEventListener('resize', reencuadrar)
+    return () => window.visualViewport?.removeEventListener('resize', reencuadrar)
+  }, [])
 
   return (
     <div className="notas-tarjeta flex flex-col gap-2">
       <input
-        autoFocus
+        ref={tituloRef}
         value={titulo}
         onChange={(e) => setTitulo(e.target.value)}
         placeholder="Título"
-        // scroll-mb-28: mismo colchón que <main> ya reserva contra la pill
-        // flotante (pb-28 en AppShell.tsx, .nav-inferior es position:absolute
-        // y no reserva su propio espacio en el flujo). En Mi Proyecto este
-        // formulario aparece más abajo en la página (switcher "Notas/Finanzas"
-        // + cabecera de carpeta encima, que Notas general no tiene), así que
-        // el auto-scroll nativo al enfocar el input a veces lo deja justo
-        // detrás de la pill al abrirse el teclado — scroll-margin-bottom le
-        // pide al navegador dejar este colchón de más al centrar el foco.
         className="scroll-mb-28 border-b border-border/60 bg-transparent px-1 py-1.5 text-[15px] text-ink outline-none placeholder:text-ink-dim"
       />
       <textarea
