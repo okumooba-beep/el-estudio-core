@@ -93,6 +93,7 @@ interface GastoFijoRow {
   activo: boolean
   created_at: string
   updated_at: string
+  deleted_at: string | null
 }
 
 interface TableSync<Local extends { id: string; pendingSync: boolean }, Remote extends { id: string }> {
@@ -235,6 +236,7 @@ const gastosFijosSync: TableSync<FinanceGastoFijo, GastoFijoRow> = {
     activo: gf.activo,
     created_at: gf.createdAt,
     updated_at: gf.updatedAt,
+    deleted_at: gf.deletedAt ?? null,
   }),
   fromRow: (row) => ({
     id: row.id,
@@ -246,6 +248,7 @@ const gastosFijosSync: TableSync<FinanceGastoFijo, GastoFijoRow> = {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     pendingSync: false,
+    ...(row.deleted_at ? { deletedAt: row.deleted_at } : {}),
   }),
 }
 

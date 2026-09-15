@@ -116,11 +116,13 @@ export interface FinanceMovimiento {
 
 /**
  * Gastos fijos mensuales — exclusivo de Finanzas general (sin `carpetaId`,
- * no existe en Mi Proyecto). Un gasto fijo no se borra, solo se desactiva
- * (`activo`): el brief nunca pide eliminarlos, sólo dejar de verlos en el
- * checklist. Si "pagado este mes" está resuelto o no se deriva de ningún
- * campo acá: se calcula en tiempo real buscando un FinanceMovimiento con
- * `gastoFijoId === this.id` y `fecha` en el mes en curso (ver mes.ts).
+ * no existe en Mi Proyecto). `activo` sigue siendo la forma de "ocultarlo
+ * del checklist sin perder el histórico"; `deletedAt` es borrado real
+ * (mismo tombstone que `FinanceMovimiento`/`FinanceIncomePeriod` — borrado
+ * físico acá sería invisible para el servidor). Si "pagado este mes" está
+ * resuelto o no se deriva de ningún campo acá: se calcula en tiempo real
+ * buscando un FinanceMovimiento con `gastoFijoId === this.id` y `fecha` en
+ * el mes en curso (ver mes.ts).
  */
 export interface FinanceGastoFijo {
   id: string
@@ -132,6 +134,7 @@ export interface FinanceGastoFijo {
   createdAt: string
   updatedAt: string
   pendingSync: boolean
+  deletedAt?: string
 }
 
 /**

@@ -8,6 +8,7 @@ export interface GastosFijosEngineApi {
   ready: boolean
   addGastoFijo(input: NuevaFinanceGastoFijo): Promise<void>
   updateGastoFijo(id: string, patch: Partial<Omit<FinanceGastoFijo, 'id' | 'createdAt'>>): Promise<void>
+  removeGastoFijo(id: string): Promise<void>
 }
 
 /**
@@ -41,7 +42,12 @@ export function createGastosFijosEngine(table: EntityTable<FinanceGastoFijo, 'id
       setGastosFijos((current) => current.map((gf) => (gf.id === id ? updated : gf)))
     }
 
-    return { gastosFijos, ready, addGastoFijo, updateGastoFijo }
+    async function removeGastoFijo(id: string): Promise<void> {
+      await repository.delete(id)
+      setGastosFijos((current) => current.filter((gf) => gf.id !== id))
+    }
+
+    return { gastosFijos, ready, addGastoFijo, updateGastoFijo, removeGastoFijo }
   }
 
   return { useEngine }

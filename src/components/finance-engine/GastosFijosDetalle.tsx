@@ -14,6 +14,7 @@ interface GastosFijosDetalleProps {
   onTildar(gastoFijo: FinanceGastoFijo, monto: number): void
   onCrear(input: NuevaFinanceGastoFijo): void
   onEditar(id: string, patch: Partial<Omit<FinanceGastoFijo, 'id' | 'createdAt'>>): void
+  onEliminar(id: string): void
   onCerrar(): void
 }
 
@@ -28,7 +29,7 @@ type Vista = { tipo: 'lista' } | { tipo: 'nuevo' } | { tipo: 'editar'; id: strin
  * movimiento nuevo matchea todavía y todos los gastos fijos vuelven a
  * aparecer sin tildar.
  */
-export function GastosFijosDetalle({ gastosFijos, movimientos, onTildar, onCrear, onEditar, onCerrar }: GastosFijosDetalleProps) {
+export function GastosFijosDetalle({ gastosFijos, movimientos, onTildar, onCrear, onEditar, onEliminar, onCerrar }: GastosFijosDetalleProps) {
   const [vista, setVista] = useState<Vista>({ tipo: 'lista' })
   const [verInactivos, setVerInactivos] = useState(false)
   /** Cuando un gasto fijo sin `montoEsperado` se tilda, pide el monto antes de crear el movimiento — acá se guarda cuál está pidiéndolo. */
@@ -75,6 +76,14 @@ export function GastosFijosDetalle({ gastosFijos, movimientos, onTildar, onCrear
           setVista({ tipo: 'lista' })
         }}
         onToggleActivo={editando ? (activo) => onEditar(editando.id, { activo }) : undefined}
+        onEliminar={
+          editando
+            ? () => {
+                onEliminar(editando.id)
+                setVista({ tipo: 'lista' })
+              }
+            : undefined
+        }
         onCerrar={() => setVista({ tipo: 'lista' })}
       />
     )
@@ -215,10 +224,12 @@ interface GastoFijoFormProps {
   onGuardar(input: NuevaFinanceGastoFijo): void
   /** Solo presente cuando se está editando: activar/desactivar es independiente del resto del formulario, se guarda al toque. */
   onToggleActivo?: ((activo: boolean) => void) | undefined
+  /** Solo presente cuando se está editando: borrado real, independiente de "Activo". */
+  onEliminar?: (() => void) | undefined
   onCerrar(): void
 }
 
-function GastoFijoForm({ gastoFijo, onGuardar, onToggleActivo, onCerrar }: GastoFijoFormProps) {
+function GastoFijoForm({ gastoFijo, onGuardar, onToggleActivo, onEliminar, onCerrar }: GastoFijoFormProps) {
   const [nombre, setNombre] = useState(gastoFijo?.nombre ?? '')
   const [palabraClave, setPalabraClave] = useState(gastoFijo?.palabraClave ?? '')
   const [categoria, setCategoria] = useState<FinanceCategoria | null>(gastoFijo?.categoria ?? null)
@@ -306,6 +317,12 @@ function GastoFijoForm({ gastoFijo, onGuardar, onToggleActivo, onCerrar }: Gasto
         <button type="submit" disabled={!esValido} className="accion-primaria finanzas-guardar-boton self-start disabled:opacity-40">
           Guardar
         </button>
+
+        {gastoFijo && onEliminar ? (
+          <button type="button" className="idea-destino self-start text-critical" onClick={onEliminar}>
+            Eliminar gasto fijo
+          </button>
+        ) : null}
       </form>
     </div>
   )

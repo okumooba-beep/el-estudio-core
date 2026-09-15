@@ -7,9 +7,10 @@ import type { EntityTable } from 'dexie'
 /**
  * "Gastos fijos mensuales" — repositorio propio, exclusivo de Finanzas
  * general (nunca instanciado desde Mi Proyecto). Sin `carpetaId` (no
- * scopea por carpeta) y sin `delete()`: el brief solo pide desactivar
- * (`activo`), nunca borrar — mismo criterio que `deletedAt` en otras
- * entidades, pero acá no hace falta ni el tombstone.
+ * scopea por carpeta). `delete()` es borrado lógico (`deletedAt`), mismo
+ * motivo que `movimientoRepository.delete()`/`periodoRepository.delete()`
+ * en financeEngineRepository.ts: un borrado físico acá sería invisible
+ * para el servidor.
  */
 export interface NuevaFinanceGastoFijo {
   nombre: string
@@ -22,6 +23,7 @@ export interface FinanceGastoFijoRepository extends Repository<FinanceGastoFijo>
   list(): Promise<FinanceGastoFijo[]>
   add(input: NuevaFinanceGastoFijo): Promise<FinanceGastoFijo>
   update(id: string, patch: Partial<Omit<FinanceGastoFijo, 'id' | 'createdAt'>>): Promise<FinanceGastoFijo>
+  delete(id: string): Promise<void>
 }
 
 export function createGastosFijosRepository(
@@ -30,7 +32,7 @@ export function createGastosFijosRepository(
   return {
     async list(): Promise<FinanceGastoFijo[]> {
       const gastos = await table.toArray()
-      return gastos.sort((a, b) => a.nombre.localeCompare(b.nombre))
+      return gastos.filter((gf) => !gf.deletedAt).sort((a, b) => a.nombre.localeCompare(b.nombre))
     },
 
     async add(input: NuevaFinanceGastoFijo): Promise<FinanceGastoFijo> {
@@ -55,6 +57,11 @@ export function createGastosFijosRepository(
       const updated = await table.get(id)
       if (!updated) throw new Error(`Gasto fijo ${id} no encontrado`)
       return updated
+    },
+
+    async delete(id: string): Promise<void> {
+      const now = new Date().toISOString()
+      await table.update(id, { deletedAt: now, updatedAt: now, pendingSync: true })
     },
   }
 }

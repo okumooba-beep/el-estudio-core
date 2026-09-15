@@ -508,6 +508,7 @@ export function FinanceEngineScreen({ engine, ideaCapture, gastosFijos }: Financ
         onTildar={tildarGastoFijo}
         onCrear={(input) => void gastosFijos.addGastoFijo(input)}
         onEditar={(id, patch) => void gastosFijos.updateGastoFijo(id, patch)}
+        onEliminar={(id) => void gastosFijos.removeGastoFijo(id)}
         onCerrar={cerrarDetalle}
       />
     )
