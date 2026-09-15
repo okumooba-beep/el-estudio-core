@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { obtenerDatosParaExportar } from '@modules/finance/public'
+import { obtenerDatosParaExportar, obtenerMovimientosParaExportarCSV, type FinanzasOrigen } from '@modules/finance/public'
 
 type EstadoExportar = 'idle' | 'exportando' | 'exportado' | 'error'
+type EstadoExportarCSV = 'idle' | 'exportando' | 'exportado' | 'sin-movimientos' | 'error'
 type EstadoActualizar = 'idle' | 'buscando' | 'buscado' | 'sin-service-worker' | 'error'
 type EstadoResyncNotas = 'idle' | 'procesando' | 'listo' | 'error'
 type EstadoResyncAgenda = 'idle' | 'procesando' | 'listo' | 'error'
@@ -32,6 +33,11 @@ type EstadoToggleEspacio = 'idle' | 'guardando' | 'ok' | 'error'
 
 /** Proporción de pantalla de teléfono usada para dibujar la caja de recorte sobre la miniatura — mismo valor que asume `background-size: cover` al llenar la pantalla real. */
 const ASPECTO_TELEFONO = 390 / 844
+
+/** RFC 4180 mínimo: solo entrecomilla cuando hace falta (coma, comilla o salto de línea), y duplica comillas internas — `concepto` es texto libre del usuario, puede traer cualquiera de los tres. */
+function escaparCeldaCSV(valor: string): string {
+  return /[",\r\n]/.test(valor) ? `"${valor.replace(/"/g, '""')}"` : valor
+}
 
 /**
  * Ajustes — pantalla de utilidades del dispositivo, no un panel de
@@ -72,6 +78,8 @@ interface AjustesScreenProps {
   espaciosOcultos: Set<string>
   /** Alterna un Espacio oculto/visible (CSS/estado local + Supabase si hay sesión). Nunca borra datos, solo el acceso desde la grilla. */
   onToggleEspacio: (path: string, oculto: boolean) => Promise<'ok' | 'error'>
+  /** Nombre elegido por el usuario para el espacio "Mi proyecto" (ej. "Omantra") — para rotular la opción "Mi Proyecto" del selector "Origen" de "Exportar Finanzas por mes". Mismo prop que ya recibe MiProyectoScreen desde App.tsx (ver src/lib/miproyecto/miProyectoPrefs.ts). */
+  nombreMiProyecto: string
 }
 
 export function AjustesScreen({
@@ -90,8 +98,14 @@ export function AjustesScreen({
   espaciosDisponibles,
   espaciosOcultos,
   onToggleEspacio,
+  nombreMiProyecto,
 }: AjustesScreenProps) {
   const [estadoExportar, setEstadoExportar] = useState<EstadoExportar>('idle')
+  const mesActual = new Date().toISOString().slice(0, 7)
+  const [mesDesde, setMesDesde] = useState(mesActual)
+  const [mesHasta, setMesHasta] = useState(mesActual)
+  const [origenExportarCSV, setOrigenExportarCSV] = useState<FinanzasOrigen>('general')
+  const [estadoExportarCSV, setEstadoExportarCSV] = useState<EstadoExportarCSV>('idle')
   const [estadoActualizar, setEstadoActualizar] = useState<EstadoActualizar>('idle')
   const [estadoResyncNotas, setEstadoResyncNotas] = useState<EstadoResyncNotas>('idle')
   const [estadoResyncAgenda, setEstadoResyncAgenda] = useState<EstadoResyncAgenda>('idle')
@@ -130,6 +144,48 @@ export function AjustesScreen({
       setEstadoExportar('exportado')
     } catch {
       setEstadoExportar('error')
+    }
+  }
+
+  /**
+   * `mesDesde`/`mesHasta` vienen de dos <input type="month"> sueltos: nada
+   * impide que el usuario deje "Hasta" antes que "Desde" en la UI, así que
+   * se normaliza el par acá (nunca en el estado) antes de pedirle a
+   * obtenerMovimientosParaExportarCSV que filtre.
+   */
+  async function handleExportarCSV() {
+    setEstadoExportarCSV('exportando')
+    try {
+      const [desde, hasta] = mesDesde <= mesHasta ? [mesDesde, mesHasta] : [mesHasta, mesDesde]
+      const movimientos = await obtenerMovimientosParaExportarCSV(origenExportarCSV, desde, hasta)
+      if (movimientos.length === 0) {
+        setEstadoExportarCSV('sin-movimientos')
+        return
+      }
+      const encabezado = ['Fecha', 'Concepto', 'Categoría', 'Monto', 'Moneda', 'Tipo']
+      const filas = movimientos.map((m) => [
+        m.fecha,
+        m.concepto,
+        m.categoria,
+        String(m.monto),
+        m.moneda,
+        m.tipo === 'ingreso' ? 'Ingreso' : 'Egreso',
+      ])
+      const csv = [encabezado, ...filas].map((fila) => fila.map(escaparCeldaCSV).join(',')).join('\r\n')
+      // BOM inicial: sin esto Excel abre el archivo asumiendo la codificación local del sistema y los acentos ("Categoría", "Envío a familia") se ven rotos.
+      const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const enlace = document.createElement('a')
+      enlace.href = url
+      const sufijoOrigen = origenExportarCSV === 'miproyecto' ? `-${nombreMiProyecto.toLowerCase().replace(/\s+/g, '-')}` : ''
+      enlace.download = `el-estudio-finanzas${sufijoOrigen}-${desde}${desde !== hasta ? `_a_${hasta}` : ''}.csv`
+      document.body.appendChild(enlace)
+      enlace.click()
+      enlace.remove()
+      URL.revokeObjectURL(url)
+      setEstadoExportarCSV('exportado')
+    } catch {
+      setEstadoExportarCSV('error')
     }
   }
 
@@ -307,6 +363,72 @@ export function AjustesScreen({
         </button>
         {estadoExportar === 'exportado' && <p className="text-[13px] text-ink-dim">Listo — revisá tus descargas.</p>}
         {estadoExportar === 'error' && (
+          <p className="text-[13px] text-critical">No se pudo exportar. Probá de nuevo.</p>
+        )}
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <h2 className="font-mono text-[11px] uppercase tracking-wide text-accent">Exportar Finanzas por mes</h2>
+        <p className="text-[13px] text-ink-dim">
+          Descarga un CSV con los movimientos del período elegido (fecha, concepto, categoría, monto, moneda y
+          tipo) — para abrir en Excel/Sheets o subir a un chat a pedir ayuda con un análisis de gastos.
+        </p>
+        <label className="flex flex-col gap-1 text-[13px] text-ink-dim">
+          Origen
+          <select
+            value={origenExportarCSV}
+            onChange={(event) => {
+              setOrigenExportarCSV(event.target.value as FinanzasOrigen)
+              setEstadoExportarCSV('idle')
+            }}
+            aria-label="Origen de los movimientos a exportar"
+            className="border-b border-border/60 bg-transparent px-1 py-2 font-mono text-[13.5px] text-ink outline-none"
+          >
+            <option value="general">General</option>
+            <option value="miproyecto">{nombreMiProyecto}</option>
+          </select>
+        </label>
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="flex flex-col gap-1 text-[13px] text-ink-dim">
+            Desde
+            <input
+              type="month"
+              value={mesDesde}
+              onChange={(event) => {
+                setMesDesde(event.target.value)
+                setEstadoExportarCSV('idle')
+              }}
+              aria-label="Mes desde"
+              className="border-b border-border/60 bg-transparent px-1 py-2 font-mono text-[13.5px] text-ink outline-none"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-[13px] text-ink-dim">
+            Hasta
+            <input
+              type="month"
+              value={mesHasta}
+              onChange={(event) => {
+                setMesHasta(event.target.value)
+                setEstadoExportarCSV('idle')
+              }}
+              aria-label="Mes hasta"
+              className="border-b border-border/60 bg-transparent px-1 py-2 font-mono text-[13.5px] text-ink outline-none"
+            />
+          </label>
+        </div>
+        <button
+          type="button"
+          className="idea-destino self-start"
+          onClick={() => void handleExportarCSV()}
+          disabled={estadoExportarCSV === 'exportando'}
+        >
+          {estadoExportarCSV === 'exportando' ? 'Exportando…' : 'Exportar Finanzas por mes'}
+        </button>
+        {estadoExportarCSV === 'exportado' && <p className="text-[13px] text-ink-dim">Listo — revisá tus descargas.</p>}
+        {estadoExportarCSV === 'sin-movimientos' && (
+          <p className="text-[13px] text-ink-dim">No hay movimientos en ese período.</p>
+        )}
+        {estadoExportarCSV === 'error' && (
           <p className="text-[13px] text-critical">No se pudo exportar. Probá de nuevo.</p>
         )}
       </section>

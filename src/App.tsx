@@ -255,6 +255,7 @@ function App() {
                   espaciosDisponibles={ESPACIOS_CONFIGURABLES}
                   espaciosOcultos={espaciosOcultos}
                   onToggleEspacio={alternarEspacio}
+                  nombreMiProyecto={nombreMiProyecto}
                 />
               }
             />
