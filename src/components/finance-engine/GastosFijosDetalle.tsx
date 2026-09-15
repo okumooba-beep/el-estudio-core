@@ -81,7 +81,7 @@ export function GastosFijosDetalle({ gastosFijos, movimientos, onTildar, onCrear
   }
 
   return (
-    <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10">
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-8 pb-10">
       <button type="button" className="idea-destino self-start" onClick={onCerrar}>
         ‹ Finanzas
       </button>
@@ -239,7 +239,7 @@ function GastoFijoForm({ gastoFijo, onGuardar, onToggleActivo, onCerrar }: Gasto
   }
 
   return (
-    <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10">
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-8 pb-10">
       <form onSubmit={handleSubmit} className="finanzas-tarjeta flex flex-col gap-6">
         <button type="button" className="idea-destino self-start" onClick={onCerrar}>
           ‹ Gastos fijos

@@ -455,7 +455,7 @@ export function FinanceEngineScreen({ engine, ideaCapture, gastosFijos }: Financ
         }
       : {}
     return (
-      <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10">
+      <div className="mx-auto flex w-full max-w-xl flex-col gap-8 pb-10">
         <NuevoMovimiento
           monedaDefault={moneda}
           {...propsDePeriodo}
@@ -479,7 +479,7 @@ export function FinanceEngineScreen({ engine, ideaCapture, gastosFijos }: Financ
    */
   if (detalle === 'entro') {
     return (
-      <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10">
+      <div className="mx-auto flex w-full max-w-xl flex-col gap-8 pb-10">
         <EntroDetalle
           ingresos={movimientos.filter((movimiento) => movimiento.tipo === 'ingreso')}
           periodos={periodos}
@@ -530,7 +530,7 @@ export function FinanceEngineScreen({ engine, ideaCapture, gastosFijos }: Financ
 
   if (sinNada) {
     return (
-      <div className="mx-auto flex max-w-xl flex-col items-center gap-4 pb-10">
+      <div className="mx-auto flex w-full max-w-xl flex-col items-center gap-4 pb-10">
         <EmptyState
           title="Todavía no se movió un peso."
           description="Escribí un gasto en el Umbral — “Gasté 80k en gasolina” — y el Estudio lo trae acá con su categoría."
@@ -570,7 +570,7 @@ export function FinanceEngineScreen({ engine, ideaCapture, gastosFijos }: Financ
 
   if (detalle === 'sefue') {
     return (
-      <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10">
+      <div className="mx-auto flex w-full max-w-xl flex-col gap-8 pb-10">
         <SeFueDetalle
           moneda={moneda}
           periodoLabel={periodoLabel}
@@ -588,7 +588,7 @@ export function FinanceEngineScreen({ engine, ideaCapture, gastosFijos }: Financ
   }
 
   return (
-    <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10">
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-8 pb-10">
       <section className="flex flex-col items-center gap-3">
         {vista === 'mes' ? (
           <div className="flex items-center gap-3">
