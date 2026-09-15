@@ -557,7 +557,6 @@ export function FinanceEngineScreen({ engine, ideaCapture, gastosFijos }: Financ
   const seFue = vista === 'semana' ? semanal.seFue : resumen.gastado
   const teQuedo = vista === 'semana' ? entroSemanaReal - semanal.seFue : resumen.balance
   const movimientosDelPeriodo = vista === 'semana' ? semanal.movimientos : resumen.movimientos
-  const gruposDelPeriodo = vista === 'semana' ? semanal.grupos : resumen.grupos
   /** "Esta semana" siempre es el real de hoy (`true`, como antes); "Este mes" solo si el mes seleccionado es el actual. */
   const registradoHastaHoy = vista === 'semana' ? true : estaEnCurso(mesSeleccionado)
   /**
@@ -570,14 +569,25 @@ export function FinanceEngineScreen({ engine, ideaCapture, gastosFijos }: Financ
   const movimientosRecientes = movimientosDelPeriodo.filter((movimiento) => movimiento.tipo === 'egreso').slice(0, 5)
 
   if (detalle === 'sefue') {
+    /**
+     * Sprint 040 — "Vista semanal para Se fue": el mes cuyas semanas se
+     * navegan es el mismo que usa "Se fue" en su vista actual (mismo
+     * criterio que `mesParaDolares`, línea de arriba) — `mesActual` en
+     * "Esta semana" (no navega), `mesSeleccionado` en "Este mes". Dentro
+     * de ese mes, la semana que arranca expandida es la relevante para la
+     * vista activa (la de hoy en "Esta semana", o la de hoy solo si el
+     * mes mostrado es el actual — si no, la semana 1) para no agregar un
+     * toque extra al camino que ya existía.
+     */
+    const mesParaSeFue = vista === 'mes' ? mesSeleccionado : mesActual
+    const semanaInicialSeFue = mesParaSeFue === mesActual ? semanaActual : 1
     return (
       <div className="mx-auto flex w-full max-w-xl flex-col gap-8 pb-10">
         <SeFueDetalle
           moneda={moneda}
-          periodoLabel={periodoLabel}
-          total={seFue}
-          grupos={gruposDelPeriodo}
-          movimientos={movimientosDelPeriodo}
+          mes={mesParaSeFue}
+          movimientos={movimientos}
+          semanaInicial={semanaInicialSeFue}
           categoriaInicial={categoriaDetalle}
           onCambiarCategoria={corregirCategoria}
           onEditar={editarMovimiento}
