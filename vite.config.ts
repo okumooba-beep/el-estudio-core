@@ -4,26 +4,6 @@ import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { fileURLToPath, URL } from 'node:url'
 import { gzipSync } from 'node:zlib'
-import { execSync } from 'node:child_process'
-
-/**
- * Diagnóstico temporal (banner "DEBUG BUILD ACTIVO", ver App.tsx): un
- * timestamp calculado DENTRO del componente no sirve para distinguir "el
- * bundle viejo cacheado por el service worker recién terminó de ejecutar"
- * de "el bundle nuevo ya llegó" — en ambos casos `new Date()` en runtime
- * da la hora actual. Este stamp en cambio se calcula acá, en build time, y
- * queda inyectado como literal dentro del JS — cambia solo cuando el
- * bundle mismo cambia, así que es la señal real de qué build está corriendo.
- */
-function calcularDebugBuildStamp(): string {
-  let hash = 'sin-git'
-  try {
-    hash = execSync('git rev-parse --short HEAD').toString().trim()
-  } catch {
-    // build sin repo git disponible (poco probable acá) — sigue con el fallback
-  }
-  return `${hash} — ${new Date().toISOString()}`
-}
 
 /**
  * F13 (ARCHITECTURE_RATIFIED.md Parte I §14): presupuesto de tamaño de
@@ -102,9 +82,6 @@ export default defineConfig({
       // mano dentro de src/sw.ts (NavigationRoute + createHandlerBoundToURL).
     }),
   ],
-  define: {
-    __DEBUG_BUILD_STAMP__: JSON.stringify(calcularDebugBuildStamp()),
-  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

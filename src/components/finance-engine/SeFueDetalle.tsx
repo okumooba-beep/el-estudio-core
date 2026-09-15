@@ -1,6 +1,7 @@
-import type { FinanceCategoria } from './categorias'
-import type { PatchMovimiento } from './MovimientoRow'
-import type { GrupoCategoria } from './mes'
+import { useState } from 'react'
+import { CATEGORIA_COLOR, CATEGORIA_LABEL, type FinanceCategoria } from './categorias'
+import { MovimientoRow, type PatchMovimiento } from './MovimientoRow'
+import { categoriaDe, formatearMonto, type GrupoCategoria } from './mes'
 import type { FinanceMovimiento } from '@/types/finance'
 import type { Moneda } from './extraccion'
 
@@ -32,15 +33,87 @@ interface SeFueDetalleProps {
  * quien abre este detalle (FinanceScreen), y volver a la lista de
  * categorías no cierra el detalle ni cambia el período.
  */
-/**
- * Diagnóstico temporal (identificar si este archivo es el que realmente
- * renderiza "Se fue" dentro de una carpeta de Mi Proyecto): reemplaza TODO
- * el contenido real por un único marcador. Se revierte apenas se confirme.
- */
-export function SeFueDetalle(_props: SeFueDetalleProps) {
+export function SeFueDetalle({
+  moneda,
+  periodoLabel,
+  total,
+  grupos,
+  movimientos,
+  categoriaInicial,
+  onCambiarCategoria,
+  onEditar,
+  onEliminar,
+  onCerrar,
+}: SeFueDetalleProps) {
+  const [categoria, setCategoria] = useState<FinanceCategoria | null>(categoriaInicial)
+
+  if (categoria) {
+    const deLaCategoria = movimientos
+      .filter((m) => m.tipo === 'egreso' && categoriaDe(m) === categoria)
+      .sort((a, b) => a.fecha.localeCompare(b.fecha))
+    const totalCategoria = deLaCategoria.reduce((suma, m) => suma + m.monto, 0)
+
+    return (
+      <div className="flex flex-col gap-6">
+        <button type="button" className="idea-destino self-start" onClick={() => setCategoria(null)}>
+          ‹ Categorías
+        </button>
+        <section className="finanzas-tarjeta flex flex-col items-center gap-1">
+          <p className="font-mono text-[11px] text-ink-faint">{periodoLabel}</p>
+          <p className="font-mono text-[11px] uppercase tracking-wide text-accent">{CATEGORIA_LABEL[categoria]}</p>
+          <p className="font-mono text-[28px] text-critical">{formatearMonto(totalCategoria, moneda)}</p>
+        </section>
+        <ul className="finanzas-tarjeta flex flex-col">
+          {deLaCategoria.map((movimiento) => (
+            <MovimientoRow
+              key={movimiento.id}
+              movimiento={movimiento}
+              moneda={moneda}
+              onCambiarCategoria={(nuevaCategoria) => onCambiarCategoria(movimiento, nuevaCategoria)}
+              onEditar={movimiento.compraId ? undefined : (patch) => onEditar(movimiento, patch)}
+              onEliminar={movimiento.compraId ? undefined : () => onEliminar(movimiento)}
+            />
+          ))}
+        </ul>
+      </div>
+    )
+  }
+
   return (
-    <div style={{ background: 'lime', color: 'black', fontSize: '28px', fontWeight: 'bold', padding: '24px' }}>
-      ESTE ES EL ARCHIVO — SeFueDetalle.tsx
+    <div className="flex flex-col gap-6">
+      <button type="button" className="idea-destino self-start" onClick={onCerrar}>
+        ‹ Finanzas
+      </button>
+      <section className="finanzas-tarjeta flex flex-col items-center gap-1">
+        <p className="font-mono text-[11px] text-ink-faint">{periodoLabel}</p>
+        <p className="font-mono text-[11px] uppercase tracking-wide text-accent">Total gastado</p>
+        <p className="font-mono text-[28px] text-critical">{formatearMonto(total, moneda)}</p>
+      </section>
+      {grupos.length === 0 ? (
+        <p className="text-center text-[14px] text-ink-faint">No se fue dinero en este período.</p>
+      ) : (
+        <ul className="finanzas-tarjeta flex flex-col gap-1">
+          {grupos.map((grupo) => (
+            <li key={grupo.categoria}>
+              <button
+                type="button"
+                className="flex w-full appearance-none items-baseline justify-between gap-3 border-b border-border/40 bg-transparent px-0 py-2.5 text-left"
+                onClick={() => setCategoria(grupo.categoria)}
+              >
+                <span className="flex items-center gap-2 text-[15px] text-ink">
+                  <span
+                    className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: CATEGORIA_COLOR[grupo.categoria] }}
+                    aria-hidden="true"
+                  />
+                  {CATEGORIA_LABEL[grupo.categoria]}
+                </span>
+                <span className="font-mono text-[14px] text-ink-dim">{formatearMonto(grupo.total, moneda)}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }

@@ -213,23 +213,6 @@ function App() {
 
   return (
     <>
-      <div
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 999999,
-          background: '#ff1493',
-          color: 'black',
-          fontSize: '16px',
-          fontWeight: 'bold',
-          padding: '6px 8px',
-          textAlign: 'center',
-        }}
-      >
-        {`DEBUG BUILD ACTIVO — ${__DEBUG_BUILD_STAMP__}`}
-      </div>
       <RoomBackground />
       <Routes>
         <Route path="login" element={<LoginScreen />} />

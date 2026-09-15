@@ -94,25 +94,7 @@ export interface FinanceEngineScreenProps {
  * nunca un listado de cada movimiento (eso es la planilla que el brief
  * rechaza).
  */
-/**
- * Diagnostico temporal (Q-FIX Finanzas): banner incondicional, literalmente
- * lo primero que este archivo renderiza, antes de que corra CUALQUIER hook o
- * `if` de `detalle` — envuelve el contenido real (sin tocarlo) para confirmar
- * si el chunk de JS de este archivo llega actualizado al dispositivo, sin
- * depender de en que rama de `detalle` caiga el usuario.
- */
-export function FinanceEngineScreen(props: FinanceEngineScreenProps) {
-  return (
-    <>
-      <div style={{ background: 'lime', color: 'black', fontSize: 20, padding: 20 }}>
-        FINANCE ENGINE SCREEN — SIEMPRE VISIBLE
-      </div>
-      <FinanceEngineScreenContenido {...props} />
-    </>
-  )
-}
-
-function FinanceEngineScreenContenido({ engine, ideaCapture, gastosFijos }: FinanceEngineScreenProps) {
+export function FinanceEngineScreen({ engine, ideaCapture, gastosFijos }: FinanceEngineScreenProps) {
   const {
     movimientos,
     periodos,
@@ -473,7 +455,7 @@ function FinanceEngineScreenContenido({ engine, ideaCapture, gastosFijos }: Fina
         }
       : {}
     return (
-      <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10" data-debug="verde">
+      <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10">
         <NuevoMovimiento
           monedaDefault={moneda}
           {...propsDePeriodo}
@@ -497,7 +479,7 @@ function FinanceEngineScreenContenido({ engine, ideaCapture, gastosFijos }: Fina
    */
   if (detalle === 'entro') {
     return (
-      <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10" data-debug="verde">
+      <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10">
         <EntroDetalle
           ingresos={movimientos.filter((movimiento) => movimiento.tipo === 'ingreso')}
           periodos={periodos}
@@ -588,7 +570,7 @@ function FinanceEngineScreenContenido({ engine, ideaCapture, gastosFijos }: Fina
 
   if (detalle === 'sefue') {
     return (
-      <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10" data-debug="verde">
+      <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10">
         <SeFueDetalle
           moneda={moneda}
           periodoLabel={periodoLabel}
@@ -606,10 +588,7 @@ function FinanceEngineScreenContenido({ engine, ideaCapture, gastosFijos }: Fina
   }
 
   return (
-    <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10" data-debug="verde">
-      <div style={{ background: 'lime', color: 'black', fontSize: '20px', fontWeight: 'bold', padding: '16px' }}>
-        ESTE ES EL DASHBOARD — FinanceEngineScreen.tsx (detalle=null)
-      </div>
+    <div className="mx-auto flex max-w-xl flex-col gap-8 pb-10">
       <section className="flex flex-col items-center gap-3">
         {vista === 'mes' ? (
           <div className="flex items-center gap-3">
