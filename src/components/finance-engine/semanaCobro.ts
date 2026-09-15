@@ -107,18 +107,25 @@ export function fechaEnSemana(fechaISO: string, fechaInicio: string, fechaFin: s
 
 /**
  * "Semana 1", "Semana 2"... — posición cronológica de `periodo` dentro de
- * `periodos` (por `fechaInicio`, luego `orden`). Nunca se persiste ni se
- * guarda en la semana: se recalcula en cada render a partir de la lista
- * completa, así que agregar o borrar una semana corre el número de las
- * que siguen sin que nadie lo edite a mano. La identidad real de la
- * semana sigue siendo su fecha (Sprint 037) — esto es solo una etiqueta
- * de UI derivada, para que la pantalla no obligue a leer un rango de
- * fechas para saber "cuál semana es esta".
+ * los períodos de `periodos` que caen en el mismo mes que él (mismo
+ * criterio que `mesDePeriodo` en EntroDetalle.tsx: el mes del jueves de
+ * la semana, vía `fechaEfectivaSemana`, no el del lunes). Antes rankeaba
+ * sobre la lista completa sin filtrar, así que el número nunca volvía a
+ * "Semana 1" al empezar un mes nuevo y seguía acumulando indefinidamente
+ * (Semana 5, Semana 6...). Nunca se persiste ni se guarda en la semana:
+ * se recalcula en cada render a partir de la lista completa, así que
+ * agregar o borrar una semana corre el número de las que siguen sin que
+ * nadie lo edite a mano. La identidad real de la semana sigue siendo su
+ * fecha (Sprint 037) — esto es solo una etiqueta de UI derivada, para
+ * que la pantalla no obligue a leer un rango de fechas para saber "cuál
+ * semana es esta".
  */
 export function numeroDeSemana(
   periodo: { id: string; fechaInicio: string; orden: number },
   periodos: readonly { id: string; fechaInicio: string; orden: number }[],
 ): number {
-  const ordenados = periodos.slice().sort((a, b) => a.fechaInicio.localeCompare(b.fechaInicio) || a.orden - b.orden)
+  const mesDelPeriodo = fechaEfectivaSemana(periodo.fechaInicio).slice(0, 7)
+  const delMismoMes = periodos.filter((p) => fechaEfectivaSemana(p.fechaInicio).slice(0, 7) === mesDelPeriodo)
+  const ordenados = delMismoMes.slice().sort((a, b) => a.fechaInicio.localeCompare(b.fechaInicio) || a.orden - b.orden)
   return ordenados.findIndex((p) => p.id === periodo.id) + 1
 }
