@@ -684,7 +684,15 @@ function NoteForm({ tituloInicial = '', contenidoInicial = '', onGuardar, onCanc
         value={titulo}
         onChange={(e) => setTitulo(e.target.value)}
         placeholder="Título"
-        className="border-b border-border/60 bg-transparent px-1 py-1.5 text-[15px] text-ink outline-none placeholder:text-ink-dim"
+        // scroll-mb-28: mismo colchón que <main> ya reserva contra la pill
+        // flotante (pb-28 en AppShell.tsx, .nav-inferior es position:absolute
+        // y no reserva su propio espacio en el flujo). En Mi Proyecto este
+        // formulario aparece más abajo en la página (switcher "Notas/Finanzas"
+        // + cabecera de carpeta encima, que Notas general no tiene), así que
+        // el auto-scroll nativo al enfocar el input a veces lo deja justo
+        // detrás de la pill al abrirse el teclado — scroll-margin-bottom le
+        // pide al navegador dejar este colchón de más al centrar el foco.
+        className="scroll-mb-28 border-b border-border/60 bg-transparent px-1 py-1.5 text-[15px] text-ink outline-none placeholder:text-ink-dim"
       />
       <textarea
         value={contenido}
