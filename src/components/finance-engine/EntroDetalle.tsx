@@ -283,7 +283,19 @@ export function EntroDetalle({
   const periodosOrdenados = periodos.slice().sort((a, b) => a.fechaInicio.localeCompare(b.fechaInicio) || a.orden - b.orden)
   const idsConocidos = new Set(periodos.map((p) => p.id))
   const sinPeriodo = ingresos.filter((m) => !m.periodoId || !idsConocidos.has(m.periodoId))
-  const { ars: totalArs, usd: totalUsd } = sumarPorMoneda(ingresos)
+  /**
+   * El resumen de arriba muestra el mes en curso, no el historial entero —
+   * mismo criterio (mesActual) que usa el resto de Finanzas para el total
+   * grande de "Entró"/"Se fue". Un ingreso cuenta acá si su período cae en
+   * este mes (mesDePeriodo) o, sin período todavía, si su propia fecha cae
+   * en este mes — la lista de abajo sigue mostrando todos los meses
+   * (Sprint 036), esto solo acota el número grande.
+   */
+  const ingresosDelMesActual = ingresos.filter((m) => {
+    const periodo = periodos.find((p) => p.id === m.periodoId)
+    return periodo ? mesDePeriodo(periodo) === mesActual : m.fecha.startsWith(mesActual)
+  })
+  const { ars: totalArs, usd: totalUsd } = sumarPorMoneda(ingresosDelMesActual)
 
   const periodosPorMes = new Map<string, FinanceIncomePeriod[]>()
   for (const periodo of periodosOrdenados) {
@@ -326,6 +338,7 @@ export function EntroDetalle({
         <p className="font-mono text-[11px] uppercase tracking-wide text-accent">Ingresos</p>
         <p className="font-mono text-[26px] text-good">{formatearMonto(totalArs, 'ars')}</p>
         {totalUsd !== 0 ? <p className="font-mono text-[18px] text-good">{formatearMonto(totalUsd, 'usd')}</p> : null}
+        <p className="text-[12px] text-ink-faint">{etiquetaMesConAnio(mesActual)}</p>
       </section>
 
       <ul className="flex flex-col gap-6">
