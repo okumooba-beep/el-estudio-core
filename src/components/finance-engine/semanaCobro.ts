@@ -106,6 +106,38 @@ export function fechaEnSemana(fechaISO: string, fechaInicio: string, fechaFin: s
 }
 
 /**
+ * Sprint 040 — "Ingresos siempre muestra todas las semanas del mes"
+ * (mismo pedido ya resuelto para egresos vía `semanasEnMes`/`mes.ts`, pero
+ * ACÁ no se reutiliza esa función: los egresos agrupan por día-del-mes
+ * (semanaDelMes), un concepto que este mismo archivo documenta arriba
+ * como deliberadamente distinto al de Ingresos — semana real lunes a
+ * domingo, que puede cruzar de mes. Aplicar semanaDelMes acá mostraría
+ * números de semana que no coinciden con los rangos de fecha reales de
+ * los períodos ya creados, así que esto extiende el sistema correcto
+ * (mondayOf/sundayOf/fechaEfectivaSemana, ya existentes) en vez de pedir
+ * prestado el ajeno.
+ *
+ * Devuelve todas las semanas reales cuyo "mes efectivo" (criterio del
+ * jueves, ver fechaEfectivaSemana) cae en `mes`, en orden cronológico —
+ * con o sin período creado todavía. `EntroDetalle` cruza esta lista
+ * contra los períodos existentes: donde hay período, muestra sus
+ * ingresos; donde no, un estado vacío.
+ */
+export function semanasRealesDelMes(mes: string): { fechaInicio: string; fechaFin: string }[] {
+  const semanas: { fechaInicio: string; fechaFin: string }[] = []
+  let cursor = mondayOf(`${mes}-01`)
+  while (fechaEfectivaSemana(cursor).slice(0, 7) <= mes) {
+    if (fechaEfectivaSemana(cursor).slice(0, 7) === mes) {
+      semanas.push({ fechaInicio: cursor, fechaFin: sundayOf(cursor) })
+    }
+    const siguiente = aFechaLocal(cursor)
+    siguiente.setDate(siguiente.getDate() + 7)
+    cursor = aTextoISO(siguiente)
+  }
+  return semanas
+}
+
+/**
  * "Semana 1", "Semana 2"... — posición cronológica de `periodo` dentro de
  * los períodos de `periodos` que caen en el mismo mes que él (mismo
  * criterio que `mesDePeriodo` en EntroDetalle.tsx: el mes del jueves de

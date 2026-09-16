@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { MovimientoRow, type PatchMovimiento } from './MovimientoRow'
 import { formatearMonto, mesDe } from './mes'
-import { fechaEfectivaSemana, numeroDeSemana } from './semanaCobro'
+import { etiquetaSemanaCobro, fechaEfectivaSemana, numeroDeSemana, semanasRealesDelMes } from './semanaCobro'
 import type { FinanceMovimiento, FinanceIncomePeriod } from '@/types/finance'
 
 export interface NuevoPeriodoInput {
@@ -211,6 +211,35 @@ function etiquetaMesConAnio(mes: string): string {
   return new Date(`${mes}-02`).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
 }
 
+interface SemanaSinPeriodoProps {
+  fechaInicio: string
+  fechaFin: string
+  onCrearPeriodo: (input: NuevoPeriodoInput) => void
+}
+
+/**
+ * Sprint 040 — "Ingresos siempre muestra todas las semanas del mes"
+ * (mismo criterio que ya usa "Se fue" en mes.ts, que muestra las
+ * semanas calendario del mes con o sin gasto). Acá la semana es real
+ * (lunes a domingo, `semanasRealesDelMes`) y todavía no tiene período
+ * creado — a diferencia de un gasto, un ingreso no puede cargarse sin
+ * que el período exista primero, así que el estado vacío ofrece
+ * crearlo con un tap en vez de ser de solo lectura.
+ */
+function SemanaSinPeriodo({ fechaInicio, fechaFin, onCrearPeriodo }: SemanaSinPeriodoProps) {
+  return (
+    <li className="finanzas-tarjeta flex flex-col gap-2">
+      <div className="flex flex-col items-start gap-0.5">
+        <span className="font-mono text-[11px] uppercase tracking-wide text-ink-faint">{etiquetaSemanaCobro(fechaInicio, fechaFin)}</span>
+        <p className="text-[13px] text-ink-faint">Sin ingresos en esta semana.</p>
+      </div>
+      <button type="button" className="idea-destino self-start" onClick={() => onCrearPeriodo({ fechaCualquiera: fechaInicio })}>
+        + Crear esta semana
+      </button>
+    </li>
+  )
+}
+
 interface GrupoMesProps {
   mes: string
   periodos: readonly FinanceIncomePeriod[]
@@ -221,6 +250,7 @@ interface GrupoMesProps {
   onEditar: (movimiento: FinanceMovimiento, patch: PatchMovimiento) => void
   onEliminar: (movimiento: FinanceMovimiento) => void
   onEliminarPeriodo: (periodoId: string) => void
+  onCrearPeriodo: (input: NuevoPeriodoInput) => void
 }
 
 /**
@@ -228,8 +258,13 @@ interface GrupoMesProps {
  * Ajustes): el mes en curso arranca abierto, el resto colapsado, para
  * que "Ingresos" no vuelva a mostrar meses viejos mezclados con el
  * actual apenas se entra a la pantalla.
+ *
+ * Sprint 040 — recorre `semanasRealesDelMes(mes)` en vez de `periodos`
+ * directo: así todas las semanas reales del mes aparecen siempre, con
+ * o sin período creado, en vez de solo las que ya tienen uno.
  */
-function GrupoMes({ mes, periodos, todosLosPeriodos, ingresos, abierto, onToggle, onEditar, onEliminar, onEliminarPeriodo }: GrupoMesProps) {
+function GrupoMes({ mes, periodos, todosLosPeriodos, ingresos, abierto, onToggle, onEditar, onEliminar, onEliminarPeriodo, onCrearPeriodo }: GrupoMesProps) {
+  const semanas = semanasRealesDelMes(mes)
   return (
     <li className="flex flex-col gap-3">
       <button type="button" className="flex items-center justify-between gap-2 text-left" aria-expanded={abierto} onClick={onToggle}>
@@ -240,17 +275,22 @@ function GrupoMes({ mes, periodos, todosLosPeriodos, ingresos, abierto, onToggle
       </button>
       {abierto ? (
         <ul className="flex flex-col gap-6">
-          {periodos.map((periodo) => (
-            <PeriodoBlock
-              key={periodo.id}
-              periodo={periodo}
-              movimientos={ingresos.filter((m) => m.periodoId === periodo.id)}
-              periodos={todosLosPeriodos}
-              onEditar={onEditar}
-              onEliminar={onEliminar}
-              onEliminarPeriodo={onEliminarPeriodo}
-            />
-          ))}
+          {semanas.map((semana) => {
+            const periodo = periodos.find((p) => p.fechaInicio === semana.fechaInicio)
+            return periodo ? (
+              <PeriodoBlock
+                key={periodo.id}
+                periodo={periodo}
+                movimientos={ingresos.filter((m) => m.periodoId === periodo.id)}
+                periodos={todosLosPeriodos}
+                onEditar={onEditar}
+                onEliminar={onEliminar}
+                onEliminarPeriodo={onEliminarPeriodo}
+              />
+            ) : (
+              <SemanaSinPeriodo key={semana.fechaInicio} fechaInicio={semana.fechaInicio} fechaFin={semana.fechaFin} onCrearPeriodo={onCrearPeriodo} />
+            )
+          })}
         </ul>
       ) : null}
     </li>
@@ -304,7 +344,10 @@ export function EntroDetalle({
     if (grupo) grupo.push(periodo)
     else periodosPorMes.set(mes, [periodo])
   }
-  const mesesOrdenados = Array.from(periodosPorMes.keys()).sort((a, b) => b.localeCompare(a))
+  /** Sprint 040 — el mes en curso siempre aparece, tenga o no períodos creados todavía (mismo criterio que "Se fue"). */
+  const mesesConDatos = new Set(periodosPorMes.keys())
+  mesesConDatos.add(mesActual)
+  const mesesOrdenados = Array.from(mesesConDatos).sort((a, b) => b.localeCompare(a))
 
   function toggleMes(mes: string) {
     setMesesAbiertos((actual) => {
@@ -354,6 +397,7 @@ export function EntroDetalle({
             onEditar={onEditar}
             onEliminar={onEliminar}
             onEliminarPeriodo={onEliminarPeriodo}
+            onCrearPeriodo={onCrearPeriodo}
           />
         ))}
       </ul>
@@ -384,10 +428,6 @@ export function EntroDetalle({
               ))}
           </ul>
         </section>
-      ) : null}
-
-      {periodosOrdenados.length === 0 && sinPeriodo.length === 0 ? (
-        <p className="text-center text-[13px] text-ink-faint">Todavía no creaste ninguna semana de cobro.</p>
       ) : null}
 
       {creandoPeriodo ? (
