@@ -666,7 +666,7 @@ export function FinanceEngineScreen({ engine, ideaCapture, gastosFijos }: Financ
           className="flex w-full appearance-none items-baseline justify-between gap-3 border-0 bg-transparent p-0 text-left"
           onClick={() => setDetalle('entro')}
         >
-          <span className="text-[15px] text-ink-dim">Ingresos</span>
+          <span className="font-mono text-[11px] uppercase tracking-wide text-accent">Ingresos</span>
           <span className="font-mono text-[16px] text-good">{formatearMonto(entro, moneda)}</span>
         </button>
         <button
@@ -674,7 +674,7 @@ export function FinanceEngineScreen({ engine, ideaCapture, gastosFijos }: Financ
           className="flex w-full appearance-none items-baseline justify-between gap-3 border-0 bg-transparent p-0 text-left"
           onClick={() => setDetalle('sefue')}
         >
-          <span className="text-[15px] text-ink-dim">Se fue</span>
+          <span className="font-mono text-[11px] uppercase tracking-wide text-accent">Se fue</span>
           <span className="font-mono text-[16px] text-critical">{formatearMonto(seFue, moneda)}</span>
         </button>
         <div className="mt-1 flex items-baseline justify-between gap-3 border-t border-border/40 pt-2">
