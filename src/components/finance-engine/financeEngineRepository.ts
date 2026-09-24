@@ -2,7 +2,7 @@ import { generateId } from '@shared-kernel/id'
 import type { Repository } from '@shared-kernel/persistence/Repository'
 import type { FinanceCategoria } from './categorias'
 import { dividirEnCuotas, fechaCuota, type Medio, type Moneda } from './extraccion'
-import { etiquetaSemanaCobro, normalizarSemana } from './semanaCobro'
+import { etiquetaSemanaCobro, fechaCorta, normalizarSemana } from './semanaCobro'
 import { fechaLocalISO } from '@shared-kernel/date/fechaLocal'
 import type {
   FinanceAccount,
@@ -175,7 +175,12 @@ async function fusionarPeriodosDuplicados(
 ): Promise<boolean> {
   const grupos = new Map<string, FinanceIncomePeriod[]>()
   for (const periodo of periodos) {
-    const clave = `${periodo.fechaInicio}|${periodo.carpetaId ?? ''}`
+    // fechaCorta: un duplicado sincronizado desde Supabase trae fechaInicio
+    // como timestamptz ("...T00:00:00+00:00"), no como fecha plana — sin
+    // normalizar acá, ese duplicado nunca comparte clave con su par recién
+    // creado localmente y esta fusión lo deja pasar de largo (ver comentario
+    // de fechaCorta en semanaCobro.ts).
+    const clave = `${fechaCorta(periodo.fechaInicio)}|${periodo.carpetaId ?? ''}`
     const grupo = grupos.get(clave)
     if (grupo) grupo.push(periodo)
     else grupos.set(clave, [periodo])
@@ -372,7 +377,7 @@ export function createFinanceEngineRepositories(
       const seFusionoAlgo = await fusionarPeriodosDuplicados(periodoTable, movimientoTable, periodos)
       const vivos = seFusionoAlgo ? await periodoTable.toCollection().filter(filtro).toArray() : periodos
 
-      return vivos.sort((a, b) => a.fechaInicio.localeCompare(b.fechaInicio) || a.orden - b.orden)
+      return vivos.sort((a, b) => fechaCorta(a.fechaInicio).localeCompare(fechaCorta(b.fechaInicio)) || a.orden - b.orden)
     },
 
     /**
@@ -387,9 +392,19 @@ export function createFinanceEngineRepositories(
      */
     async add(input: NuevoFinanceIncomePeriod, carpetaId?: string): Promise<FinanceIncomePeriod> {
       const { fechaInicio, fechaFin } = normalizarSemana(input.fechaCualquiera)
+      /**
+       * `startsWith`, no `equals`: `fechaInicio` acá siempre es plano
+       * (normalizarSemana), pero un período que ya pasó por Supabase quedó
+       * guardado como timestamptz ("2026-08-31T00:00:00+00:00", ver
+       * fechaCorta en semanaCobro.ts) — `equals` nunca lo encontraba, así
+       * que cada "+ Crear esta semana" sobre una semana ya sincronizada
+       * creaba un período duplicado en vez de reabrir el que ya existía.
+       * Toda fecha plana es siempre prefijo de su propia versión timestamptz,
+       * así que `startsWith` encuentra ambos formatos por igual.
+       */
       const existente = await periodoTable
         .where('fechaInicio')
-        .equals(fechaInicio)
+        .startsWith(fechaInicio)
         .and((p) => (carpetaId ? p.carpetaId === carpetaId : true))
         .first()
       if (existente && !existente.deletedAt) return existente

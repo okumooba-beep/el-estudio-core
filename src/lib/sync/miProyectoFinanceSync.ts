@@ -201,8 +201,10 @@ const periodosSync: TableSync<FinanceIncomePeriod, PeriodoRow> = {
   fromRow: (row) => ({
     id: row.id,
     nombre: row.nombre,
-    fechaInicio: row.fecha_inicio,
-    fechaFin: row.fecha_fin,
+    // Mismo motivo que financeSync.ts: fecha_inicio/fecha_fin son timestamptz
+    // en Supabase, no fecha plana — ver fechaCorta en semanaCobro.ts.
+    fechaInicio: row.fecha_inicio.slice(0, 10),
+    fechaFin: row.fecha_fin.slice(0, 10),
     orden: row.orden,
     createdAt: row.created_at,
     updatedAt: row.updated_at,

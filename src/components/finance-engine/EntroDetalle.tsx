@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { MovimientoRow, type PatchMovimiento } from './MovimientoRow'
 import { etiquetaDia, formatearMonto, mesDe } from './mes'
-import { etiquetaSemanaCobro, fechaEfectivaSemana, numeroDeSemana, semanasRealesDelMes } from './semanaCobro'
+import { etiquetaSemanaCobro, fechaCorta, fechaEfectivaSemana, numeroDeSemana, semanasRealesDelMes } from './semanaCobro'
 import type { FinanceMovimiento, FinanceIncomePeriod } from '@/types/finance'
 
 export interface NuevoPeriodoInput {
@@ -276,7 +276,18 @@ function GrupoMes({ mes, periodos, todosLosPeriodos, ingresos, abierto, onToggle
       {abierto ? (
         <ul className="flex flex-col gap-6">
           {semanas.map((semana) => {
-            const periodo = periodos.find((p) => p.fechaInicio === semana.fechaInicio)
+            /**
+             * Bug reportado de nuevo (2026-09-24): esta comparación era
+             * `p.fechaInicio === semana.fechaInicio` — `semana.fechaInicio`
+             * siempre es plano (semanasRealesDelMes), pero un período que
+             * ya sincronizó con Supabase quedó guardado como timestamptz
+             * ("2026-08-31T00:00:00+00:00", ver fechaCorta en
+             * semanaCobro.ts): el período existía y tenía ingresos, pero
+             * esta comparación nunca calzaba, así que la tarjeta mostraba
+             * "Sin ingresos" + "Crear esta semana" como si no existiera
+             * ninguno. fechaCorta normaliza antes de comparar.
+             */
+            const periodo = periodos.find((p) => fechaCorta(p.fechaInicio) === semana.fechaInicio)
             return periodo ? (
               <PeriodoBlock
                 key={periodo.id}
@@ -295,9 +306,14 @@ function GrupoMes({ mes, periodos, todosLosPeriodos, ingresos, abierto, onToggle
                  * hace que la plata aparezca en la semana correcta pase lo
                  * que pase con los ids — la fusión sigue limpiando las
                  * filas duplicadas de fondo, esto solo evita que la UI
-                 * dependa de que ya haya terminado.
+                 * dependa de que ya haya terminado. fechaCorta otra vez acá
+                 * por el mismo motivo que arriba: dos períodos "de la misma
+                 * semana" pueden tener fechaInicio con formato distinto
+                 * según si pasaron por sync o no.
                  */
-                movimientos={ingresos.filter((m) => todosLosPeriodos.find((p) => p.id === m.periodoId)?.fechaInicio === periodo.fechaInicio)}
+                movimientos={ingresos.filter(
+                  (m) => fechaCorta(todosLosPeriodos.find((p) => p.id === m.periodoId)?.fechaInicio ?? '') === fechaCorta(periodo.fechaInicio),
+                )}
                 periodos={todosLosPeriodos}
                 onEditar={onEditar}
                 onEliminar={onEliminar}
@@ -336,7 +352,7 @@ export function EntroDetalle({
   const mesActual = mesDe(new Date())
   const [mesesAbiertos, setMesesAbiertos] = useState<Set<string>>(() => new Set([mesActual]))
 
-  const periodosOrdenados = periodos.slice().sort((a, b) => a.fechaInicio.localeCompare(b.fechaInicio) || a.orden - b.orden)
+  const periodosOrdenados = periodos.slice().sort((a, b) => fechaCorta(a.fechaInicio).localeCompare(fechaCorta(b.fechaInicio)) || a.orden - b.orden)
   const idsConocidos = new Set(periodos.map((p) => p.id))
   const sinPeriodo = ingresos.filter((m) => !m.periodoId || !idsConocidos.has(m.periodoId))
   /**

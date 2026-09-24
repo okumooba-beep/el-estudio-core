@@ -214,8 +214,14 @@ const periodosSync: TableSync<FinanceIncomePeriod, PeriodoRow> = {
   fromRow: (row) => ({
     id: row.id,
     nombre: row.nombre,
-    fechaInicio: row.fecha_inicio,
-    fechaFin: row.fecha_fin,
+    // fecha_inicio/fecha_fin son timestamptz en Supabase: vuelven como
+    // "2026-08-31T00:00:00+00:00", no como "2026-08-31" (ver fechaCorta en
+    // semanaCobro.ts). Sin este slice, cada período que pasa por acá queda
+    // en un formato distinto al de uno recién creado localmente y dos
+    // "mismo lunes" dejan de reconocerse como la misma semana — la causa de
+    // fondo detrás de los períodos duplicados reportados el 2026-09-24.
+    fechaInicio: row.fecha_inicio.slice(0, 10),
+    fechaFin: row.fecha_fin.slice(0, 10),
     orden: row.orden,
     createdAt: row.created_at,
     updatedAt: row.updated_at,

@@ -33,6 +33,26 @@ function aTextoISO(fecha: Date): string {
   return `${anio}-${mes}-${dia}`
 }
 
+/**
+ * Bug reportado de nuevo (2026-09-24): dos períodos con el mismo lunes real
+ * coexistían sin fusionarse y una semana con ingresos reales mostraba "Sin
+ * ingresos" + "Crear esta semana" (como si no existiera ningún período).
+ * Causa real, más profunda que la fusión de duplicados ya existente: un
+ * período que pasó por Supabase vuelve con `fechaInicio` como
+ * "2026-08-31T00:00:00+00:00" (timestamptz, mismo motivo que obliga a
+ * `.slice(0, 10)` en `aFechaLocal` de acá arriba), mientras uno recién
+ * creado localmente (`normalizarSemana`) es siempre "2026-08-31" plano —
+ * cualquier comparación con `===` entre un período sincronizado y una
+ * fecha plana (o entre dos períodos de distinto origen) fallaba en
+ * silencio: el período existía, pero nunca "calzaba". Esto normaliza
+ * cualquier `fechaInicio`/`fechaFin`, sin importar su origen, al mismo
+ * formato plano — usarlo en toda comparación por fecha evita que el
+ * formato de origen decida si dos semanas son "la misma".
+ */
+export function fechaCorta(fechaISO: string): string {
+  return fechaISO.slice(0, 10)
+}
+
 /** El lunes de la semana calendario real que contiene `fechaISO`. */
 export function mondayOf(fechaISO: string): string {
   const fecha = aFechaLocal(fechaISO)
@@ -158,6 +178,6 @@ export function numeroDeSemana(
 ): number {
   const mesDelPeriodo = fechaEfectivaSemana(periodo.fechaInicio).slice(0, 7)
   const delMismoMes = periodos.filter((p) => fechaEfectivaSemana(p.fechaInicio).slice(0, 7) === mesDelPeriodo)
-  const ordenados = delMismoMes.slice().sort((a, b) => a.fechaInicio.localeCompare(b.fechaInicio) || a.orden - b.orden)
+  const ordenados = delMismoMes.slice().sort((a, b) => fechaCorta(a.fechaInicio).localeCompare(fechaCorta(b.fechaInicio)) || a.orden - b.orden)
   return ordenados.findIndex((p) => p.id === periodo.id) + 1
 }
