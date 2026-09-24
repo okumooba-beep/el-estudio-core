@@ -2,10 +2,15 @@ import { useState } from 'react'
 import { CATEGORIAS, CATEGORIA_LABEL, type FinanceCategoria } from './categorias'
 import { dividirEnCuotas, parsearMontoManual, type Medio, type Moneda } from './extraccion'
 import type { NuevaCompraEnCuotas, NuevaFinanceMovimiento } from './financeEngineRepository'
-import { etiquetaSemana, formatearMonto, mesDe, rangoSemana, semanaDelMes } from './mes'
+import { etiquetaSemana, formatearMonto, mesDe, rangoSemana, semanaDelMes, sumarMeses } from './mes'
 import { fechaEfectivaSemana, numeroDeSemana } from './semanaCobro'
 import type { FinanceIncomePeriod, FinanceMovimientoTipo } from '@/types/finance'
 import { fechaLocalISO } from '@shared-kernel/date/fechaLocal'
+
+/** "Septiembre 2026" — mismo criterio que `etiquetaMesConAnio` en EntroDetalle.tsx, para el nav ‹ mes › del selector de semana de cobro. */
+function etiquetaMesConAnio(mes: string): string {
+  return new Date(`${mes}-02`).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
+}
 
 interface NuevoMovimientoProps {
   /** Arranca en la moneda que ya se está mirando en Finanzas — no inventa un tercer estado de moneda. */
@@ -61,8 +66,22 @@ export function NuevoMovimiento({
   const [medio, setMedio] = useState<Medio>('transferencia')
   const [cuotas, setCuotas] = useState('1')
   const [guardando, setGuardando] = useState(false)
+  /**
+   * Bug reportado: el selector de semana mostraba TODAS las semanas de
+   * cobro creadas alguna vez, de más vieja a más nueva, sin ningún
+   * recorte por mes — semanas de agosto (ya pasado) mezcladas con las de
+   * septiembre. Acá el selector arranca en el mes en curso y solo
+   * muestra sus semanas; `mesPeriodoElegido` navega mes a mes (‹ ›,
+   * `sumarMeses`, mismo helper que ya usa "Este mes") sin tocar la lista
+   * completa de `periodos` que sigue viajando entera para otros usos
+   * (`numeroDeSemana` necesita el universo completo del mes para contar
+   * bien "Semana 1/2/3...").
+   */
+  const [mesPeriodoElegido, setMesPeriodoElegido] = useState(() => mesDe(new Date()))
   /** Sprint 039 — solo se usa cuando hay `periodos` (acción global "+ Agregar ingreso"). */
-  const [periodoElegidoId, setPeriodoElegidoId] = useState<string | undefined>(() => periodos?.[0]?.id)
+  const [periodoElegidoId, setPeriodoElegidoId] = useState<string | undefined>(
+    () => periodos?.find((p) => fechaEfectivaSemana(p.fechaInicio).slice(0, 7) === mesDe(new Date()))?.id,
+  )
   /**
    * Mini sprint "Reconstruir Ingresos, tres montos independientes" — un
    * ingreso semanal casi siempre mezcla efectivo en pesos, dólares y
@@ -77,6 +96,14 @@ export function NuevoMovimiento({
 
   const mostrarSelectorPeriodo = tipo === 'ingreso' && periodos !== undefined
   const periodoElegido = mostrarSelectorPeriodo ? periodos?.find((p) => p.id === periodoElegidoId) : undefined
+  const periodosDelMesElegido = (periodos ?? []).filter((p) => fechaEfectivaSemana(p.fechaInicio).slice(0, 7) === mesPeriodoElegido)
+
+  function cambiarMesPeriodo(delta: number) {
+    const nuevoMes = sumarMeses(mesPeriodoElegido, delta)
+    setMesPeriodoElegido(nuevoMes)
+    const primero = periodos?.find((p) => fechaEfectivaSemana(p.fechaInicio).slice(0, 7) === nuevoMes)
+    setPeriodoElegidoId(primero?.id)
+  }
   /**
    * Cuando hay semana elegida, su lunes ES la fecha del ingreso — no hay
    * un campo de fecha visible que pueda contradecirla. `fecha` (el input
@@ -335,20 +362,33 @@ export function NuevoMovimiento({
           periodos && periodos.length > 0 ? (
             <div className="flex flex-col gap-1.5">
               <p className="text-[11.5px] text-ink-faint">¿A qué semana pertenece este ingreso?</p>
-              <div className="idea-destinos" role="group" aria-label="Semana de cobro">
-                {periodos.map((periodo) => (
-                  <button
-                    key={periodo.id}
-                    type="button"
-                    className="idea-destino"
-                    aria-pressed={periodoElegidoId === periodo.id}
-                    style={periodoElegidoId === periodo.id ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
-                    onClick={() => setPeriodoElegidoId(periodo.id)}
-                  >
-                    Semana {numeroDeSemana(periodo, periodos)} · {periodo.nombre}
-                  </button>
-                ))}
+              <div className="flex items-center justify-between gap-2">
+                <button type="button" className="idea-destino" onClick={() => cambiarMesPeriodo(-1)} aria-label="Mes anterior">
+                  ‹
+                </button>
+                <p className="font-mono text-[11px] uppercase tracking-wide text-ink-faint">{etiquetaMesConAnio(mesPeriodoElegido)}</p>
+                <button type="button" className="idea-destino" onClick={() => cambiarMesPeriodo(1)} aria-label="Mes siguiente">
+                  ›
+                </button>
               </div>
+              {periodosDelMesElegido.length > 0 ? (
+                <div className="idea-destinos" role="group" aria-label="Semana de cobro">
+                  {periodosDelMesElegido.map((periodo) => (
+                    <button
+                      key={periodo.id}
+                      type="button"
+                      className="idea-destino"
+                      aria-pressed={periodoElegidoId === periodo.id}
+                      style={periodoElegidoId === periodo.id ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
+                      onClick={() => setPeriodoElegidoId(periodo.id)}
+                    >
+                      Semana {numeroDeSemana(periodo, periodos)} · {periodo.nombre}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-[13px] text-ink-faint">Sin semanas de cobro en {etiquetaMesConAnio(mesPeriodoElegido)} todavía.</p>
+              )}
             </div>
           ) : (
             <p className="text-[13px] text-ink-faint">
