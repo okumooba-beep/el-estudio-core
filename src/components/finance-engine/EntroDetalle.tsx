@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { MovimientoRow, type PatchMovimiento } from './MovimientoRow'
-import { formatearMonto, mesDe } from './mes'
+import { etiquetaDia, formatearMonto, mesDe } from './mes'
 import { etiquetaSemanaCobro, fechaEfectivaSemana, numeroDeSemana, semanasRealesDelMes } from './semanaCobro'
 import type { FinanceMovimiento, FinanceIncomePeriod } from '@/types/finance'
 
@@ -336,6 +336,9 @@ export function EntroDetalle({
     return periodo ? mesDePeriodo(periodo) === mesActual : m.fecha.startsWith(mesActual)
   })
   const { ars: totalArs, usd: totalUsd } = sumarPorMoneda(ingresosDelMesActual)
+  const [desglosarTotal, setDesglosarTotal] = useState(false)
+  const periodosDelMesActual = periodos.filter((p) => mesDePeriodo(p) === mesActual)
+  const desgloseOrdenado = ingresosDelMesActual.slice().sort((a, b) => a.fecha.localeCompare(b.fecha))
 
   const periodosPorMes = new Map<string, FinanceIncomePeriod[]>()
   for (const periodo of periodosOrdenados) {
@@ -377,11 +380,46 @@ export function EntroDetalle({
         ‹ Finanzas
       </button>
 
-      <section className="finanzas-tarjeta flex flex-col items-center gap-1">
-        <p className="font-mono text-[11px] uppercase tracking-wide text-accent">Ingresos</p>
-        <p className="font-mono text-[26px] text-good">{formatearMonto(totalArs, 'ars')}</p>
-        {totalUsd !== 0 ? <p className="font-mono text-[18px] text-good">{formatearMonto(totalUsd, 'usd')}</p> : null}
-        <p className="text-[12px] text-ink-faint">{etiquetaMesConAnio(mesActual)}</p>
+      <section className="finanzas-tarjeta flex flex-col gap-1">
+        <button
+          type="button"
+          className="flex w-full appearance-none flex-col items-center gap-1 border-0 bg-transparent p-0"
+          onClick={() => setDesglosarTotal((actual) => !actual)}
+          aria-expanded={desglosarTotal}
+        >
+          <span className="font-mono text-[11px] uppercase tracking-wide text-accent">Ingresos</span>
+          <span className="font-mono text-[26px] text-good">{formatearMonto(totalArs, 'ars')}</span>
+          {totalUsd !== 0 ? <span className="font-mono text-[18px] text-good">{formatearMonto(totalUsd, 'usd')}</span> : null}
+          <span className="text-[12px] text-ink-faint">
+            {etiquetaMesConAnio(mesActual)} {desglosarTotal ? '▴' : '▾'}
+          </span>
+        </button>
+
+        {desglosarTotal ? (
+          desgloseOrdenado.length === 0 ? (
+            <p className="pt-2 text-center text-[12px] text-ink-faint">Todavía no hay ingresos este mes.</p>
+          ) : (
+            <ul className="flex flex-col gap-1.5 border-t border-border/40 pt-2">
+              {desgloseOrdenado.map((movimiento) => {
+                const periodo = periodos.find((p) => p.id === movimiento.periodoId)
+                const etiquetaPeriodo = periodo
+                  ? `Semana ${numeroDeSemana(periodo, periodosDelMesActual)} · ${periodo.nombre}`
+                  : 'Sin período'
+                return (
+                  <li key={movimiento.id} className="flex items-center justify-between gap-3 text-[13px]">
+                    <span className="flex min-w-0 flex-col">
+                      <span className="truncate text-ink">{movimiento.concepto || etiquetaPeriodo}</span>
+                      <span className="text-[11px] text-ink-faint">
+                        {etiquetaDia(movimiento.fecha)} · {etiquetaPeriodo}
+                      </span>
+                    </span>
+                    <span className="font-mono text-good">{formatearMonto(movimiento.monto, movimiento.moneda)}</span>
+                  </li>
+                )
+              })}
+            </ul>
+          )
+        ) : null}
       </section>
 
       <ul className="flex flex-col gap-6">

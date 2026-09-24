@@ -664,22 +664,20 @@ export function FinanceEngineScreen({ engine, ideaCapture, gastosFijos }: Financ
         ) : null}
       </section>
 
-      <section className="finanzas-tarjeta flex flex-col gap-1.5">
-        <button
-          type="button"
-          className="flex w-full appearance-none items-baseline justify-between gap-3 border-0 bg-transparent p-0 text-left"
-          onClick={() => setDetalle('entro')}
-        >
+      <section className="finanzas-tarjeta flex flex-col gap-2">
+        <button type="button" className="finanzas-resumen-boton finanzas-resumen-boton--ingreso" onClick={() => setDetalle('entro')}>
           <span className="font-mono text-[11px] uppercase tracking-wide text-accent">Ingresos</span>
-          <span className="font-mono text-[16px] text-good">{formatearMonto(entro, moneda)}</span>
+          <span className="flex items-center gap-2">
+            <span className="font-mono text-[16px] text-good">{formatearMonto(entro, moneda)}</span>
+            <span aria-hidden className="finanzas-resumen-boton-flecha">›</span>
+          </span>
         </button>
-        <button
-          type="button"
-          className="flex w-full appearance-none items-baseline justify-between gap-3 border-0 bg-transparent p-0 text-left"
-          onClick={() => setDetalle('sefue')}
-        >
+        <button type="button" className="finanzas-resumen-boton finanzas-resumen-boton--gasto" onClick={() => setDetalle('sefue')}>
           <span className="font-mono text-[11px] uppercase tracking-wide text-accent">Se fue</span>
-          <span className="font-mono text-[16px] text-critical">{formatearMonto(seFue, moneda)}</span>
+          <span className="flex items-center gap-2">
+            <span className="font-mono text-[16px] text-critical">{formatearMonto(seFue, moneda)}</span>
+            <span aria-hidden className="finanzas-resumen-boton-flecha">›</span>
+          </span>
         </button>
         <div className="mt-1 flex items-baseline justify-between gap-3 border-t border-border/40 pt-2">
           <span className="text-[15px] text-ink">Te quedó</span>

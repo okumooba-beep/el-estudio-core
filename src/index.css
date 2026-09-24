@@ -4289,6 +4289,47 @@ html[data-route='notas'] .room-layer-photo {
 }
 
 /*
+  Fix reportado: "Ingresos"/"Se fue" en el resumen de Finanzas eran texto
+  suelto sin fondo ni borde — "no se sabe si son botones", chiquitos y
+  pegados uno al otro. Mismo lenguaje que .finanzas-tipo-boton (fondo +
+  borde tenues en el color real de cada uno) pero en fila completa, con
+  una flecha que promete que tocar abre el detalle.
+*/
+.finanzas-resumen-boton {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-md, 14px);
+  border: 1px solid color-mix(in srgb, var(--finanzas-resumen-color) 35%, transparent);
+  background: color-mix(in srgb, var(--finanzas-resumen-color) 10%, transparent);
+  transition: background-color 150ms ease, transform 100ms ease-out;
+}
+
+.finanzas-resumen-boton:hover {
+  background: color-mix(in srgb, var(--finanzas-resumen-color) 18%, transparent);
+}
+
+.finanzas-resumen-boton:active {
+  transform: scale(0.98);
+}
+
+.finanzas-resumen-boton--ingreso {
+  --finanzas-resumen-color: var(--good);
+}
+
+.finanzas-resumen-boton--gasto {
+  --finanzas-resumen-color: var(--critical);
+}
+
+.finanzas-resumen-boton-flecha {
+  font-size: 13px;
+  color: var(--ink-faint);
+}
+
+/*
   Toggle Normal/Alarma en Agenda: mismo patrón de chip con fondo que
   .finanzas-tipo-boton de arriba, pero clase propia — .idea-destino
   nace sin fondo ni borde a propósito (así la necesitan Umbral,
