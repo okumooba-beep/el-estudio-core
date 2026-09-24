@@ -281,7 +281,23 @@ function GrupoMes({ mes, periodos, todosLosPeriodos, ingresos, abierto, onToggle
               <PeriodoBlock
                 key={periodo.id}
                 periodo={periodo}
-                movimientos={ingresos.filter((m) => m.periodoId === periodo.id)}
+                /**
+                 * Bug reportado (2026-09-24): la identidad real de una
+                 * semana es su fecha, no el id de una fila puntual (ver
+                 * numeroDeSemana más arriba) — pero acá se filtraba por
+                 * `m.periodoId === periodo.id`, un id puntual. Si existen
+                 * dos períodos con el mismo fechaInicio (fusión pendiente
+                 * o todavía no corrida, ver fusionarPeriodosDuplicados en
+                 * financeEngineRepository.ts), un ingreso podía apuntar al
+                 * otro período y desaparecer de esta tarjeta aunque el
+                 * desglose de arriba sí lo mostrara. Resolver la fecha del
+                 * período de cada movimiento (en vez de comparar ids)
+                 * hace que la plata aparezca en la semana correcta pase lo
+                 * que pase con los ids — la fusión sigue limpiando las
+                 * filas duplicadas de fondo, esto solo evita que la UI
+                 * dependa de que ya haya terminado.
+                 */
+                movimientos={ingresos.filter((m) => todosLosPeriodos.find((p) => p.id === m.periodoId)?.fechaInicio === periodo.fechaInicio)}
                 periodos={todosLosPeriodos}
                 onEditar={onEditar}
                 onEliminar={onEliminar}
@@ -337,6 +353,14 @@ export function EntroDetalle({
   })
   const { ars: totalArs, usd: totalUsd } = sumarPorMoneda(ingresosDelMesActual)
   const [desglosarTotal, setDesglosarTotal] = useState(false)
+  /**
+   * Pedido (2026-09-24): el desglose mezclaba pesos y dólares en la misma
+   * lista, ordenados solo por fecha — dos monedas que nunca se suman entre
+   * sí (ver sumarPorMoneda) mostradas como si fueran una sola secuencia.
+   * Pesos por defecto (la moneda de la enorme mayoría de los ingresos) y
+   * un toggle para pasar a dólares, en vez de las dos intercaladas.
+   */
+  const [monedaDesglose, setMonedaDesglose] = useState<'ars' | 'usd'>('ars')
   const periodosDelMesActual = periodos.filter((p) => mesDePeriodo(p) === mesActual)
   const desgloseOrdenado = ingresosDelMesActual.slice().sort((a, b) => a.fecha.localeCompare(b.fecha))
 
@@ -396,29 +420,61 @@ export function EntroDetalle({
         </button>
 
         {desglosarTotal ? (
-          desgloseOrdenado.length === 0 ? (
-            <p className="pt-2 text-center text-[12px] text-ink-faint">Todavía no hay ingresos este mes.</p>
-          ) : (
-            <ul className="flex flex-col gap-1.5 border-t border-border/40 pt-2">
-              {desgloseOrdenado.map((movimiento) => {
-                const periodo = periodos.find((p) => p.id === movimiento.periodoId)
-                const etiquetaPeriodo = periodo
-                  ? `Semana ${numeroDeSemana(periodo, periodosDelMesActual)} · ${periodo.nombre}`
-                  : 'Sin período'
+          <div className="flex flex-col gap-2 border-t border-border/40 pt-2">
+            {totalUsd !== 0 ? (
+              <div className="flex justify-center gap-2" role="group" aria-label="Moneda">
+                <button
+                  type="button"
+                  className="idea-destino"
+                  aria-pressed={monedaDesglose === 'ars'}
+                  style={monedaDesglose === 'ars' ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
+                  onClick={() => setMonedaDesglose('ars')}
+                >
+                  Pesos
+                </button>
+                <button
+                  type="button"
+                  className="idea-destino"
+                  aria-pressed={monedaDesglose === 'usd'}
+                  style={monedaDesglose === 'usd' ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
+                  onClick={() => setMonedaDesglose('usd')}
+                >
+                  Dólares
+                </button>
+              </div>
+            ) : null}
+            {(() => {
+              const filtrado = desgloseOrdenado.filter((m) => (m.moneda === 'usd' ? 'usd' : 'ars') === monedaDesglose)
+              if (filtrado.length === 0) {
                 return (
-                  <li key={movimiento.id} className="flex items-center justify-between gap-3 text-[13px]">
-                    <span className="flex min-w-0 flex-col">
-                      <span className="truncate text-ink">{movimiento.concepto || etiquetaPeriodo}</span>
-                      <span className="text-[11px] text-ink-faint">
-                        {etiquetaDia(movimiento.fecha)} · {etiquetaPeriodo}
-                      </span>
-                    </span>
-                    <span className="font-mono text-good">{formatearMonto(movimiento.monto, movimiento.moneda)}</span>
-                  </li>
+                  <p className="pt-1 text-center text-[12px] text-ink-faint">
+                    {monedaDesglose === 'usd' ? 'Todavía no hay ingresos en dólares este mes.' : 'Todavía no hay ingresos en pesos este mes.'}
+                  </p>
                 )
-              })}
-            </ul>
-          )
+              }
+              return (
+                <ul className="flex flex-col gap-1.5">
+                  {filtrado.map((movimiento) => {
+                    const periodo = periodos.find((p) => p.id === movimiento.periodoId)
+                    const etiquetaPeriodo = periodo
+                      ? `Semana ${numeroDeSemana(periodo, periodosDelMesActual)} · ${periodo.nombre}`
+                      : 'Sin período'
+                    return (
+                      <li key={movimiento.id} className="flex items-center justify-between gap-3 text-[13px]">
+                        <span className="flex min-w-0 flex-col">
+                          <span className="truncate text-ink">{movimiento.concepto || etiquetaPeriodo}</span>
+                          <span className="text-[11px] text-ink-faint">
+                            {etiquetaDia(movimiento.fecha)} · {etiquetaPeriodo}
+                          </span>
+                        </span>
+                        <span className="font-mono text-good">{formatearMonto(movimiento.monto, movimiento.moneda)}</span>
+                      </li>
+                    )
+                  })}
+                </ul>
+              )
+            })()}
+          </div>
         ) : null}
       </section>
 

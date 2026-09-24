@@ -58,19 +58,38 @@ export function createFinanceEngine(
     const [ready, setReady] = useState(false)
 
     useEffect(() => {
+      let cancelado = false
       setReady(false)
-      Promise.all([
-        accountRepository.list(carpetaId),
-        movimientoRepository.list(carpetaId),
-        goalRepository.list(carpetaId),
-        periodoRepository.list(carpetaId),
-      ]).then(([loadedAccounts, loadedMovimientos, loadedGoals, loadedPeriodos]) => {
-        setAccounts(loadedAccounts)
-        setMovimientos(loadedMovimientos)
-        setGoals(loadedGoals)
-        setPeriodos(loadedPeriodos)
-        setReady(true)
+      /**
+       * Bug reportado (2026-09-24): un ingreso aparecía en el desglose de
+       * arriba pero su semana mostraba "Sin ingresos". Causa: acá adentro
+       * `periodoRepository.list()` puede fusionar períodos duplicados
+       * (ver fusionarPeriodosDuplicados, financeEngineRepository.ts), lo
+       * que reasigna `periodoId` en movimientoTable — si ese list() corre
+       * en paralelo con movimientoRepository.list() (antes, ambos dentro
+       * de un mismo Promise.all), el segundo puede leer la tabla A MITAD
+       * de esa reasignación y quedarse con un `periodoId` viejo apuntando
+       * a un período que la fusión ya borró. Esperar a que termine
+       * periodoRepository.list() antes de leer movimientos (en vez de
+       * lanzarlos en paralelo) elimina esa carrera: cuando movimientos se
+       * lee, cualquier fusión ya terminó de escribir.
+       */
+      periodoRepository.list(carpetaId).then((loadedPeriodos) => {
+        if (cancelado) return
+        Promise.all([accountRepository.list(carpetaId), movimientoRepository.list(carpetaId), goalRepository.list(carpetaId)]).then(
+          ([loadedAccounts, loadedMovimientos, loadedGoals]) => {
+            if (cancelado) return
+            setAccounts(loadedAccounts)
+            setMovimientos(loadedMovimientos)
+            setGoals(loadedGoals)
+            setPeriodos(loadedPeriodos)
+            setReady(true)
+          },
+        )
       })
+      return () => {
+        cancelado = true
+      }
     }, [carpetaId])
 
     async function addAccount(input: NuevaFinanceAccount): Promise<void> {

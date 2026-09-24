@@ -56,7 +56,29 @@ window.visualViewport?.addEventListener('resize', medirVhReal)
 // unas pocas veces más durante el primer segundo de vida de la página:
 // barato (un setProperty, no fuerza reflow) y sin efecto una vez que el
 // valor ya convergió.
-;[100, 300, 600, 1000].forEach((ms) => window.setTimeout(medirVhReal, ms))
+function ramaDeMediciones(): void {
+  ;[0, 100, 300, 600, 1000].forEach((ms) => window.setTimeout(medirVhReal, ms))
+}
+ramaDeMediciones()
+
+// Bug reportado de nuevo (2026-09-24) tras lo de arriba: la ráfaga inicial
+// solo corre una vez, en el primer load real de la página — pero la PWA
+// instalada en iOS casi nunca hace un load real al "abrirse" desde el
+// ícono: la mayoría de las veces el sistema solo reanuda un WKWebView que
+// ya estaba suspendido en background, y esa reanudación puede cambiar el
+// tamaño real disponible (rotación, cambio de safe-area, etc. mientras
+// estaba en segundo plano) sin disparar 'resize' de visualViewport — es
+// el mismo asentamiento tardío de arriba, pero en el momento de volver, no
+// en el de abrir por primera vez. 'visibilitychange' (se vuelve visible) y
+// 'pageshow' (con bfcache, `persisted: true`) son los dos eventos que sí
+// cubren esa reanudación — repetir acá la misma ráfaga corta de
+// mediciones hace que "volver a la app" quede cubierto igual que "abrirla
+// por primera vez", sin que el usuario tenga que scrollear para heredar
+// el resize "gratis".
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') ramaDeMediciones()
+})
+window.addEventListener('pageshow', ramaDeMediciones)
 
 /**
  * .nav-inferior es position:absolute con bottom:0 contra este mismo
