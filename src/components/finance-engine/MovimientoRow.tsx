@@ -250,6 +250,15 @@ export function MovimientoRow({
               />
             )}
           </div>
+          {/*
+            Bug reportado: tocar Pesos/Dólares o Efectivo/Transferencia
+            borraba el monto ya tipeado (setMontoTexto('') al cambiar de
+            opción) — el mismo problema que "Reconstruir Ingresos, tres
+            montos independientes" ya había corregido en NuevoMovimiento.tsx
+            para el alta. Acá alcanza con no tocar montoTexto: es un solo
+            movimiento existente, cambiar moneda/medio nunca debería vaciar
+            lo que el usuario ya escribió.
+          */}
           <div className="idea-destinos" role="group" aria-label="Moneda">
             {(['ars', 'usd'] as const).map((opcion) => (
               <button
@@ -258,11 +267,7 @@ export function MovimientoRow({
                 className="idea-destino"
                 aria-pressed={monedaEditada === opcion}
                 style={monedaEditada === opcion ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
-                onClick={() => {
-                  if (opcion === monedaEditada) return
-                  setMonedaEditada(opcion)
-                  setMontoTexto('')
-                }}
+                onClick={() => setMonedaEditada(opcion)}
               >
                 {opcion === 'ars' ? 'Pesos' : 'Dólares'}
               </button>
@@ -276,11 +281,7 @@ export function MovimientoRow({
                 className="idea-destino"
                 aria-pressed={medioEditado === opcion}
                 style={medioEditado === opcion ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
-                onClick={() => {
-                  if (opcion === medioEditado) return
-                  setMedioEditado(opcion)
-                  setMontoTexto('')
-                }}
+                onClick={() => setMedioEditado(opcion)}
               >
                 {opcion === 'efectivo' ? 'Efectivo' : 'Transferencia'}
               </button>
