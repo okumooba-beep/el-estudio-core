@@ -39,11 +39,7 @@ export function FrasesScreen() {
 
   return (
     <div className="flex flex-col gap-5 pt-2">
-      <button
-        type="button"
-        onClick={handleNuevaFrase}
-        className="self-start text-[13.5px] text-ink-faint transition-colors duration-150 hover:text-ink active:text-ink"
-      >
+      <button type="button" onClick={handleNuevaFrase} className="accion-primaria self-start px-3.5 py-2 text-[13.5px]">
         Agregar frase
       </button>
       {frases.length === 0 && !draft ? (

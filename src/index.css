@@ -1103,9 +1103,25 @@ html.teclado-abierto .nav-inferior {
   min-height: 1.55em;
 }
 
+/*
+  Biblioteca (bug reportado): el texto tipeado se veía en blanco sobre
+  el papel beige, ilegible — color-scheme: light dark en :root (ver
+  arriba) hace que WebKit fuerce el color de foreground de un
+  [contenteditable] al del modo del sistema (blanco en dark mode) salvo
+  que -webkit-text-fill-color quede fijado a mano; el color heredado de
+  .material-paper no alcanza para pisar eso. Mismo tratamiento para el
+  placeholder (antes leía el --ink-faint genérico, pensado para fondos
+  oscuros, en vez del --paper-ink-faint que ya usa el resto de la hoja).
+*/
+.material-paper [contenteditable='true'] {
+  color: var(--paper-ink);
+  -webkit-text-fill-color: var(--paper-ink);
+  caret-color: var(--paper-ink);
+}
+
 .idea-hoja [contenteditable='true']:empty::before {
   content: 'Escribí algo…';
-  color: var(--ink-faint);
+  color: var(--paper-ink-faint);
 }
 
 .idea-hoja-time {
