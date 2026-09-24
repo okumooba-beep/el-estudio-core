@@ -41,6 +41,8 @@ interface MissionRow {
   created_at: string
   updated_at: string
   deleted_at: string | null
+  /** Mi Proyecto — Misiones por espacio (ver Idea.carpetaId, types/idea.ts). Ausente/null = misión global. */
+  carpeta_id: string | null
 }
 
 const SUPABASE_TABLE = 'missions'
@@ -63,6 +65,7 @@ function toRow(userId: string, idea: Idea): MissionRow {
     created_at: idea.createdAt,
     updated_at: idea.updatedAt,
     deleted_at: idea.deletedAt ?? null,
+    carpeta_id: idea.carpetaId ?? null,
   }
 }
 
@@ -85,6 +88,7 @@ function fromRow(row: MissionRow): Idea {
     updatedAt: row.updated_at,
     pendingSync: false,
     ...(row.deleted_at ? { deletedAt: row.deleted_at } : {}),
+    ...(row.carpeta_id ? { carpetaId: row.carpeta_id } : {}),
   }
 }
 

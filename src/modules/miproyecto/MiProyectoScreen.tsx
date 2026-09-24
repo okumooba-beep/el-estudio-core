@@ -32,6 +32,15 @@ export interface MiProyectoScreenProps {
  * (ver finance-engine/), sobre sus propias 4 tablas Dexie/Supabase
  * (mi_proyecto_finanzas_*), scopeadas por carpeta. Sin `ideaCapture`: este
  * espacio no tiene Umbral propio.
+ *
+ * Misiones tampoco es una pestaña de espacio: cada carpeta suma "Misiones"
+ * al switcher (`misionesHabilitadas`, ver NotesEngineScreen), mismo
+ * sistema principales/secundarias que el módulo global de Misiones — a
+ * diferencia de Notas/Finanzas, no tiene tablas propias: sigue siendo
+ * `db.ideas` (la misma tabla que usa Misiones global), scopeada por
+ * `Idea.carpetaId = folder.id` (ver types/idea.ts,
+ * missions/seleccionarPrincipales.ts) en vez de una tabla
+ * `mi_proyecto_*` aparte.
  */
 export function MiProyectoScreen({ nombre, onRenombrar }: MiProyectoScreenProps) {
   const notes = engine.useEngine()
@@ -48,6 +57,7 @@ export function MiProyectoScreen({ nombre, onRenombrar }: MiProyectoScreenProps)
         ocultarTitulo
         carpetasEnGrilla
         financeEngine={financeEngine}
+        misionesHabilitadas
       />
     </div>
   )

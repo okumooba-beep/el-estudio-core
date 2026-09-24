@@ -19,9 +19,16 @@ export const MAX_PRINCIPALES = 5
  * no se renderizaba, ni siquiera oculta). Devuelve TODAS las misiones
  * pendientes; el recorte a cinco existe únicamente dentro de
  * Principales, en `seleccionarPrincipales`.
+ *
+ * Mi Proyecto — Misiones por espacio: `carpetaId` filtra por igualdad
+ * exacta contra `Idea.carpetaId` — omitido (undefined), solo misiones
+ * globales (`carpetaId` ausente); con un id, solo las de esa carpeta.
+ * Así el módulo global de Misiones y "Misión principal" de Hoy (que
+ * llaman esta función sin `carpetaId`, ver missions/public.ts) nunca
+ * mezclan las misiones de un espacio de Mi Proyecto con las globales.
  */
-export function seleccionarActivas(ideas: readonly Idea[]): Idea[] {
-  const misiones = ideas.filter((idea) => idea.destino === 'misiones')
+export function seleccionarActivas(ideas: readonly Idea[], carpetaId?: string): Idea[] {
+  const misiones = ideas.filter((idea) => idea.destino === 'misiones' && idea.carpetaId === carpetaId)
   const pendientes = misiones.filter((m) => m.estado !== 'terminada' && m.estado !== 'completada' && !m.deletedAt)
   return [...pendientes].sort((a, b) => a.createdAt.localeCompare(b.createdAt))
 }

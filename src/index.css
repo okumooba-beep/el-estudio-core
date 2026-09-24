@@ -4203,6 +4203,21 @@ html[data-route='notas'] .room-layer-photo {
 }
 
 /*
+  Bug reportado: "Nueva nota"/"Bloquear con PIN" (FolderContent) usaba
+  la misma tarjeta de vidrio que el switcher Notas/Finanzas/Misiones
+  (.carpeta-barra-acciones) justo arriba — se leían como un solo grupo
+  de cuatro botones en vez de "elegí sección" + "acciones de esta
+  sección". Clase propia, sin tarjeta ni borde — vuelve al lenguaje
+  suelto de .idea-destino (voz baja, ver comentario más arriba) para
+  que la jerarquía se note de un vistazo: el switcher es la estructura
+  del espacio, esto es lo que se puede hacer dentro de la sección
+  actual.
+*/
+.carpeta-acciones-seccion {
+  padding: 0.2rem 0.1rem 0;
+}
+
+/*
   Chips de categoría (fix: opciones antes eran texto plano de
   .idea-destino sin separación visual). Se agregan clases propias de
   Finanzas en vez de tocar .idea-destino/.idea-destinos, que son

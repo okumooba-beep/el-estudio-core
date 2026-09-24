@@ -48,8 +48,20 @@ import type { Idea } from '@/types/idea'
  * El filtro `!== 'terminada'` es la única concesión al diseño anterior:
  * una misión ya marcada terminada bajo ese modelo (nunca archivada,
  * porque ese paso era opcional) no debe aparecer como pendiente.
+ *
+ * Mi Proyecto — Misiones por espacio: `carpetaId`, cuando se pasa, scopea
+ * toda la pantalla (lista, alta de misión nueva) a ese espacio — mismo
+ * componente, mismo `useIdeas()` global (Idea sigue siendo una sola tabla,
+ * ver types/idea.ts), pero filtrado por `seleccionarActivas` y con las
+ * misiones nuevas naciendo ya con ese `carpetaId` (ver handleDraftBlur).
+ * Sin `carpetaId` (uso actual del módulo global) se comporta exactamente
+ * igual que antes.
  */
-export function MisionesScreen() {
+export interface MisionesScreenProps {
+  carpetaId?: string | undefined
+}
+
+export function MisionesScreen({ carpetaId }: MisionesScreenProps = {}) {
   const { ideas, ready, add, update, moveSheet } = useIdeas()
   const [draftTexto, setDraftTexto] = useState<string | null>(null)
   /** Sprint 016.2, punto 6: misión que el usuario intenta hacer Principal habiendo ya cinco — nunca se auto-decide. */
@@ -80,7 +92,7 @@ export function MisionesScreen() {
     return hora ? `${etiquetaFecha(fecha)} · ${formatearHora12(hora)}` : etiquetaFecha(fecha)
   }, [draftTexto])
 
-  const activas = seleccionarActivas(ideas)
+  const activas = seleccionarActivas(ideas, carpetaId)
   const principales = seleccionarPrincipales(activas)
   const secundarias = seleccionarSecundarias(activas)
 
@@ -227,7 +239,11 @@ export function MisionesScreen() {
     setDraftTexto(null)
     if (!texto) return
     const { fecha, hora, textoLimpio } = interpretarMision(texto)
-    const creada = await add(textoLimpio || texto, { destino: 'misiones', origen: 'misiones' })
+    const creada = await add(textoLimpio || texto, {
+      destino: 'misiones',
+      origen: 'misiones',
+      ...(carpetaId ? { carpetaId } : {}),
+    })
     if (fecha) await update(creada.id, { programadaFecha: fecha, programadaHora: hora })
   }
 

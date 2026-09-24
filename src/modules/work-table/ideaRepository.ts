@@ -9,6 +9,8 @@ export interface AddOptions {
   /** Sprint 3.1: "Nueva hoja" desde un mueble nace ya con ese destino, sin pasar por el Escritorio. */
   destino?: IdeaDestino
   origen?: IdeaDestino
+  /** Mi Proyecto — Misiones por espacio (ver Idea.carpetaId en types/idea.ts). Ausente = misión global. */
+  carpetaId?: string
 }
 
 export interface IdeaRepository extends Repository<Idea> {
@@ -51,6 +53,7 @@ class DexieIdeaRepository implements IdeaRepository {
       createdAt: nowISO,
       updatedAt: nowISO,
       pendingSync: true,
+      ...(options?.carpetaId ? { carpetaId: options.carpetaId } : {}),
     }
     await db.ideas.add(idea)
     eventBus.emit('idea.captured', { id: idea.id, texto: idea.texto })

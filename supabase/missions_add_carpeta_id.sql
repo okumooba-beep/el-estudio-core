@@ -1,0 +1,15 @@
+-- Mi Proyecto — Misiones por espacio.
+--
+-- Agrega carpeta_id a `missions` (ver missions_schema.sql): cuando está
+-- presente, esa misión pertenece a una carpeta de Mi Proyecto (Notas/
+-- Finanzas/miProyectoFolders) y nunca debe aparecer en el módulo global
+-- de Misiones ni en "Misión principal" de Hoy — el filtrado real vive en
+-- el cliente (seleccionarActivas, src/modules/missions/seleccionarPrincipales.ts),
+-- esta columna solo necesita viajar sin perderse entre dispositivos.
+--
+-- No lleva foreign key a una tabla de carpetas de Mi Proyecto porque esas
+-- carpetas viven en la tabla `notes_folders` compartida por Notas y Mi
+-- Proyecto (ver notes_schema.sql) sin una columna que distinga cuál
+-- espacio es cuál — igual que el resto de esta app, la relación se
+-- resuelve en el cliente, no con integridad referencial en Postgres.
+alter table missions add column if not exists carpeta_id text;

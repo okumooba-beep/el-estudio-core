@@ -132,4 +132,13 @@ export interface Idea {
    * compartido por todo destino que no lo use).
    */
   deletedAt?: string
+  /**
+   * Mi Proyecto — Misiones por espacio (ver MiProyectoScreen.tsx): cuando
+   * está presente, esta misión pertenece únicamente a esa carpeta y nunca
+   * aparece en el módulo global de Misiones ni en "Misión principal" de
+   * Hoy (ver seleccionarActivas en missions/seleccionarPrincipales.ts,
+   * que filtra por igualdad exacta contra este campo). Ausente = misión
+   * global, mismo comportamiento que antes de que este campo existiera.
+   */
+  carpetaId?: string
 }

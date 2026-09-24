@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { esPinValido } from './pin'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { FinanceEngineScreen } from '@/components/finance-engine/FinanceEngineScreen'
+import { MisionesScreen } from '@modules/missions/public'
 import type { FinanceEngine } from '@/components/finance-engine/createFinanceEngine'
 import type { NotesEngineApi } from './createNotesEngine'
 import type { NotesFolder, NotesNote } from '@/types/notes'
@@ -59,13 +60,22 @@ export interface NotesEngineScreenProps {
   /**
    * Finanzas por carpeta (Mi Proyecto): cuando se pasa, cada carpeta
    * abierta muestra un switcher "Notas / Finanzas" y esta fábrica se
-   * instancia scopeada al id de esa carpeta (ver FolderFinanceSwitch).
+   * instancia scopeada al id de esa carpeta (ver FolderSectionSwitch).
    * Notas general no lo pasa y sigue mostrando solo sus notas.
    */
   financeEngine?: FinanceEngine | undefined
+  /**
+   * Misiones por carpeta (Mi Proyecto): cuando es `true`, cada carpeta
+   * abierta suma "Misiones" al switcher de sección, mismo sistema
+   * (principales/secundarias, MisionesScreen.tsx) que el módulo global,
+   * scopeado al id de esa carpeta (ver Idea.carpetaId, types/idea.ts) —
+   * nunca se mezcla con el módulo global de Misiones ni con "Misión
+   * principal" de Hoy. Notas general no lo pasa.
+   */
+  misionesHabilitadas?: boolean | undefined
 }
 
-export function NotesEngineScreen({ engine, titulo, descripcionVacio, ocultarTitulo, carpetasEnGrilla, financeEngine }: NotesEngineScreenProps) {
+export function NotesEngineScreen({ engine, titulo, descripcionVacio, ocultarTitulo, carpetasEnGrilla, financeEngine, misionesHabilitadas }: NotesEngineScreenProps) {
   const [carpetaAbiertaId, setCarpetaAbiertaId] = useState<string | null>(null)
 
   if (!engine.ready) return null
@@ -80,6 +90,7 @@ export function NotesEngineScreen({ engine, titulo, descripcionVacio, ocultarTit
         titulo={titulo}
         onVolver={() => setCarpetaAbiertaId(null)}
         financeEngine={financeEngine}
+        misionesHabilitadas={misionesHabilitadas}
       />
     )
   }
@@ -488,10 +499,12 @@ interface FolderViewProps {
   titulo: string
   onVolver: () => void
   financeEngine?: FinanceEngine | undefined
+  misionesHabilitadas?: boolean | undefined
 }
 
-function FolderView({ folder, engine, titulo, onVolver, financeEngine }: FolderViewProps) {
+function FolderView({ folder, engine, titulo, onVolver, financeEngine, misionesHabilitadas }: FolderViewProps) {
   const desbloqueada = engine.isUnlocked(folder)
+  const mostrarSwitcher = Boolean(financeEngine) || Boolean(misionesHabilitadas)
 
   return (
     // Sin max-w-xl acá afuera: mismo bug que MiProyectoScreen.tsx (ver ese
@@ -509,8 +522,13 @@ function FolderView({ folder, engine, titulo, onVolver, financeEngine }: FolderV
       </div>
 
       {desbloqueada ? (
-        financeEngine ? (
-          <FolderFinanceSwitch folder={folder} notesEngine={engine} financeEngine={financeEngine} />
+        mostrarSwitcher ? (
+          <FolderSectionSwitch
+            folder={folder}
+            notesEngine={engine}
+            financeEngine={financeEngine}
+            misionesHabilitadas={misionesHabilitadas}
+          />
         ) : (
           <div className="mx-auto w-full max-w-xl">
             <FolderContent folder={folder} engine={engine} />
@@ -525,29 +543,40 @@ function FolderView({ folder, engine, titulo, onVolver, financeEngine }: FolderV
   )
 }
 
-type SeccionCarpeta = 'notas' | 'finanzas'
+type SeccionCarpeta = 'notas' | 'finanzas' | 'misiones'
 
-interface FolderFinanceSwitchProps {
+interface FolderSectionSwitchProps {
   folder: NotesFolder
   notesEngine: NotesEngineApi
-  financeEngine: FinanceEngine
+  financeEngine?: FinanceEngine | undefined
+  misionesHabilitadas?: boolean | undefined
 }
 
 /**
- * Switcher "Notas / Finanzas" dentro de una carpeta abierta — misma
- * estructura que el switcher "Carpetas / Finanzas" que antes vivía un
- * nivel arriba, en MiProyectoScreen.tsx. `financeEngine.useEngine` acá
- * queda scopeado al id de esta carpeta, así que sus cuentas/movimientos/
- * metas/períodos nunca se mezclan con los de otra carpeta.
+ * Switcher de sección dentro de una carpeta abierta — "Notas" siempre,
+ * "Finanzas" cuando se pasa `financeEngine` y "Misiones" cuando
+ * `misionesHabilitadas` es true (Mi Proyecto). `financeEngine.useEngine`
+ * queda scopeado al id de esta carpeta (cuentas/movimientos/metas/
+ * períodos propios); Misiones reusa el mismo `MisionesScreen` del módulo
+ * global pasándole `carpetaId={folder.id}` — mismo componente, mismo
+ * sistema de principales/secundarias, datos scopeados vía Idea.carpetaId
+ * (ver seleccionarActivas, missions/seleccionarPrincipales.ts).
  */
-function FolderFinanceSwitch({ folder, notesEngine, financeEngine }: FolderFinanceSwitchProps) {
-  const finance = financeEngine.useEngine(folder.id)
+function FolderSectionSwitch({ folder, notesEngine, financeEngine, misionesHabilitadas }: FolderSectionSwitchProps) {
+  const finance = financeEngine?.useEngine(folder.id)
   const [seccion, setSeccion] = useState<SeccionCarpeta>('notas')
+
+  const opciones: SeccionCarpeta[] = [
+    'notas',
+    ...(financeEngine ? (['finanzas'] as const) : []),
+    ...(misionesHabilitadas ? (['misiones'] as const) : []),
+  ]
+  const ETIQUETAS: Record<SeccionCarpeta, string> = { notas: 'Notas', finanzas: 'Finanzas', misiones: 'Misiones' }
 
   return (
     <div className="flex flex-col gap-5">
       <div className="carpeta-barra-acciones idea-destinos mx-auto w-full max-w-xl" role="group" aria-label="Sección">
-        {(['notas', 'finanzas'] as const).map((opcion) => (
+        {opciones.map((opcion) => (
           <button
             key={opcion}
             type="button"
@@ -556,7 +585,7 @@ function FolderFinanceSwitch({ folder, notesEngine, financeEngine }: FolderFinan
             style={seccion === opcion ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
             onClick={() => setSeccion(opcion)}
           >
-            {opcion === 'notas' ? 'Notas' : 'Finanzas'}
+            {ETIQUETAS[opcion]}
           </button>
         ))}
       </div>
@@ -564,9 +593,13 @@ function FolderFinanceSwitch({ folder, notesEngine, financeEngine }: FolderFinan
         <div className="mx-auto w-full max-w-xl">
           <FolderContent folder={folder} engine={notesEngine} />
         </div>
-      ) : (
+      ) : seccion === 'finanzas' && finance ? (
         <FinanceEngineScreen engine={finance} />
-      )}
+      ) : seccion === 'misiones' ? (
+        <div className="mx-auto w-full max-w-xl">
+          <MisionesScreen carpetaId={folder.id} />
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -640,7 +673,7 @@ function FolderContent({ folder, engine }: FolderContentProps) {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="carpeta-barra-acciones flex flex-wrap items-center gap-3">
+      <div className="carpeta-acciones-seccion flex flex-wrap items-center gap-3">
         <button type="button" className="idea-destino" onClick={() => setCreando((v) => !v)}>
           {creando ? 'Cancelar' : 'Nueva nota'}
         </button>
