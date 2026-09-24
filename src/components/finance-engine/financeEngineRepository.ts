@@ -145,6 +145,62 @@ export interface FinanceEngineRepositories {
   periodoRepository: FinanceIncomePeriodRepository
 }
 
+/**
+ * Bug reportado (2026-09-24): un ingreso con periodoId asignado a "Semana
+ * 1" (31 ago → 6 sep) aparecía en el desglose del total de arriba, pero
+ * esa misma semana mostraba "Sin ingresos en esta semana" más abajo.
+ * Causa real: dos períodos ACTIVOS con la misma fechaInicio (mismo lunes
+ * real) — `periodoRepository.add()` solo dedupea contra lo que Dexie ya
+ * tiene guardado LOCALMENTE en el momento de crear (ver Sprint 037 más
+ * abajo), así que dos dispositivos que cada uno crea "Semana 1" antes de
+ * ver el período del otro terminan sincronizando dos filas separadas con
+ * el mismo fechaInicio. `GrupoMes` (EntroDetalle.tsx) encuentra la semana
+ * calendario con un `.find()` por fechaInicio — con dos períodos posibles
+ * solo puede quedarse con uno, y los movimientos que apuntan al otro
+ * quedan invisibles ahí, aunque el total de arriba (que sí recorre todos
+ * los períodos) los siga contando.
+ *
+ * Se resuelve acá, de forma autocurativa, cada vez que se listan
+ * períodos: si dos activos comparten fechaInicio (+ carpetaId), se
+ * conserva el más viejo (`createdAt`), se reasignan a él los movimientos
+ * del otro y el otro se borra (lógico, mismo criterio que
+ * periodoRepository.delete()) — el dato se corrige solo la próxima vez
+ * que alguien abre Ingresos, en cualquier dispositivo, sin depender de
+ * una migración manual ni de tocar Supabase directamente.
+ */
+async function fusionarPeriodosDuplicados(
+  periodoTable: EntityTable<FinanceIncomePeriod, 'id'>,
+  movimientoTable: EntityTable<FinanceMovimiento, 'id'>,
+  periodos: readonly FinanceIncomePeriod[],
+): Promise<boolean> {
+  const grupos = new Map<string, FinanceIncomePeriod[]>()
+  for (const periodo of periodos) {
+    const clave = `${periodo.fechaInicio}|${periodo.carpetaId ?? ''}`
+    const grupo = grupos.get(clave)
+    if (grupo) grupo.push(periodo)
+    else grupos.set(clave, [periodo])
+  }
+
+  let seFusionoAlgo = false
+  for (const grupo of grupos.values()) {
+    if (grupo.length < 2) continue
+    const ordenado = grupo.slice().sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+    const keeper = ordenado[0]
+    if (!keeper) continue
+    const duplicados = ordenado.slice(1)
+    const now = new Date().toISOString()
+    for (const duplicado of duplicados) {
+      await movimientoTable
+        .where('periodoId')
+        .equals(duplicado.id)
+        .modify({ periodoId: keeper.id, updatedAt: now, pendingSync: true })
+      await periodoTable.update(duplicado.id, { deletedAt: now, updatedAt: now, pendingSync: true })
+      seFusionoAlgo = true
+    }
+  }
+  return seFusionoAlgo
+}
+
 export function createFinanceEngineRepositories(
   accountTable: EntityTable<FinanceAccount, 'id'>,
   movimientoTable: EntityTable<FinanceMovimiento, 'id'>,
@@ -310,11 +366,13 @@ export function createFinanceEngineRepositories(
 
   const periodoRepository: FinanceIncomePeriodRepository = {
     async list(carpetaId?: string): Promise<FinanceIncomePeriod[]> {
-      const periodos = await periodoTable
-        .toCollection()
-        .filter((p) => !p.deletedAt && (carpetaId ? p.carpetaId === carpetaId : true))
-        .toArray()
-      return periodos.sort((a, b) => a.fechaInicio.localeCompare(b.fechaInicio) || a.orden - b.orden)
+      const filtro = (p: FinanceIncomePeriod) => !p.deletedAt && (carpetaId ? p.carpetaId === carpetaId : true)
+      const periodos = await periodoTable.toCollection().filter(filtro).toArray()
+
+      const seFusionoAlgo = await fusionarPeriodosDuplicados(periodoTable, movimientoTable, periodos)
+      const vivos = seFusionoAlgo ? await periodoTable.toCollection().filter(filtro).toArray() : periodos
+
+      return vivos.sort((a, b) => a.fechaInicio.localeCompare(b.fechaInicio) || a.orden - b.orden)
     },
 
     /**

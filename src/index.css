@@ -1504,14 +1504,28 @@ html.teclado-abierto .nav-inferior {
   color: var(--ink);
 }
 
+/*
+  Bug reportado: sin ningún borde ni fondo, este input se sentía como si
+  se escribiera "sobre la nada" — nada marcaba que ahí había un campo.
+  Mismo lenguaje que .captura-input (IdeaCapture.tsx): una línea inferior
+  sutil que se profundiza al enfocar, nunca una caja completa — consistente
+  con cómo el resto de la app señala "acá se escribe" sin remarcarlo.
+*/
 .mision-nuevo-input {
   width: 100%;
   border: none;
+  border-bottom: 1px solid var(--border);
   outline: none;
   background: none;
+  padding-bottom: 6px;
   font-size: 15px;
   color: var(--ink);
   caret-color: var(--accent);
+  transition: border-color 150ms ease-out;
+}
+
+.mision-nuevo-input:focus {
+  border-bottom-color: color-mix(in srgb, var(--accent) 70%, transparent);
 }
 
 .mision-nuevo-input::placeholder {
