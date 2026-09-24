@@ -368,9 +368,12 @@ export function FinanceEngineScreen({ engine, ideaCapture, gastosFijos }: Financ
    * "Gastos fijos mensuales" — tildar a mano: mismo `addMovimiento` que
    * usa "+ Movimiento" (ninguna escritura paralela), con `gastoFijoId` ya
    * puesto desde que nace — así el efecto de auto-detección de arriba
-   * nunca lo vuelve a tocar. `medio`/`moneda` no los pide el brief para
-   * esta acción: mismo default silencioso que ya usa "+ Movimiento"
-   * (`medio: 'transferencia'`), acá también en pesos.
+   * nunca lo vuelve a tocar. `medio` no lo pide el brief para esta
+   * acción: mismo default silencioso que ya usa "+ Movimiento" (`medio:
+   * 'transferencia'`). `moneda` es la del propio gasto fijo (Pesos por
+   * default para uno creado antes de que ese campo existiera) — antes
+   * iba fijo en 'ars' sin importar en qué moneda estuviera el gasto
+   * fijo, así que un gasto en dólares se guardaba mal etiquetado.
    */
   function tildarGastoFijo(gastoFijo: FinanceGastoFijo, monto: number) {
     void addMovimiento({
@@ -378,7 +381,7 @@ export function FinanceEngineScreen({ engine, ideaCapture, gastosFijos }: Financ
       monto,
       concepto: gastoFijo.nombre,
       categoria: gastoFijo.categoria,
-      moneda: 'ars',
+      moneda: gastoFijo.moneda ?? 'ars',
       medio: 'transferencia',
       gastoFijoId: gastoFijo.id,
     })
@@ -506,6 +509,7 @@ export function FinanceEngineScreen({ engine, ideaCapture, gastosFijos }: Financ
         gastosFijos={gastosFijos.gastosFijos}
         movimientos={movimientos}
         onTildar={tildarGastoFijo}
+        onDestildar={eliminarMovimiento}
         onCrear={(input) => void gastosFijos.addGastoFijo(input)}
         onEditar={(id, patch) => void gastosFijos.updateGastoFijo(id, patch)}
         onEliminar={(id) => void gastosFijos.removeGastoFijo(id)}

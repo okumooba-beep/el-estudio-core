@@ -1,0 +1,14 @@
+-- Ampliación de finance_gastos_fijos_schema.sql — moneda de un gasto fijo.
+--
+-- Ejecutar manualmente en el SQL Editor de Supabase (o vía `supabase db push`
+-- si el proyecto está linkeado localmente). Este repo no tiene credenciales ni
+-- CLI de Supabase conectados, así que este archivo no se aplica solo.
+--
+-- Hasta ahora `monto_esperado` se asumía siempre en pesos (ver
+-- tildarGastoFijo en FinanceEngineScreen.tsx, que mandaba `moneda: 'ars'`
+-- fijo) — un gasto fijo real en dólares (ej. una suscripción cobrada en
+-- USD) no tenía forma de declararlo y quedaba mal etiquetado como pesos.
+-- Nullable a propósito: una fila existente sin esta columna sigue
+-- interpretándose como 'ars' en el código (mismo default silencioso de
+-- siempre), nunca requiere backfill.
+alter table finance_gastos_fijos add column if not exists moneda text;

@@ -43,3 +43,49 @@ medirVhReal()
 // primera vez) porque el mismo evento también cubre rotación de
 // pantalla y apertura/cierre de teclado.
 window.visualViewport?.addEventListener('resize', medirVhReal)
+
+/**
+ * .nav-inferior es position:absolute con bottom:0 contra este mismo
+ * contenedor de --vh-real (ver .h-dvh-safe/.nav-inferior en index.css):
+ * al abrir el teclado, --vh-real se achica al alto visible arriba de él,
+ * así que la pill deja de estar al borde real de la pantalla y pasa a
+ * flotar en la mitad del formulario, tapando los campos que siguen
+ * (bug reportado: la pill Hoy/Misiones/Hábitos/Finanzas/Espacios
+ * apareciendo entre "Efectivo/Transferencia" y las categorías mientras
+ * se escribe el monto). Se oculta mientras hay foco en un campo que de
+ * verdad dispara el teclado nativo — excluye checkbox/radio/date/etc,
+ * que abren su propio picker y no reducen visualViewport de la misma
+ * forma — y vuelve a aparecer al perder el foco. focusin/focusout
+ * delegados en document (nunca por input individual) para cubrir
+ * cualquier input que se monte después, mismo criterio "corre una sola
+ * vez, para toda la vida de la página" que medirVhReal arriba.
+ */
+const TIPOS_SIN_TECLADO = new Set([
+  'checkbox',
+  'radio',
+  'range',
+  'button',
+  'submit',
+  'reset',
+  'file',
+  'color',
+  'date',
+  'time',
+  'datetime-local',
+  'month',
+  'week',
+])
+
+function abreTecladoNativo(el: EventTarget | null): boolean {
+  if (!(el instanceof HTMLElement)) return false
+  if (el instanceof HTMLTextAreaElement) return true
+  if (el instanceof HTMLInputElement) return !TIPOS_SIN_TECLADO.has(el.type)
+  return el.isContentEditable
+}
+
+document.addEventListener('focusin', (event) => {
+  if (abreTecladoNativo(event.target)) document.documentElement.classList.add('teclado-abierto')
+})
+document.addEventListener('focusout', (event) => {
+  if (abreTecladoNativo(event.target)) document.documentElement.classList.remove('teclado-abierto')
+})

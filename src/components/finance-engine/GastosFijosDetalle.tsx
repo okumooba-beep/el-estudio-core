@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { CATEGORIAS, CATEGORIA_LABEL, type FinanceCategoria } from './categorias'
 import { formatearMonto, mesDe } from './mes'
-import { parsearMontoManual } from './extraccion'
+import { parsearMontoManual, type Moneda } from './extraccion'
 import type { NuevaFinanceGastoFijo } from './gastosFijosRepository'
 import type { FinanceGastoFijo, FinanceMovimiento } from '@/types/finance'
 
@@ -12,6 +12,8 @@ interface GastosFijosDetalleProps {
   movimientos: readonly FinanceMovimiento[]
   /** Tilda un gasto fijo a mano: crea el movimiento de egreso ya vinculado (`gastoFijoId`). */
   onTildar(gastoFijo: FinanceGastoFijo, monto: number): void
+  /** Des-tilda: borra el movimiento ya creado este mes, para poder volver a tildar (p. ej. después de corregir el monto esperado). */
+  onDestildar(movimiento: FinanceMovimiento): void
   onCrear(input: NuevaFinanceGastoFijo): void
   onEditar(id: string, patch: Partial<Omit<FinanceGastoFijo, 'id' | 'createdAt'>>): void
   onEliminar(id: string): void
@@ -29,7 +31,7 @@ type Vista = { tipo: 'lista' } | { tipo: 'nuevo' } | { tipo: 'editar'; id: strin
  * movimiento nuevo matchea todavía y todos los gastos fijos vuelven a
  * aparecer sin tildar.
  */
-export function GastosFijosDetalle({ gastosFijos, movimientos, onTildar, onCrear, onEditar, onEliminar, onCerrar }: GastosFijosDetalleProps) {
+export function GastosFijosDetalle({ gastosFijos, movimientos, onTildar, onDestildar, onCrear, onEditar, onEliminar, onCerrar }: GastosFijosDetalleProps) {
   const [vista, setVista] = useState<Vista>({ tipo: 'lista' })
   const [verInactivos, setVerInactivos] = useState(false)
   /** Cuando un gasto fijo sin `montoEsperado` se tilda, pide el monto antes de crear el movimiento — acá se guarda cuál está pidiéndolo. */
@@ -45,8 +47,21 @@ export function GastosFijosDetalle({ gastosFijos, movimientos, onTildar, onCrear
   const inactivos = gastosFijos.filter((gf) => !gf.activo)
   const pagos = activos.map((gf) => ({ gastoFijo: gf, movimiento: pagadoEsteMes(gf) }))
   const cantidadPagados = pagos.filter((p) => p.movimiento).length
-  const totalEsperado = activos.reduce((total, gf) => total + (gf.montoEsperado ?? 0), 0)
-  const totalPagado = pagos.reduce((total, p) => total + (p.movimiento?.monto ?? 0), 0)
+  /**
+   * "Esperado"/"Pagado" siempre fueron una sola cifra en pesos (nunca
+   * mostró selector de moneda) — con gastos fijos en dólares ahora
+   * posibles, sumar su monto crudo ahí adentro sería mezclar pesos y
+   * dólares en un mismo número, el error que moneda.ts documenta como
+   * prohibido en toda la app. Se filtra a solo pesos: un gasto fijo en
+   * dólares sigue contando para "N de M pagados" (cantidadPagados, sin
+   * filtrar) y muestra su propio monto en su fila, pero no entra en
+   * esta suma.
+   */
+  const activosArs = activos.filter((gf) => (gf.moneda ?? 'ars') === 'ars')
+  const totalEsperado = activosArs.reduce((total, gf) => total + (gf.montoEsperado ?? 0), 0)
+  const totalPagado = pagos
+    .filter((p) => (p.gastoFijo.moneda ?? 'ars') === 'ars')
+    .reduce((total, p) => total + (p.movimiento?.monto ?? 0), 0)
 
   function tildar(gastoFijo: FinanceGastoFijo) {
     if (gastoFijo.montoEsperado !== undefined) {
@@ -131,9 +146,8 @@ export function GastosFijosDetalle({ gastosFijos, movimientos, onTildar, onCrear
                   <input
                     type="checkbox"
                     checked={Boolean(movimiento)}
-                    disabled={Boolean(movimiento)}
                     aria-label={`${gastoFijo.nombre} pagado este mes`}
-                    onChange={() => tildar(gastoFijo)}
+                    onChange={() => (movimiento ? onDestildar(movimiento) : tildar(gastoFijo))}
                   />
                   <button
                     type="button"
@@ -143,9 +157,9 @@ export function GastosFijosDetalle({ gastosFijos, movimientos, onTildar, onCrear
                     <span className="text-[15px] text-ink">{gastoFijo.nombre}</span>
                     <span className="font-mono text-[14px] text-ink-dim">
                       {movimiento
-                        ? formatearMonto(movimiento.monto, 'ars')
+                        ? formatearMonto(movimiento.monto, movimiento.moneda)
                         : gastoFijo.montoEsperado !== undefined
-                          ? formatearMonto(gastoFijo.montoEsperado, 'ars')
+                          ? formatearMonto(gastoFijo.montoEsperado, gastoFijo.moneda ?? 'ars')
                           : '—'}
                     </span>
                   </button>
@@ -234,6 +248,7 @@ function GastoFijoForm({ gastoFijo, onGuardar, onToggleActivo, onEliminar, onCer
   const [palabraClave, setPalabraClave] = useState(gastoFijo?.palabraClave ?? '')
   const [categoria, setCategoria] = useState<FinanceCategoria | null>(gastoFijo?.categoria ?? null)
   const [montoEsperado, setMontoEsperado] = useState(gastoFijo?.montoEsperado !== undefined ? String(gastoFijo.montoEsperado) : '')
+  const [moneda, setMoneda] = useState<Moneda>(gastoFijo?.moneda ?? 'ars')
 
   const montoNumero = montoEsperado.trim() === '' ? undefined : (parsearMontoManual(montoEsperado) ?? undefined)
   const esValido = nombre.trim().length > 0 && palabraClave.trim().length > 0
@@ -246,6 +261,7 @@ function GastoFijoForm({ gastoFijo, onGuardar, onToggleActivo, onEliminar, onCer
       palabraClave: palabraClave.trim(),
       categoria,
       ...(montoNumero !== undefined ? { montoEsperado: montoNumero } : {}),
+      moneda,
     })
   }
 
@@ -288,6 +304,20 @@ function GastoFijoForm({ gastoFijo, onGuardar, onToggleActivo, onEliminar, onCer
             aria-label="Monto esperado"
             className="border-b border-border/60 bg-transparent px-1 py-2 font-mono text-[15px] text-ink outline-none placeholder:text-ink-dim"
           />
+          <div className="idea-destinos" role="group" aria-label="Moneda">
+            {(['ars', 'usd'] as const).map((opcion) => (
+              <button
+                key={opcion}
+                type="button"
+                className="idea-destino"
+                aria-pressed={moneda === opcion}
+                style={moneda === opcion ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
+                onClick={() => setMoneda(opcion)}
+              >
+                {opcion === 'ars' ? 'Pesos' : 'Dólares'}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="finanzas-tarjeta flex flex-col gap-3">

@@ -301,6 +301,17 @@ textarea,
     0 12px 28px -6px rgba(0, 0, 0, 0.5);
 }
 
+/*
+  Ver light-bootstrap.ts (teclado-abierto): mientras hay foco en un
+  campo que dispara el teclado nativo, --vh-real se achica al alto
+  visible arriba de él y bottom:0 (arriba) empuja esta pill al medio
+  del contenido en vez del borde real de la pantalla — se oculta hasta
+  que el foco se va.
+*/
+html.teclado-abierto .nav-inferior {
+  display: none;
+}
+
 .nav-inferior::before {
   content: '';
   position: absolute;

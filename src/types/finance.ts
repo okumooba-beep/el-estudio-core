@@ -130,6 +130,8 @@ export interface FinanceGastoFijo {
   palabraClave: string
   categoria: FinanceCategoria | null
   montoEsperado?: number
+  /** En qué moneda es `montoEsperado` (y el monto que se pide al tildar). Ausente = 'ars' — mismo default silencioso que ya usaba tildarGastoFijo antes de que este campo existiera. */
+  moneda?: Moneda
   activo: boolean
   createdAt: string
   updatedAt: string

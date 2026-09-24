@@ -1,6 +1,7 @@
 import { generateId } from '@shared-kernel/id'
 import type { Repository } from '@shared-kernel/persistence/Repository'
 import type { FinanceCategoria } from './categorias'
+import type { Moneda } from './extraccion'
 import type { FinanceGastoFijo } from '@/types/finance'
 import type { EntityTable } from 'dexie'
 
@@ -17,6 +18,7 @@ export interface NuevaFinanceGastoFijo {
   palabraClave: string
   categoria: FinanceCategoria | null
   montoEsperado?: number
+  moneda?: Moneda
 }
 
 export interface FinanceGastoFijoRepository extends Repository<FinanceGastoFijo> {
@@ -43,6 +45,7 @@ export function createGastosFijosRepository(
         palabraClave: input.palabraClave.trim(),
         categoria: input.categoria,
         ...(input.montoEsperado !== undefined ? { montoEsperado: input.montoEsperado } : {}),
+        ...(input.moneda !== undefined ? { moneda: input.moneda } : {}),
         activo: true,
         createdAt: now,
         updatedAt: now,

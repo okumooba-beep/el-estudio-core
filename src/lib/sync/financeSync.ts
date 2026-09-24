@@ -90,6 +90,7 @@ interface GastoFijoRow {
   palabra_clave: string
   categoria: FinanceCategoria | null
   monto_esperado: number | null
+  moneda: string | null
   activo: boolean
   created_at: string
   updated_at: string
@@ -233,6 +234,7 @@ const gastosFijosSync: TableSync<FinanceGastoFijo, GastoFijoRow> = {
     palabra_clave: gf.palabraClave,
     categoria: gf.categoria,
     monto_esperado: gf.montoEsperado ?? null,
+    moneda: gf.moneda ?? null,
     activo: gf.activo,
     created_at: gf.createdAt,
     updated_at: gf.updatedAt,
@@ -244,6 +246,7 @@ const gastosFijosSync: TableSync<FinanceGastoFijo, GastoFijoRow> = {
     palabraClave: row.palabra_clave,
     categoria: row.categoria,
     ...(row.monto_esperado != null ? { montoEsperado: row.monto_esperado } : {}),
+    ...(row.moneda != null ? { moneda: row.moneda as Moneda } : {}),
     activo: row.activo,
     createdAt: row.created_at,
     updatedAt: row.updated_at,

@@ -269,6 +269,25 @@ export function NuevoMovimiento({
             ))}
           </div>
 
+          <div className="idea-destinos" role="group" aria-label="Moneda">
+            {(['ars', 'usd'] as const).map((opcion) => (
+              <button
+                key={opcion}
+                type="button"
+                className="idea-destino"
+                aria-pressed={moneda === opcion}
+                style={moneda === opcion ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
+                onClick={() => {
+                  if (opcion === moneda) return
+                  setMoneda(opcion)
+                  setMonto('')
+                }}
+              >
+                {opcion === 'ars' ? 'Pesos' : 'Dólares'}
+              </button>
+            ))}
+          </div>
+
           <div className="finanzas-categorias" role="group" aria-label="Categoría">
             {CATEGORIAS.map((opcion) => (
               <button
@@ -338,37 +357,15 @@ export function NuevoMovimiento({
           )
         ) : null}
 
-        <div className="flex items-center justify-between gap-3">
-          {mostrarSelectorPeriodo ? null : (
-            <input
-              type="date"
-              value={fecha}
-              onChange={(event) => setFecha(event.target.value)}
-              aria-label="Fecha"
-              className="border-b border-border/60 bg-transparent px-1 py-2 font-mono text-[13.5px] text-ink outline-none"
-            />
-          )}
-          {tipo === 'egreso' ? (
-            <div className="idea-destinos" role="group" aria-label="Moneda">
-              {(['ars', 'usd'] as const).map((opcion) => (
-                <button
-                  key={opcion}
-                  type="button"
-                  className="idea-destino"
-                  aria-pressed={moneda === opcion}
-                  style={moneda === opcion ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
-                  onClick={() => {
-                    if (opcion === moneda) return
-                    setMoneda(opcion)
-                    setMonto('')
-                  }}
-                >
-                  {opcion === 'ars' ? 'Pesos' : 'Dólares'}
-                </button>
-              ))}
-            </div>
-          ) : null}
-        </div>
+        {mostrarSelectorPeriodo ? null : (
+          <input
+            type="date"
+            value={fecha}
+            onChange={(event) => setFecha(event.target.value)}
+            aria-label="Fecha"
+            className="border-b border-border/60 bg-transparent px-1 py-2 font-mono text-[13.5px] text-ink outline-none"
+          />
+        )}
 
         {tipo === 'egreso' ? (
           <div className="flex flex-col gap-1.5">
