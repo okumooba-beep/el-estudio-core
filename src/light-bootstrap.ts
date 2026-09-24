@@ -44,6 +44,20 @@ medirVhReal()
 // pantalla y apertura/cierre de teclado.
 window.visualViewport?.addEventListener('resize', medirVhReal)
 
+// Bug reportado: al abrir la PWA instalada (standalone, sin barra de
+// direcciones) queda un hueco vacío bajo el nav hasta que el usuario hace
+// scroll — y ese scroll no "arregla" nada por sí mismo, solo dispara el
+// resize de visualViewport de arriba, que es lo que en realidad corrige
+// --vh-real. La causa: WKWebView a veces termina de asentar su tamaño
+// real *después* de que medirVhReal() ya corrió una vez, sin emitir ese
+// resize — el evento cubre teclado y rotación de forma confiable, pero no
+// siempre ese asentamiento tardío del lanzamiento. En vez de depender de
+// un scroll manual del usuario para heredar el resize "gratis", se remide
+// unas pocas veces más durante el primer segundo de vida de la página:
+// barato (un setProperty, no fuerza reflow) y sin efecto una vez que el
+// valor ya convergió.
+;[100, 300, 600, 1000].forEach((ms) => window.setTimeout(medirVhReal, ms))
+
 /**
  * .nav-inferior es position:absolute con bottom:0 contra este mismo
  * contenedor de --vh-real (ver .h-dvh-safe/.nav-inferior en index.css):
