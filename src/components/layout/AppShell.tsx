@@ -90,14 +90,27 @@ export function AppShell({ espaciosOcultos }: AppShellProps) {
         <main> crece más allá de la altura fija de la columna en vez de
         scrollear puertas adentro.
 
-        `pb-28` (mobile): el nav pasó a ser una pill flotante en overlay
-        (position:absolute, ver .nav-inferior en index.css) — ya no es un
-        hijo flex que reserva su propio espacio, así que el <main> no lo
-        "sabe" y el contenido scrolleable necesita este colchón propio
+        `pb-[calc(...)]` (mobile): el nav pasó a ser una pill flotante en
+        overlay (position:absolute, ver .nav-inferior en index.css) — ya no
+        es un hijo flex que reserva su propio espacio, así que el <main> no
+        lo "sabe" y el contenido scrolleable necesita este colchón propio
         para no terminar tapado detrás de la pill al hacer scroll hasta
         el final.
+
+        Bug reportado de nuevo (2026-09-24, Espacios/Finanzas): el valor
+        anterior era `pb-28` (112px), un número fijo que nunca sumaba
+        `env(safe-area-inset-bottom)` — a diferencia de pt/pr/pl acá mismo,
+        que sí lo hacen, y de .nav-inferior, que también lo suma para su
+        propio margin-bottom. La pill mide ~68px de alto real
+        (min-h-14 + my-1.5 de cada ítem) más ese inset — en un dispositivo
+        donde el inset real deja el total por encima de 112px, el scroll
+        llega a su tope sin que el último ítem termine de despejar la pill,
+        y no hay forma de scrollear más allá para verlo. 5rem (80px) ya
+        cubre la pill con margen; sumar el mismo env() que ya usan sus
+        hermanos (y la propia pill) hace que el colchón seleccion real del
+        dispositivo, en vez de asumir un número fijo que puede no alcanzar.
       */}
-      <main className="min-h-0 flex-1 overflow-y-auto pt-[calc(1.5rem+env(safe-area-inset-top))] pr-[calc(1.25rem+env(safe-area-inset-right))] pb-28 pl-[calc(1.25rem+env(safe-area-inset-left))] md:px-8 md:pb-10 md:pt-8">
+      <main className="min-h-0 flex-1 overflow-y-auto pt-[calc(1.5rem+env(safe-area-inset-top))] pr-[calc(1.25rem+env(safe-area-inset-right))] pb-[calc(5rem+env(safe-area-inset-bottom))] pl-[calc(1.25rem+env(safe-area-inset-left))] md:px-8 md:pb-10 md:pt-8">
         <Outlet />
       </main>
 
