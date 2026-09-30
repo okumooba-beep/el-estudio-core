@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { ReflexionBanner } from '@/components/ui/ReflexionBanner'
 import type { FinanceEngineApi } from './createFinanceEngine'
 import { AnilloCategorias } from './AnilloCategorias'
 import { EntroDetalle } from './EntroDetalle'
@@ -605,6 +606,7 @@ export function FinanceEngineScreen({ engine, ideaCapture, gastosFijos }: Financ
 
   return (
     <div className="mx-auto flex w-full max-w-xl flex-col gap-8 pb-10">
+      <ReflexionBanner espacio="finanzas" />
       <section className="flex flex-col items-center gap-3">
         {vista === 'mes' ? (
           <div className="flex items-center gap-3">

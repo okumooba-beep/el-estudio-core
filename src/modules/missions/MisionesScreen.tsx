@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useIdeas } from '@modules/work-table/public'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { ReflexionBanner } from '@/components/ui/ReflexionBanner'
 import { MUEBLES } from '@world/studio/muebles'
 import { interpretarMision } from './extraccionFecha'
 import { MAX_PRINCIPALES, seleccionarActivas, seleccionarPrincipales, seleccionarSecundarias } from './seleccionarPrincipales'
@@ -515,6 +516,7 @@ export function MisionesScreen({ carpetaId }: MisionesScreenProps = {}) {
 
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-6 pb-10" data-mueble={MUEBLES.misiones}>
+      <ReflexionBanner espacio="misiones" />
       {activas.length === 0 ? (
         <EmptyState title="Nada que hacer todavía." description="Agregá lo primero que dependa solo de vos." />
       ) : (

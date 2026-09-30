@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { useIdeas } from '@modules/work-table/public'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { ReflexionBanner } from '@/components/ui/ReflexionBanner'
 import { useHabitChecks } from './useHabitChecks'
 import { MUEBLES } from '@world/studio/muebles'
 import type { Idea } from '@/types/idea'
@@ -154,6 +155,7 @@ export function HabitosScreen() {
 
   return (
     <div className="flex flex-col gap-6 pt-2" data-mueble={MUEBLES.habitos}>
+      <ReflexionBanner espacio="habitos" />
       {habitos.length > 0 ? (
         <div className="habito-resumen">
           <div className="habito-resumen-cabecera">
