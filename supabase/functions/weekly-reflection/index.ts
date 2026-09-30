@@ -145,12 +145,21 @@ async function calcularMetricas(userId: string, inicioSemana: Date) {
 
 type Metricas = Awaited<ReturnType<typeof calcularMetricas>>
 
+function formatMonto(monto: number): string {
+  return `$ ${Math.round(monto).toLocaleString('es-AR')}`
+}
+
 async function generarNotas(metricas: Metricas): Promise<{ misiones: string; habitos: string; finanzas: string }> {
+  const porCategoriaFormateado = Object.fromEntries(
+    Object.entries(metricas.finanzas.porCategoria).map(([categoria, monto]) => [categoria, formatMonto(monto)]),
+  )
+
   const prompt = `Sos la voz interna de "El Estudio", una app personal de organización. Generá una reflexión semanal breve (2-3 frases cada una), en español, tono cercano y directo, sin emojis, sin exclamaciones excesivas. Basate SOLO en estos números reales, no inventes nada:
 
 Misiones: ${metricas.misiones.completadas} completadas de ${metricas.misiones.total} esta semana.
 Hábitos: ${metricas.habitos.completadas} de ${metricas.habitos.totalCeldas} prácticas marcadas${metricas.habitos.porcentaje !== null ? ` (${metricas.habitos.porcentaje}%)` : ' (sin hábitos cargados)'}.
-Finanzas: gastó ${metricas.finanzas.gastoSemana} esta semana vs. ${metricas.finanzas.gastoSemanaAnterior} la semana anterior. Por categoría: ${JSON.stringify(metricas.finanzas.porCategoria)}.
+Finanzas: gastó ${formatMonto(metricas.finanzas.gastoSemana)} esta semana vs. ${formatMonto(metricas.finanzas.gastoSemanaAnterior)} la semana anterior. Por categoría: ${JSON.stringify(porCategoriaFormateado)}.
+Escribí los montos exactamente como vienen dados, sin reformatearlos.
 
 Devolvé SOLO un JSON válido con esta forma exacta, sin texto alrededor:
 {"misiones": "...", "habitos": "...", "finanzas": "..."}`
