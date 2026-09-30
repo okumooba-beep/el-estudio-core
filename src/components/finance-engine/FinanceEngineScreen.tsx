@@ -462,6 +462,7 @@ export function FinanceEngineScreen({ engine, ideaCapture, gastosFijos }: Financ
         <NuevoMovimiento
           monedaDefault={moneda}
           {...propsDePeriodo}
+          movimientos={movimientos}
           onGuardar={guardarMovimiento}
           onGuardarCompra={guardarCompra}
           onCerrar={cerrarNuevo}

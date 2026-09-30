@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { CATEGORIAS, CATEGORIA_LABEL, type FinanceCategoria } from './categorias'
+import { sugerirCategoria } from './categoriaSugerida'
 import { dividirEnCuotas, parsearMontoManual, type Medio, type Moneda } from './extraccion'
 import type { NuevaCompraEnCuotas, NuevaFinanceMovimiento } from './financeEngineRepository'
 import { etiquetaSemana, formatearMonto, mesDe, rangoSemana, semanaDelMes, sumarMeses } from './mes'
 import { fechaEfectivaSemana, numeroDeSemana } from './semanaCobro'
-import type { FinanceIncomePeriod, FinanceMovimientoTipo } from '@/types/finance'
+import type { FinanceIncomePeriod, FinanceMovimiento, FinanceMovimientoTipo } from '@/types/finance'
 import { fechaLocalISO } from '@shared-kernel/date/fechaLocal'
 
 /** "Septiembre 2026" — mismo criterio que `etiquetaMesConAnio` en EntroDetalle.tsx, para el nav ‹ mes › del selector de semana de cobro. */
@@ -26,6 +27,8 @@ interface NuevoMovimientoProps {
    * para "cuándo es esto", nunca dos fechas visibles a la vez).
    */
   periodos?: readonly FinanceIncomePeriod[]
+  /** Historial completo de movimientos — se usa solo para sugerir categoría (ver categoriaSugerida.ts), nunca se muestra acá. */
+  movimientos: readonly FinanceMovimiento[]
   onGuardar: (input: NuevaFinanceMovimiento) => Promise<void>
   /** Sprint 028 — mismo formulario, pero cuando hay 2+ cuotas la alta va por acá, no por `onGuardar`. */
   onGuardarCompra: (input: NuevaCompraEnCuotas) => Promise<void>
@@ -53,6 +56,7 @@ export function NuevoMovimiento({
   monedaDefault,
   tipoFijo,
   periodos,
+  movimientos,
   onGuardar,
   onGuardarCompra,
   onCerrar,
@@ -61,6 +65,19 @@ export function NuevoMovimiento({
   const [concepto, setConcepto] = useState('')
   const [monto, setMonto] = useState('')
   const [categoria, setCategoria] = useState<FinanceCategoria | null>(null)
+  /**
+   * Sugerencia automática de categoría: mientras el usuario no haya
+   * tocado una chip a mano, cada cambio de concepto vuelve a calcular la
+   * sugerencia y la preselecciona — nunca al revés (si ya eligió a mano,
+   * seguir tipeando el concepto no se la pisa). `categoriaTocada` es lo
+   * que distingue "esto lo eligió el usuario" de "esto lo eligió la
+   * sugerencia", ninguna de las dos vive en `categoria` en sí.
+   */
+  const [categoriaTocada, setCategoriaTocada] = useState(false)
+  useEffect(() => {
+    if (categoriaTocada) return
+    setCategoria(sugerirCategoria(concepto, movimientos))
+  }, [concepto, movimientos, categoriaTocada])
   const [fecha, setFecha] = useState(() => fechaLocalISO())
   const [moneda, setMoneda] = useState<Moneda>(monedaDefault)
   const [medio, setMedio] = useState<Medio>('transferencia')
@@ -322,7 +339,10 @@ export function NuevoMovimiento({
                 type="button"
                 className="finanzas-categoria-chip"
                 aria-pressed={categoria === opcion}
-                onClick={() => setCategoria((actual) => (actual === opcion ? null : opcion))}
+                onClick={() => {
+                  setCategoriaTocada(true)
+                  setCategoria((actual) => (actual === opcion ? null : opcion))
+                }}
               >
                 {CATEGORIA_LABEL[opcion]}
               </button>

@@ -42,10 +42,12 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
-    // 235 KB: "Gastos fijos mensuales" (checklist + form + auto-detección) ya
-    // es parte permanente del bundle real (231.7 KB medido) — el presupuesto
-    // anterior de 230 KB era de antes de esa feature.
-    bundleSizeBudget(235 * 1024),
+    // 238 KB: "Sugerencia automática de categoría en Finanzas" (categoriaSugerida.ts
+    // + el useEffect que la preselecciona en NuevoMovimiento) ya es parte
+    // permanente del bundle real (235.4 KB medido) — el presupuesto anterior
+    // de 235 KB era de antes de esa feature, mismo criterio que la nota que
+    // este comentario reemplaza (230 KB → 235 KB por "Gastos fijos mensuales").
+    bundleSizeBudget(238 * 1024),
     VitePWA({
       registerType: 'autoUpdate',
       // Fase 1 (push real): 'generateSW' (el default anterior) autogenera el
