@@ -19,10 +19,18 @@ import { resolveVoice } from '@/lib/voice/voiceEngine'
  * Sprint 021 ("Frase ambiental — sacarla del flujo funcional"): ahora vive
  * al cierre de HoyScreen, no pegada al saludo. Centrada (en vez de alineada
  * a la izquierda como todo el contenido funcional) y con más aire arriba
- * (mt-4 propio, encima del gap-10 del contenedor) para que se lea como una
- * presencia aparte del último bloque funcional (Atención), no como su
- * continuación. Sigue sin card, sin borde, sin fondo, sin ícono — el mismo
- * texto suelto de siempre, solo con otra relación espacial con Home.
+ * para que se lea como una presencia aparte del último bloque funcional
+ * (Atención), no como su continuación.
+ *
+ * Bug reportado (2026-09-29): --ink-faint suelto sobre la foto del cuarto
+ * se leía casi invisible, y en días con pocos bloques (sin Atención, sin
+ * Misión) el mt fijo la dejaba pegada arriba, cerca del saludo, en vez de
+ * leerse como el cierre de la pantalla. Dos cambios, mismo criterio que ya
+ * resolvió esto en Ajustes (ver .ajustes-superficie en index.css): la
+ * frase pasa a vivir dentro de una píldora con el mismo vidrio esmerilado
+ * (.frase-ambiental-scrim) en vez de flotar directo sobre la foto, y el
+ * margen superior crece (mt-4 → mt-12) para separarla más del contenido
+ * funcional y correrla hacia la mitad inferior de la pantalla.
  */
 export function PhraseSlot() {
   const { ideas } = useIdeas()
@@ -30,7 +38,7 @@ export function PhraseSlot() {
   if (!entry) return null
 
   return (
-    <p className="mx-auto mt-4 max-w-[32ch] text-center text-[13px] italic leading-relaxed text-ink-faint">
+    <p className="frase-ambiental-scrim mx-auto mt-12 max-w-[32ch] px-4 py-2.5 text-center text-[13px] italic leading-relaxed text-ink-dim">
       {entry.text}
     </p>
   )

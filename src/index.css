@@ -349,6 +349,24 @@ html.teclado-abierto .nav-inferior {
 }
 
 /*
+  Bug reportado (2026-09-29, Hoy): PhraseSlot (la voz ambiental, ver ese
+  componente) flotaba directo sobre la foto del cuarto con --ink-faint
+  suelto — el mismo problema que .ajustes-superficie ya había resuelto
+  para el contenido de Ajustes, así que se reusa el mismo tratamiento
+  (color-mix sobre --surface + blur) en vez de inventar uno nuevo. Clase
+  propia (no .ajustes-superficie en sí) porque acá es una píldora de
+  texto centrada, no un panel de contenido: radio-md sería un rectángulo
+  demasiado angosto, y el padding es el de una etiqueta, no el de una
+  pantalla entera.
+*/
+.frase-ambiental-scrim {
+  background: color-mix(in srgb, var(--surface) 78%, black 22%);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+/*
   Sprint 036 (hotfix) — la regla universal de deriva de luz (más abajo,
   `*, *::before, *::after { transition: background-color 60s linear,
   color 60s linear }`) también alcanzaba a estos links: nada acá fijaba
