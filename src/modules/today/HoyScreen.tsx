@@ -5,6 +5,7 @@ import { Proximo } from './components/Proximo'
 import { MisionesPrincipales } from './components/MisionesPrincipales'
 import { IdeaCapture } from '@modules/work-table/IdeaCapture'
 import { AttentionSummary } from './components/AttentionSummary'
+import { OnboardingChecklist } from './components/OnboardingChecklist'
 import { useAgendaHoy } from '@modules/agenda/public'
 import { useMisionesPrincipales } from '@modules/missions/public'
 
@@ -118,6 +119,8 @@ export function HoyScreen() {
         </div>
         <IdeaCapture />
       </div>
+      {/* Primeros pasos: solo cuentas nuevas, se oculta sola (ver OnboardingChecklist.tsx). */}
+      <OnboardingChecklist />
       <Proximo ahora={ahora} proximo={proximo} ready={ready} />
       <MisionesPrincipales misiones={misionesPrincipales} />
       <AttentionSummary atencion={atencion} />

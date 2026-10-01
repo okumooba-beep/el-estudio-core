@@ -47,11 +47,13 @@ export default defineConfig({
     // permanente del bundle real (235.4 KB medido) — el presupuesto anterior
     // de 235 KB era de antes de esa feature, mismo criterio que la nota que
     // este comentario reemplaza (230 KB → 235 KB por "Gastos fijos mensuales").
-    // 240 KB: margen TEMPORAL para el panel de depuración del viewport
-    // (src/lib/debug/viewportDebug.ts + los registrarDebug del centrado en
-    // light-bootstrap.ts, 239.4 KB medido) — vuelve a 238 KB cuando se
-    // saque el panel.
-    bundleSizeBudget(240 * 1024),
+    // 240 KB: base permanente con "Primeros pasos" (OnboardingChecklist.tsx
+    // en Hoy, ~2 KB gzip) — antes de esa función la base era 238 KB.
+    // 242 KB: +2 KB de margen TEMPORAL para el panel de depuración del
+    // viewport (src/lib/debug/viewportDebug.ts + los registrarDebug del
+    // centrado en light-bootstrap.ts; 241.6 KB medido con ambos) — vuelve
+    // a 240 KB (no a 238) cuando se saque el panel.
+    bundleSizeBudget(242 * 1024),
     VitePWA({
       registerType: 'autoUpdate',
       // Fase 1 (push real): 'generateSW' (el default anterior) autogenera el

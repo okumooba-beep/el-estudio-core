@@ -69,12 +69,19 @@ module.exports = {
     {
       name: 'today-app-tree-boundaries',
       severity: 'error',
-      comment: 'today (renombrado de `hoy` en F16) es el único módulo orquestador declarado (ARCHITECTURE_RATIFIED.md §1/§7; Foundation §6). Excepciones documentadas: HoyScreen.tsx ya componía memoria, workspace y room antes de existir enforcement mecánico; PhraseSlot.tsx ya usaba lib/voice/voiceEngine. Además hereda las 3 excepciones universales de module-no-app-tree. Condición de remoción: (1) cuando memoria, workspace y room se relocalicen cada uno a su propio módulo (mismo patrón que F16), today debería importar sus public.ts en vez de sus internos; (2) cuando lib/voice se relocalice a su paquete lógico definitivo.',
+      comment: 'today (renombrado de `hoy` en F16) es el único módulo orquestador declarado (ARCHITECTURE_RATIFIED.md §1/§7; Foundation §6). Excepciones documentadas: HoyScreen.tsx ya componía memoria, workspace y room antes de existir enforcement mecánico; PhraseSlot.tsx ya usaba lib/voice/voiceEngine. Además hereda las 3 excepciones universales de module-no-app-tree. Excepción adicional (Primeros pasos): components/OnboardingChecklist.tsx necesita lib/auth/AuthContext.tsx (fecha de alta y user_metadata del usuario) y lib/supabase/client.ts (auth.updateUser para sincronizar oculto/completado entre dispositivos) — ningún otro archivo de today los usa. Condición de remoción: (1) cuando memoria, workspace y room se relocalicen cada uno a su propio módulo (mismo patrón que F16), today debería importar sus public.ts en vez de sus internos; (2) cuando lib/voice se relocalice a su paquete lógico definitivo.',
       from: { path: '^src/modules/today' },
       to: {
         path: '^src/(app|features|components|lib|types|main\\.tsx|App\\.tsx)',
-        pathNot: '^src/lib/db/db\\.ts$|^src/app/shell/comprehensionEngine\\.ts$|^src/components/ui/EmptyState\\.tsx$|^src/features/memoria/|^src/features/workspace/|^src/features/room/|^src/components/room/|^src/lib/voice/',
+        pathNot: '^src/lib/db/db\\.ts$|^src/app/shell/comprehensionEngine\\.ts$|^src/components/ui/EmptyState\\.tsx$|^src/features/memoria/|^src/features/workspace/|^src/features/room/|^src/components/room/|^src/lib/voice/|^src/lib/auth/AuthContext\\.tsx$|^src/lib/supabase/client\\.ts$',
       },
+    },
+    {
+      name: 'today-auth-solo-onboarding',
+      severity: 'error',
+      comment: 'Ver la excepción "Primeros pasos" de today-app-tree-boundaries: solo OnboardingChecklist.tsx puede importar AuthContext y el cliente de Supabase.',
+      from: { path: '^src/modules/today', pathNot: '^src/modules/today/components/OnboardingChecklist\\.tsx$' },
+      to: { path: '^src/lib/(auth/AuthContext\\.tsx|supabase/client\\.ts)$' },
     },
     {
       name: 'module-no-cross-module-import',
