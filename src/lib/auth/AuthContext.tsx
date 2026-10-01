@@ -25,6 +25,7 @@ import {
   bootstrapRecordatoriosSync,
   stopRecordatoriosSync,
 } from '@/lib/sync/bootstrap'
+import { registrarActividad } from '@/lib/actividad/registrarActividad'
 
 interface AuthResult {
   error: string | null
@@ -73,6 +74,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!activo) return
       setSession(nextSession)
       setUser(nextSession?.user ?? null)
+
+      if (nextSession?.user) registrarActividad(nextSession.user.id)
 
       if (nextSession?.user && bootstrapping.current !== nextSession.user.id) {
         bootstrapping.current = nextSession.user.id
