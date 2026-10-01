@@ -350,20 +350,14 @@ html.teclado-abierto .nav-inferior {
 
 /*
   Bug reportado (2026-09-29, Hoy): PhraseSlot (la voz ambiental, ver ese
-  componente) flotaba directo sobre la foto del cuarto con --ink-faint
-  suelto — el mismo problema que .ajustes-superficie ya había resuelto
-  para el contenido de Ajustes, así que se reusa el mismo tratamiento
-  (color-mix sobre --surface + blur) en vez de inventar uno nuevo. Clase
-  propia (no .ajustes-superficie en sí) porque acá es una píldora de
-  texto centrada, no un panel de contenido: radio-md sería un rectángulo
-  demasiado angosto, y el padding es el de una etiqueta, no el de una
-  pantalla entera.
+  componente) se leía casi invisible con --ink-faint suelto sobre la foto
+  del cuarto. La cápsula con vidrio esmerilado (sprint 021) resolvía la
+  legibilidad pero se veía tosca y tapaba el fondo — vuelta al estilo
+  sutil original: solo texto, sin contenedor, con un text-shadow suave
+  (en vez de un fondo sólido) para que siga legible sobre la foto.
 */
 .frase-ambiental-scrim {
-  background: color-mix(in srgb, var(--surface) 78%, black 22%);
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--border);
-  border-radius: 999px;
+  text-shadow: 0 1px 3px color-mix(in srgb, black 50%, transparent);
 }
 
 /*
