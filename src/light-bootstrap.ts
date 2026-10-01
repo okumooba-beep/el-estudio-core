@@ -56,7 +56,12 @@ document.documentElement.classList.remove('light-boot')
  * puede colarse acá.
  */
 const html = document.documentElement
-const esIosStandalone = (navigator as { standalone?: boolean }).standalone === true
+// La prueba f2 del panel de depuración (barra de estado 'black', ver
+// index.html) saca el contenido de debajo de la barra: ahí outerHeight ya
+// no es el alto disponible y no hay desfasaje que corregir.
+const barraTranslucida =
+  document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')?.getAttribute('content') === 'black-translucent'
+const esIosStandalone = (navigator as { standalone?: boolean }).standalone === true && barraTranslucida
 let altoBase = 0
 let anchoMedido = 0
 

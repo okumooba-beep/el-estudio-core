@@ -90,38 +90,11 @@ html {
   lleva el mismo tono (arriba) y ya evita cualquier destello blanco
   antes del primer paint — el de acá era una copia redundante que
   además tapaba en silencio la ventana y la lámpara detrás de todo:
-  ninguna de las dos se veía nunca, en ningún sprint anterior.
-
-  Eso dejó de aplicar cuando <body> pasó a ser el contenedor fijo (abajo):
-  position:fixed lo vuelve contexto de apilamiento propio, y el fondo de
-  un contexto pinta debajo de sus hijos con z-index negativo — la
-  habitación (-z-10) ahora vive adentro de body y queda por encima.
-
-  Contenedor fijo del layout (bug del hueco bajo la nav en la PWA de
-  iOS, medido con src/lib/debug/viewportDebug.ts): al abrir en frío,
-  WKWebView reporta el layout viewport más corto por safe-area-inset-top
-  (873 en vez de 932) hasta el primer scroll del documento, y con él
-  todas las unidades vh/dvh/svh, inset:0 y bottom de cualquier
-  position:fixed. --alto-base (light-bootstrap.ts, sale de outerHeight,
-  correcto desde el ms 0) fija la altura a mano; fuera de iOS standalone
-  no se escribe y vale 100dvh. top/left/right + height explícito, nunca
-  inset:0: bottom se resolvería contra el viewport corto.
-
-  El contenedor es body y no #root porque un position:fixed también aísla
-  los mix-blend-mode de adentro (.cuaderno-luz, los overlay): con #root
-  fijo dejarían de mezclarse con la foto, que vive afuera de #root.
-  Sin contenido en flujo el documento no puede scrollear, así que iOS
-  tampoco puede dejarlo desplazado al cerrar el teclado.
+  ninguna de las dos se veía nunca, en ningún sprint anterior. (Por eso
+  el tono oscuro de respaldo vive solo en <html>, nunca acá.)
 */
 body {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: var(--alto-base, 100dvh);
-  overflow: hidden;
   margin: 0;
-  background-color: #120f0c;
   color: var(--ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
@@ -168,24 +141,38 @@ html[data-gaze="escritorio"] body {
 }
 
 /*
-  Llena body (que ya tiene la altura base) y scrollea por su cuenta para
-  las pantallas fuera de AppShell (login, registro); dentro de AppShell
-  el que scrollea es <main>.
+  Altura base del layout (bug del hueco bajo la nav en la PWA de iOS,
+  medido con src/lib/debug/viewportDebug.ts): al abrir en frío, WKWebView
+  reporta el layout viewport más corto por safe-area-inset-top (873 en
+  vez de 932) hasta el primer gesto de scroll, y con él todas las
+  unidades vh/dvh/svh, inset:0 y bottom de cualquier position:fixed.
+  --alto-base (light-bootstrap.ts, sale de outerHeight, correcto desde el
+  ms 0) fija la altura a mano; fuera de iOS standalone no se escribe y
+  vale 100dvh. Las capas fijas usan top + height explícito, nunca
+  inset:0 ni bottom.
+
+  El documento sigue pudiendo scrollear a propósito: medir bien no
+  alcanza (WebKit recorta el dibujo a 873 hasta ese recálculo), y el
+  primer gesto de scroll nativo es lo que hoy lo dispara.
 */
 #root {
   position: relative;
-  height: 100%;
-  overflow-y: auto;
+  min-height: var(--alto-base, 100dvh);
 }
 
 /*
-  Contenedor raíz de AppShell: 100% de #root, o sea --alto-base (ver
-  body arriba). Nunca depende de visualViewport — con el teclado abierto
-  no se achica; .nav-inferior (absolute, bottom:0) queda siempre al
-  borde real de la pantalla.
+  Contenedor raíz de AppShell. Nunca depende de visualViewport — con el
+  teclado abierto no se achica; .nav-inferior (absolute, bottom:0) queda
+  siempre al borde real de la pantalla.
 */
 .h-dvh-safe {
-  height: 100%;
+  height: var(--alto-base, 100dvh);
+}
+
+/* Envoltorio de la habitación en index.html (fixed): alto explícito, ver #root. */
+.room-capa {
+  bottom: auto;
+  height: var(--alto-base, 100dvh);
 }
 
 * {
@@ -488,7 +475,7 @@ html.teclado-abierto .scroll-principal {
 #root::before {
   content: '';
   position: fixed;
-  /* Alto explícito, nunca bottom:0 — ver el comentario de body. */
+  /* Alto explícito, nunca bottom:0 — ver el comentario de #root. */
   inset: 0 0 auto 0;
   height: var(--alto-base, 100dvh);
   z-index: -1;
@@ -3813,7 +3800,7 @@ html.teclado-abierto .scroll-principal {
 */
 .cuaderno-luz {
   position: fixed;
-  /* Alto explícito, nunca bottom:0 — ver el comentario de body. */
+  /* Alto explícito, nunca bottom:0 — ver el comentario de #root. */
   inset: 0 0 auto 0;
   height: var(--alto-base, 100dvh);
   z-index: -1;
@@ -4077,10 +4064,9 @@ html.teclado-abierto .scroll-principal {
   qué parte de la foto quede detrás. No es una solución global: ninguna
   otra ruta toca `.room-layer-*` ni recibe `.finanzas-tarjeta`.
 
-  Con body como contenedor fijo (ver su comentario) la habitación ya no
-  se mueve nunca al scrollear; se mantiene el fixed pero con alto
-  explícito: con inset:0 se resolvía contra el layout viewport corto del
-  arranque en frío de iOS y dejaba la franja de abajo sin foto.
+  Alto explícito (ver #root): con inset:0 se resolvía contra el layout
+  viewport corto del arranque en frío de iOS y dejaba la franja de abajo
+  sin foto.
 */
 html[data-route='finanzas'] .room-layer-photo,
 html[data-route='notas'] .room-layer-photo {

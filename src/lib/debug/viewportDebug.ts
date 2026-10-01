@@ -17,6 +17,12 @@ let escuchando = false
 let abajo = false
 let transparente = false
 let ultimoToqueY: number | null = null
+let pruebas: string[] = []
+let indiceAltoHtml = 0
+
+const MAX_PRUEBAS = 24
+const CLAVE_BARRA = 'debug.statusBar'
+const ALTOS_HTML = ['100vh', '100%', '-webkit-fill-available', '']
 
 function leerFlag(): boolean {
   try {
@@ -84,6 +90,8 @@ function render(): void {
     `standalone=${standalone} dpr=${window.devicePixelRatio} ua=${navigator.userAgent.slice(0, 60)}`,
     `— EN VIVO (+${Math.round(performance.now())}ms) —`,
     lineaViva,
+    '— PRUEBAS —',
+    ...pruebas,
     '— SNAPSHOTS —',
     ...snapshots,
     '— EVENTOS —',
@@ -111,6 +119,128 @@ function registrar(tipo: string): void {
   if (eventos.length > MAX_EVENTOS) eventos = eventos.slice(-MAX_EVENTOS)
   render()
 }
+
+function corto(): string {
+  const vv = window.visualViewport
+  const bottom = (sel: string) => {
+    const el = document.querySelector(sel)
+    return el ? n(el.getBoundingClientRect().bottom) : '—'
+  }
+  return `iH${window.innerHeight} vvH${n(vv?.height)} cH${document.documentElement.clientHeight} sY${n(window.scrollY)} | nav b${bottom('.nav-inferior')} shell b${bottom('.h-dvh-safe')}`
+}
+
+function anotar(linea: string): void {
+  pruebas.push(linea)
+  if (pruebas.length > MAX_PRUEBAS) pruebas = pruebas.slice(-MAX_PRUEBAS)
+  render()
+}
+
+/** Aplica UNA técnica y anota antes / +0ms / +300ms; `aplicar` puede devolver cómo deshacerla (corre después de la medición de +300ms). */
+function probar(nombre: string, aplicar: () => (() => void) | void): void {
+  anotar(`${nombre} antes: ${corto()}`)
+  const revertir = aplicar()
+  window.setTimeout(() => anotar(`${nombre} +0: ${corto()}`), 0)
+  window.setTimeout(() => {
+    anotar(`${nombre} +300: ${corto()}`)
+    revertir?.()
+  }, 300)
+}
+
+function metaViewport(): HTMLMetaElement | null {
+  return document.querySelector('meta[name="viewport"]')
+}
+
+function metaBarra(): HTMLMetaElement | null {
+  return document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')
+}
+
+const PRUEBAS: [string, () => void][] = [
+  [
+    'a',
+    () =>
+      probar('a scrollTo(0,1)→(0,0)', () => {
+        const de = document.documentElement
+        const altoPrevio = de.style.height
+        de.style.height = '100.5%'
+        window.scrollTo(0, 1)
+        window.requestAnimationFrame(() => window.scrollTo(0, 0))
+        return () => {
+          de.style.height = altoPrevio
+        }
+      }),
+  ],
+  [
+    'b',
+    () =>
+      probar('b meta viewport quitar/reinsertar', () => {
+        const meta = metaViewport()
+        if (!meta) return
+        const padre = meta.parentNode
+        const siguiente = meta.nextSibling
+        meta.remove()
+        window.requestAnimationFrame(() => padre?.insertBefore(meta, siguiente))
+      }),
+  ],
+  [
+    'c',
+    () =>
+      probar('c meta viewport +maximum-scale y revertir', () => {
+        const meta = metaViewport()
+        if (!meta) return
+        const original = meta.getAttribute('content') ?? ''
+        meta.setAttribute('content', `${original}, maximum-scale=1`)
+        window.requestAnimationFrame(() => meta.setAttribute('content', original))
+      }),
+  ],
+  [
+    'd',
+    () =>
+      probar('d resize + reflow', () => {
+        window.dispatchEvent(new Event('resize'))
+        void document.documentElement.offsetHeight
+        void document.body.offsetHeight
+      }),
+  ],
+  [
+    'e',
+    () => {
+      const valor = ALTOS_HTML[indiceAltoHtml % ALTOS_HTML.length] ?? ''
+      indiceAltoHtml++
+      probar(`e html{height:${valor || 'original'}}`, () => {
+        document.documentElement.style.height = valor
+      })
+    },
+  ],
+  [
+    'f',
+    () =>
+      probar('f status-bar default y volver', () => {
+        const meta = metaBarra()
+        if (!meta) return
+        const original = meta.getAttribute('content') ?? ''
+        meta.setAttribute('content', 'default')
+        window.setTimeout(() => meta.setAttribute('content', original), 100)
+      }),
+  ],
+  [
+    'f2',
+    () => {
+      let activa = false
+      try {
+        activa = localStorage.getItem(CLAVE_BARRA) === 'black'
+        if (activa) localStorage.removeItem(CLAVE_BARRA)
+        else localStorage.setItem(CLAVE_BARRA, 'black')
+      } catch {
+        /* sin storage no hay prueba f2 */
+      }
+      anotar(
+        activa
+          ? 'f2 APAGADA: el próximo arranque vuelve a black-translucent'
+          : `f2 ACTIVA: cerrá la app del todo y abrila en frío (barra 'black'; ahora: ${metaBarra()?.getAttribute('content') ?? '—'})`,
+      )
+    },
+  ],
+]
 
 function boton(texto: string, onClick: () => void): HTMLButtonElement {
   const b = document.createElement('button')
@@ -170,9 +300,12 @@ function abrirPanel(etiqueta: string): void {
     boton('ocultar', () => cerrarPanel(false)),
     boton('apagar', () => cerrarPanel(true)),
   )
+  const barraPruebas = document.createElement('div')
+  barraPruebas.style.cssText = 'margin-bottom:4px;pointer-events:auto'
+  barraPruebas.append('prueba: ', ...PRUEBAS.map(([texto, accion]) => boton(texto, accion)))
   const pre = document.createElement('pre')
   pre.style.cssText = 'margin:0;white-space:pre-wrap;word-break:break-all'
-  panel.append(barra, pre)
+  panel.append(barra, barraPruebas, pre)
   document.body.appendChild(panel)
 
   programarSnapshots(etiqueta)
@@ -211,6 +344,7 @@ function cerrarPanel(apagar: boolean): void {
   if (apagar) {
     snapshots = []
     eventos = []
+    pruebas = []
     ultimoPorTipo = new Map()
   }
 }

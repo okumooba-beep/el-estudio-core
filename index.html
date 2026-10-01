@@ -43,6 +43,13 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- Prueba temporal f2 del panel de viewport (src/lib/debug/viewportDebug.ts): barra de estado 'black' desde el arranque. -->
+    <script>
+      try {
+        if (localStorage.getItem('debug.statusBar') === 'black')
+          document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]').setAttribute('content', 'black')
+      } catch (e) {}
+    </script>
     <meta name="apple-mobile-web-app-title" content="El Estudio" />
     <title>El Estudio</title>
   </head>
@@ -63,12 +70,11 @@
       única base visual, ahora elegible desde Ajustes (ver
       src/lib/room/roomBackgrounds.ts).
 
-      absolute (no fixed) contra <body>, que es el contenedor fijo con la
-      altura base real (ver body en src/index.css): un fixed inset-0 se
-      resolvía contra el layout viewport corto del arranque en frío de la
-      PWA en iOS y dejaba la franja de abajo sin foto.
+      .room-capa le da alto explícito (--alto-base, ver #root en
+      src/index.css): un fixed inset-0 se resolvía contra el layout
+      viewport corto del arranque en frío de la PWA en iOS.
     -->
-    <div aria-hidden class="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+    <div aria-hidden class="room-capa pointer-events-none fixed inset-0 -z-10 overflow-hidden">
       <div class="room-layer-photo absolute inset-0"></div>
       <div class="room-layer-grain absolute inset-0"></div>
     </div>
