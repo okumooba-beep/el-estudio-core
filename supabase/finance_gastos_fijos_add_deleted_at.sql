@@ -1,0 +1,12 @@
+-- Ampliación de finance_gastos_fijos_schema.sql — borrado real de Gastos fijos.
+--
+-- finance_gastos_fijos nació sin `deleted_at` (ver comentario original en
+-- finance_gastos_fijos_schema.sql: "un gasto fijo no se borra, solo se
+-- desactiva") porque todavía no existía UI para eliminarlo. Ahora sí (ver
+-- GastosFijosDetalle.tsx: botón "Eliminar gasto fijo" en la pantalla de
+-- edición), así que suma el mismo tombstone que finance_movimientos y
+-- finance_income_periods ya tenían — sin esta columna,
+-- `gastosFijosRepository.delete()` sigue marcando `deletedAt` solo en Dexie
+-- local: nunca llega a Supabase ni a otro dispositivo, y el gasto fijo
+-- "borrado" reaparece solo con re-hidratar.
+alter table finance_gastos_fijos add column if not exists deleted_at timestamptz;
