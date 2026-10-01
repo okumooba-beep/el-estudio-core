@@ -2,6 +2,7 @@ import { CATEGORIAS, type FinanceCategoria } from './categorias'
 import type { Medio, Moneda } from './extraccion'
 import type { FinanceMovimiento } from '@/types/finance'
 import { fechaLocalISO } from '@shared-kernel/date/fechaLocal'
+import { fechaEnSemana } from './semanaCobro'
 
 export interface GrupoCategoria {
   categoria: FinanceCategoria
@@ -24,27 +25,6 @@ export interface ResumenMes {
   movimientos: readonly FinanceMovimiento[]
   /** Sprint 007 — egresos que el léxico no clasificó con confianza: "Por revisar", nunca 'Otros'. */
   porRevisar: readonly FinanceMovimiento[]
-}
-
-/**
- * Semana calendario dentro del mes (día 1-7 = semana 1, 8-14 = semana 2,
- * ...). Mini Sprint 032 (§1): ya no se capa en 4 — un mes de 29-31 días
- * abre una semana 5 real (29-31, por ejemplo) en lugar de estirar la
- * semana 4 a 8-10 días. `semanasEnMes` es el techo real para saber
- * cuántos bloques semanales mostrar, incluso los que todavía no tienen
- * ningún movimiento.
- */
-export function semanaDelMes(fecha: string): number {
-  const dia = Number(fecha.slice(8, 10))
-  return Math.ceil(dia / 7)
-}
-
-/** Cuántas semanas calendario tiene un mes (4 o 5 según cuántos días tenga). */
-export function semanasEnMes(mes: string): number {
-  const anio = Number(mes.slice(0, 4))
-  const mesNum = Number(mes.slice(5, 7))
-  const diasEnMes = new Date(anio, mesNum, 0).getDate()
-  return Math.ceil(diasEnMes / 7)
 }
 
 /**
@@ -160,7 +140,8 @@ export function resumirMes(
 }
 
 export interface ResumenSemana {
-  semana: number
+  fechaInicio: string
+  fechaFin: string
   entro: number
   seFue: number
   teQuedo: number
@@ -172,8 +153,11 @@ export interface ResumenSemana {
 /**
  * Vista semanal (Sprint 007): "Entró, Se fue, Te quedó", sin
  * comparaciones ni tendencias — la misma pregunta que la vista mensual,
- * recortada a la semana calendario dentro del mes (día 1-7 = semana 1,
- * igual que `semanaDelMes`, ya usado para agrupar ingresos).
+ * recortada a una semana real (unificación de semanas, 2026-09-30:
+ * `fechaInicio`/`fechaFin` son siempre lunes→domingo, el mismo criterio
+ * de `semanaCobro.ts` que ya usaban los ingresos — egresos e ingresos
+ * comparten ahora una sola definición de "semana", en vez de que cada
+ * uno tuviera la suya).
  *
  * Sprint 016: además de los tres totales, ahora expone `grupos` y
  * `movimientos` (vía `resumirPeriodo`) para que el detalle de "Entró"/
@@ -182,39 +166,21 @@ export interface ResumenSemana {
  */
 export function resumirSemana(
   movimientos: readonly FinanceMovimiento[],
-  mes: string,
-  semana: number,
+  fechaInicio: string,
+  fechaFin: string,
   moneda: Moneda = 'ars',
 ): ResumenSemana {
   const delaSemana = movimientos.filter(
-    (movimiento) =>
-      movimiento.fecha.startsWith(mes) && monedaDe(movimiento) === moneda && semanaDelMes(movimiento.fecha) === semana,
+    (movimiento) => monedaDe(movimiento) === moneda && fechaEnSemana(movimiento.fecha, fechaInicio, fechaFin),
   )
   const base = resumirPeriodo(delaSemana, moneda)
-  return { semana, entro: base.ingresado, seFue: base.gastado, teQuedo: base.balance, ...base }
+  return { fechaInicio, fechaFin, entro: base.ingresado, seFue: base.gastado, teQuedo: base.balance, ...base }
 }
 
 /** Sin decimales: en pesos los centavos son ruido, y el número tiene que leerse de un vistazo. */
 export function formatearMonto(monto: number, moneda: Moneda = 'ars'): string {
   const cifra = Math.round(monto).toLocaleString('es-AR')
   return moneda === 'usd' ? `US$${cifra}` : `$${cifra}`
-}
-
-/** Últimos días de una semana calendario del mes, recortados al largo real del mes (Sprint 016). */
-export function rangoSemana(mes: string, semana: number): { desde: number; hasta: number } {
-  const anio = Number(mes.slice(0, 4))
-  const mesNum = Number(mes.slice(5, 7))
-  const diasEnMes = new Date(anio, mesNum, 0).getDate()
-  const desde = (semana - 1) * 7 + 1
-  const hasta = Math.min(semana * 7, diasEnMes)
-  return { desde, hasta }
-}
-
-/** "1–7 agosto" — la etiqueta de una semana dentro del desglose de "Entró" (Sprint 016, punto 2). */
-export function etiquetaSemana(mes: string, semana: number): string {
-  const { desde, hasta } = rangoSemana(mes, semana)
-  const nombreMes = new Date(`${mes}-02`).toLocaleDateString('es-AR', { month: 'long' })
-  return `${desde}–${hasta} ${nombreMes}`
 }
 
 /**

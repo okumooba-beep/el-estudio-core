@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { etiquetaSemanaCobro, fechaEnSemana, mondayOf, normalizarSemana, sundayOf } from './semanaCobro'
+import { etiquetaSemanaCobro, fechaEnSemana, mondayOf, normalizarSemana, semanasQueToquenMes, sundayOf } from './semanaCobro'
 
 describe('mondayOf / sundayOf', () => {
   it('un lunes es el lunes de su propia semana', () => {
@@ -45,12 +45,27 @@ describe('normalizarSemana', () => {
 })
 
 describe('etiquetaSemanaCobro', () => {
-  it('semana dentro de un mismo mes: "24 → 30 ago"', () => {
-    expect(etiquetaSemanaCobro('2026-08-24', '2026-08-30')).toBe('24 → 30 ago')
+  it('semana dentro de un mismo mes: "24–30 ago"', () => {
+    expect(etiquetaSemanaCobro('2026-08-24', '2026-08-30')).toBe('24–30 ago')
   })
 
-  it('semana que cruza de mes: "27 jul → 2 ago"', () => {
-    expect(etiquetaSemanaCobro('2026-07-27', '2026-08-02')).toBe('27 jul → 2 ago')
+  it('semana que cruza de mes: "27 jul – 2 ago"', () => {
+    expect(etiquetaSemanaCobro('2026-07-27', '2026-08-02')).toBe('27 jul – 2 ago')
+  })
+})
+
+describe('semanasQueToquenMes', () => {
+  it('una semana que cruza de mes aparece en los dos meses', () => {
+    const julio = semanasQueToquenMes('2026-07')
+    const agosto = semanasQueToquenMes('2026-08')
+    expect(julio.some((s) => s.fechaInicio === '2026-07-27' && s.fechaFin === '2026-08-02')).toBe(true)
+    expect(agosto.some((s) => s.fechaInicio === '2026-07-27' && s.fechaFin === '2026-08-02')).toBe(true)
+  })
+
+  it('una semana entera dentro del mes aparece una sola vez', () => {
+    const agosto = semanasQueToquenMes('2026-08')
+    const veces = agosto.filter((s) => s.fechaInicio === '2026-08-24' && s.fechaFin === '2026-08-30')
+    expect(veces).toHaveLength(1)
   })
 })
 

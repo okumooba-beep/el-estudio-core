@@ -3,8 +3,8 @@ import { CATEGORIAS, CATEGORIA_LABEL, type FinanceCategoria } from './categorias
 import { sugerirCategoria } from './categoriaSugerida'
 import { dividirEnCuotas, parsearMontoManual, type Medio, type Moneda } from './extraccion'
 import type { NuevaCompraEnCuotas, NuevaFinanceMovimiento } from './financeEngineRepository'
-import { etiquetaSemana, formatearMonto, mesDe, rangoSemana, semanaDelMes, sumarMeses } from './mes'
-import { fechaEfectivaSemana, numeroDeSemana } from './semanaCobro'
+import { formatearMonto, mesDe, sumarMeses } from './mes'
+import { etiquetaSemanaCobro, fechaEfectivaSemana, semanasQueToquenMes } from './semanaCobro'
 import type { FinanceIncomePeriod, FinanceMovimiento, FinanceMovimientoTipo } from '@/types/finance'
 import { fechaLocalISO } from '@shared-kernel/date/fechaLocal'
 
@@ -133,8 +133,17 @@ export function NuevoMovimiento({
   const montoNumero = parsearMontoManual(monto) ?? NaN
   const cuotasNumero = Number(cuotas)
   const esCompraEnCuotas = tipo === 'egreso' && Number.isFinite(cuotasNumero) && cuotasNumero >= 2
-  /** Base para las 4 chips de "Semana del mes" (Fix 3) — siempre el mes real de hoy, igual que `semanaActual` en FinanceScreen. */
+  /** Base para las chips de semana (Fix 3) — siempre el mes real de hoy, igual que `semanaActual` en FinanceScreen. */
   const mesEnCurso = mesDe(new Date())
+  /**
+   * Unificación de semanas (2026-09-30) — las chips de "¿De qué semana
+   * es este gasto?" ya no parten el mes en bloques de 7 días
+   * (`semanaDelMes`): muestran las semanas reales lunes→domingo que
+   * tocan `mesEnCurso`, con el mismo criterio que el selector de
+   * Ingresos de arriba. Una semana que cruza de mes aparece acá igual,
+   * aunque su lunes o domingo caigan en el mes vecino.
+   */
+  const semanasDelMesEnCurso = semanasQueToquenMes(mesEnCurso)
 
   /** Los tres baldes de un ingreso — solo entra al guardar el que de verdad tiene algo cargado, cada uno como su propia moneda/medio real (nunca sumados). */
   const efectivoArsNumero = parsearMontoManual(montoEfectivoArs)
@@ -402,7 +411,7 @@ export function NuevoMovimiento({
                       style={periodoElegidoId === periodo.id ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
                       onClick={() => setPeriodoElegidoId(periodo.id)}
                     >
-                      Semana {numeroDeSemana(periodo, periodos)} · {periodo.nombre}
+                      {etiquetaSemanaCobro(periodo.fechaInicio, periodo.fechaFin)}
                     </button>
                   ))}
                 </div>
@@ -429,23 +438,20 @@ export function NuevoMovimiento({
 
         {tipo === 'egreso' ? (
           <div className="flex flex-col gap-1.5">
-            <p className="text-[11.5px] text-ink-faint">¿De qué semana del mes es este gasto?</p>
-            <div className="idea-destinos" role="group" aria-label="Semana del mes">
-              {([1, 2, 3, 4] as const).map((numero) => {
-                const activa = fecha.startsWith(mesEnCurso) && semanaDelMes(fecha) === numero
+            <p className="text-[11.5px] text-ink-faint">¿De qué semana es este gasto?</p>
+            <div className="idea-destinos" role="group" aria-label="Semana">
+              {semanasDelMesEnCurso.map((semana) => {
+                const activa = fecha >= semana.fechaInicio && fecha <= semana.fechaFin
                 return (
                   <button
-                    key={numero}
+                    key={semana.fechaInicio}
                     type="button"
                     className="idea-destino"
                     aria-pressed={activa}
                     style={activa ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
-                    onClick={() => {
-                      const { desde } = rangoSemana(mesEnCurso, numero)
-                      setFecha(`${mesEnCurso}-${String(desde).padStart(2, '0')}`)
-                    }}
+                    onClick={() => setFecha(semana.fechaInicio)}
                   >
-                    Semana {numero} · {etiquetaSemana(mesEnCurso, numero)}
+                    {etiquetaSemanaCobro(semana.fechaInicio, semana.fechaFin)}
                   </button>
                 )
               })}

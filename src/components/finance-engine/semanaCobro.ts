@@ -4,9 +4,15 @@
  * Sprint 036 dejaba sin ninguna regla (el usuario podía tipear
  * cualquier par de fechas y cualquier nombre) — acá la única entrada es
  * "cualquier día de la semana que quiero", y estas funciones devuelven
- * siempre el lunes y el domingo que la contienen. No se toca
- * `semanaDelMes` en mes.ts: esa sigue siendo la agrupación calendario
- * por día-del-mes que usan los egresos, un concepto distinto a propósito.
+ * siempre el lunes y el domingo que la contienen.
+ *
+ * Unificación de semanas (2026-09-30) — este archivo ya no es exclusivo
+ * de Ingresos: `semanaDelMes` (agrupación por día-del-mes, el sistema
+ * que antes usaban los egresos) se eliminó de `mes.ts`, y tanto el
+ * selector de "¿De qué semana es este gasto?" como la vista semanal de
+ * egresos (`FinanceEngineScreen.tsx`, `SeFueDetalle.tsx`) usan ahora las
+ * mismas funciones de acá — una sola definición de "semana" en toda
+ * Finanzas.
  */
 
 /**
@@ -104,10 +110,15 @@ export function fechaEfectivaSemana(fechaInicio: string): string {
 const MESES_CORTOS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
 
 /**
- * "24 → 30 ago" — o, si la semana cruza de mes, "27 jul → 2 ago": la
+ * "22–28 sep" — o, si la semana cruza de mes, "28 sep – 4 oct": la
  * semana sigue siendo una sola entidad, la etiqueta simplemente lo dice
  * (Sprint 037, §identidad: nunca "Semana 4"). Siempre derivada de las
- * fechas, nunca tipeada por el usuario.
+ * fechas, nunca tipeada por el usuario ni leída de un campo persistido
+ * (unificación de semanas, 2026-09-30: antes esto se guardaba una sola
+ * vez como `FinanceIncomePeriod.nombre` — un período viejo nunca
+ * actualizaba su etiqueta si este formato cambiaba. Ahora se recalcula
+ * siempre en vivo desde `fechaInicio`/`fechaFin`, en todos los puntos
+ * donde se muestra una semana).
  */
 export function etiquetaSemanaCobro(fechaInicio: string, fechaFin: string): string {
   const inicio = aFechaLocal(fechaInicio)
@@ -116,8 +127,8 @@ export function etiquetaSemanaCobro(fechaInicio: string, fechaFin: string): stri
   const diaFin = fin.getDate()
   const mesInicio = MESES_CORTOS[inicio.getMonth()]
   const mesFin = MESES_CORTOS[fin.getMonth()]
-  if (mesInicio === mesFin) return `${diaInicio} → ${diaFin} ${mesFin}`
-  return `${diaInicio} ${mesInicio} → ${diaFin} ${mesFin}`
+  if (mesInicio === mesFin) return `${diaInicio}–${diaFin} ${mesFin}`
+  return `${diaInicio} ${mesInicio} – ${diaFin} ${mesFin}`
 }
 
 /** `true` si `fechaISO` cae dentro de [fechaInicio, fechaFin] (comparación lexicográfica, válida porque el formato es YYYY-MM-DD). */
@@ -126,22 +137,15 @@ export function fechaEnSemana(fechaISO: string, fechaInicio: string, fechaFin: s
 }
 
 /**
- * Sprint 040 — "Ingresos siempre muestra todas las semanas del mes"
- * (mismo pedido ya resuelto para egresos vía `semanasEnMes`/`mes.ts`, pero
- * ACÁ no se reutiliza esa función: los egresos agrupan por día-del-mes
- * (semanaDelMes), un concepto que este mismo archivo documenta arriba
- * como deliberadamente distinto al de Ingresos — semana real lunes a
- * domingo, que puede cruzar de mes. Aplicar semanaDelMes acá mostraría
- * números de semana que no coinciden con los rangos de fecha reales de
- * los períodos ya creados, así que esto extiende el sistema correcto
- * (mondayOf/sundayOf/fechaEfectivaSemana, ya existentes) en vez de pedir
- * prestado el ajeno.
- *
+ * Sprint 040 — "Ingresos siempre muestra todas las semanas del mes".
  * Devuelve todas las semanas reales cuyo "mes efectivo" (criterio del
  * jueves, ver fechaEfectivaSemana) cae en `mes`, en orden cronológico —
  * con o sin período creado todavía. `EntroDetalle` cruza esta lista
  * contra los períodos existentes: donde hay período, muestra sus
- * ingresos; donde no, un estado vacío.
+ * ingresos; donde no, un estado vacío. Unificación de semanas
+ * (2026-09-30): `SeFueDetalle` reutiliza esta misma función para su
+ * acordeón de egresos por semana — un solo criterio de "a qué mes
+ * pertenece esta semana" para las dos secciones.
  */
 export function semanasRealesDelMes(mes: string): { fechaInicio: string; fechaFin: string }[] {
   const semanas: { fechaInicio: string; fechaFin: string }[] = []
@@ -158,26 +162,27 @@ export function semanasRealesDelMes(mes: string): { fechaInicio: string; fechaFi
 }
 
 /**
- * "Semana 1", "Semana 2"... — posición cronológica de `periodo` dentro de
- * los períodos de `periodos` que caen en el mismo mes que él (mismo
- * criterio que `mesDePeriodo` en EntroDetalle.tsx: el mes del jueves de
- * la semana, vía `fechaEfectivaSemana`, no el del lunes). Antes rankeaba
- * sobre la lista completa sin filtrar, así que el número nunca volvía a
- * "Semana 1" al empezar un mes nuevo y seguía acumulando indefinidamente
- * (Semana 5, Semana 6...). Nunca se persiste ni se guarda en la semana:
- * se recalcula en cada render a partir de la lista completa, así que
- * agregar o borrar una semana corre el número de las que siguen sin que
- * nadie lo edite a mano. La identidad real de la semana sigue siendo su
- * fecha (Sprint 037) — esto es solo una etiqueta de UI derivada, para
- * que la pantalla no obligue a leer un rango de fechas para saber "cuál
- * semana es esta".
+ * Unificación de semanas (2026-09-30) — "el selector muestra las semanas
+ * que tocan el mes de la fecha elegida; una semana que cruza meses
+ * aparece en ambos". A diferencia de `semanasRealesDelMes` (que asigna
+ * cada semana a un único mes "efectivo", vía el criterio del jueves),
+ * esta función no decide un mes dueño: una semana entra en la lista de
+ * `mes` si cualquiera de sus dos puntas (lunes o domingo) cae en `mes`,
+ * así que la misma semana puede devolverse acá dos veces — una vez por
+ * cada mes que toca — para que el selector de "¿De qué semana es este
+ * gasto?" la muestre en los dos.
  */
-export function numeroDeSemana(
-  periodo: { id: string; fechaInicio: string; orden: number },
-  periodos: readonly { id: string; fechaInicio: string; orden: number }[],
-): number {
-  const mesDelPeriodo = fechaEfectivaSemana(periodo.fechaInicio).slice(0, 7)
-  const delMismoMes = periodos.filter((p) => fechaEfectivaSemana(p.fechaInicio).slice(0, 7) === mesDelPeriodo)
-  const ordenados = delMismoMes.slice().sort((a, b) => fechaCorta(a.fechaInicio).localeCompare(fechaCorta(b.fechaInicio)) || a.orden - b.orden)
-  return ordenados.findIndex((p) => p.id === periodo.id) + 1
+export function semanasQueToquenMes(mes: string): { fechaInicio: string; fechaFin: string }[] {
+  const semanas: { fechaInicio: string; fechaFin: string }[] = []
+  let cursor = mondayOf(`${mes}-01`)
+  while (cursor.slice(0, 7) <= mes) {
+    const fechaFin = sundayOf(cursor)
+    if (cursor.slice(0, 7) === mes || fechaFin.slice(0, 7) === mes) {
+      semanas.push({ fechaInicio: cursor, fechaFin })
+    }
+    const siguiente = aFechaLocal(cursor)
+    siguiente.setDate(siguiente.getDate() + 7)
+    cursor = aTextoISO(siguiente)
+  }
+  return semanas
 }

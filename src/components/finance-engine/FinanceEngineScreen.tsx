@@ -15,20 +15,21 @@ import type { GastosFijosEngineApi } from './createGastosFijosEngine'
 import {
   estaEnCurso,
   etiquetaMesEnCurso,
-  etiquetaSemana,
   formatearMonto,
   mesDe,
   monedaDe,
   resumirMes,
   resumirSemana,
-  semanaDelMes,
   sumarMeses,
 } from './mes'
-import { etiquetaSemanaCobro, fechaEnSemana, semanaActual as semanaCobroActual } from './semanaCobro'
+import {
+  etiquetaSemanaCobro,
+  semanaActual as semanaCobroActual,
+  semanasRealesDelMes,
+} from './semanaCobro'
 import type { FinanceGastoFijo, FinanceMovimiento } from '@/types/finance'
 import type { NuevaCompraEnCuotas, NuevaFinanceMovimiento } from './financeEngineRepository'
 import type { PatchMovimiento } from './MovimientoRow'
-import { fechaLocalISO } from '@shared-kernel/date/fechaLocal'
 
 type Vista = 'semana' | 'mes'
 type Detalle = 'entro' | 'sefue' | 'nuevo' | 'gastosfijos' | null
@@ -272,42 +273,23 @@ export function FinanceEngineScreen({ engine, ideaCapture, gastosFijos }: Financ
     return { activos: activos.length, pagados: pagados.size, totalEsperado, totalPagado }
   }, [gastosFijos, movimientos])
 
-  const semanaActual = useMemo(() => semanaDelMes(fechaLocalISO()), [])
+  /**
+   * Unificación de semanas (2026-09-30) — la semana real de hoy
+   * (lunes→domingo), mismo criterio para egresos e ingresos. Ya no hay
+   * un `entroSemanaReal` separado calculado a mano: `semanal.entro`
+   * viene del mismo `resumirSemana` recortado a esta semana real.
+   */
+  const semanaActual = useMemo(() => semanaCobroActual(), [])
   const resumen = useMemo(
     () => resumirMes(movimientos, mesSeleccionado, moneda),
     [movimientos, mesSeleccionado, moneda],
   )
-  /** Siempre `mesActual`, no `mesSeleccionado`: "Esta semana" no navega, sea cual sea el mes que "Este mes" esté mostrando. */
+  /** Siempre la semana real de hoy, no la del mes seleccionado: "Esta semana" no navega. */
   const semanal = useMemo(
-    () => resumirSemana(movimientos, mesActual, semanaActual, moneda),
-    [movimientos, mesActual, semanaActual, moneda],
+    () => resumirSemana(movimientos, semanaActual.fechaInicio, semanaActual.fechaFin, moneda),
+    [movimientos, semanaActual, moneda],
   )
-  /**
-   * Sprint 037 — "Esta semana" para Ingresos ya no puede usar
-   * `semanal.entro` (ese número viene de `semanaDelMes`, que resetea con
-   * el mes: una semana de cobro real como 27 jul → 2 ago quedaba partida
-   * en dos y el total de "Esta semana" no coincidía con lo que mostraba
-   * Ingresos, que ya agrupa por semana de cobro real desde este sprint).
-   * Acá se suma directo sobre `movimientos` con la semana lunes→domingo
-   * real de hoy — mismo criterio que `EntroDetalle`/`semanaCobro.ts`, sin
-   * tocar cómo se calculan los egresos (`semanal.seFue` sigue viniendo
-   * de `resumirSemana`, que es el modelo correcto y ya probado para
-   * egresos, fuera de alcance de este sprint).
-   */
-  const entroSemanaReal = useMemo(() => {
-    const { fechaInicio, fechaFin } = semanaCobroActual()
-    return movimientos
-      .filter(
-        (movimiento) =>
-          movimiento.tipo === 'ingreso' && monedaDe(movimiento) === moneda && fechaEnSemana(movimiento.fecha, fechaInicio, fechaFin),
-      )
-      .reduce((total, movimiento) => total + movimiento.monto, 0)
-  }, [movimientos, moneda])
-  /** Etiqueta de la semana de cobro real de hoy, solo para el aviso de ingreso pendiente — misma fuente que `entroSemanaReal`, ninguna semana nueva. */
-  const etiquetaSemanaActual = useMemo(() => {
-    const { fechaInicio, fechaFin } = semanaCobroActual()
-    return etiquetaSemanaCobro(fechaInicio, fechaFin)
-  }, [])
+  const etiquetaSemanaActual = etiquetaSemanaCobro(semanaActual.fechaInicio, semanaActual.fechaFin)
   const ahorroPct = resumen.ingresado > 0 ? Math.round((resumen.balance / resumen.ingresado) * 100) : 0
 
   /**
@@ -522,7 +504,7 @@ export function FinanceEngineScreen({ engine, ideaCapture, gastosFijos }: Financ
 
   const nombreMes = new Date(`${mesSeleccionado}-02`).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
   /** Sprint 016.1, punto 15: mismo texto que ya arma el header acá abajo, para que Entró/Se fue nunca pierdan de vista qué período están mostrando al entrar en un detalle. */
-  const periodoLabel = vista === 'semana' ? `Semana ${semanaActual} · ${etiquetaSemana(mesActual, semanaActual)}` : nombreMes
+  const periodoLabel = vista === 'semana' ? etiquetaSemanaActual : nombreMes
   /**
    * Mini Sprint 035 ya dejó documentado (ver comentario de `editarMovimiento`
    * más arriba) que `resumen` está filtrado por la moneda de la vista — pero
@@ -559,9 +541,9 @@ export function FinanceEngineScreen({ engine, ideaCapture, gastosFijos }: Financ
     )
   }
 
-  const entro = vista === 'semana' ? entroSemanaReal : resumen.ingresado
+  const entro = vista === 'semana' ? semanal.entro : resumen.ingresado
   const seFue = vista === 'semana' ? semanal.seFue : resumen.gastado
-  const teQuedo = vista === 'semana' ? entroSemanaReal - semanal.seFue : resumen.balance
+  const teQuedo = vista === 'semana' ? semanal.teQuedo : resumen.balance
   const movimientosDelPeriodo = vista === 'semana' ? semanal.movimientos : resumen.movimientos
   /** "Esta semana" siempre es el real de hoy (`true`, como antes); "Este mes" solo si el mes seleccionado es el actual. */
   const registradoHastaHoy = vista === 'semana' ? true : estaEnCurso(mesSeleccionado)
@@ -586,7 +568,8 @@ export function FinanceEngineScreen({ engine, ideaCapture, gastosFijos }: Financ
      * toque extra al camino que ya existía.
      */
     const mesParaSeFue = vista === 'mes' ? mesSeleccionado : mesActual
-    const semanaInicialSeFue = mesParaSeFue === mesActual ? semanaActual : 1
+    const semanaInicialSeFue =
+      mesParaSeFue === mesActual ? semanaActual.fechaInicio : semanasRealesDelMes(mesParaSeFue)[0]?.fechaInicio ?? semanaActual.fechaInicio
     return (
       <div className="mx-auto flex w-full max-w-xl flex-col gap-8 pb-10">
         <SeFueDetalle
@@ -690,7 +673,7 @@ export function FinanceEngineScreen({ engine, ideaCapture, gastosFijos }: Financ
           </span>
         </div>
         {registradoHastaHoy ? <p className="text-right text-[12px] text-ink-faint">Registrado hasta hoy</p> : null}
-        {entroSemanaReal === 0 ? (
+        {semanal.entro === 0 ? (
           <button
             type="button"
             className="finanzas-aviso-semana"

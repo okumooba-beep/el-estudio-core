@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { CATEGORIAS, CATEGORIA_LABEL, type FinanceCategoria } from './categorias'
 import { etiquetaDia, formatearMonto } from './mes'
 import { parsearMontoManual } from './extraccion'
-import { fechaEfectivaSemana, numeroDeSemana } from './semanaCobro'
+import { etiquetaSemanaCobro, fechaEfectivaSemana } from './semanaCobro'
 import type { FinanceMovimiento, FinanceIncomePeriod } from '@/types/finance'
 import type { Medio, Moneda } from './extraccion'
 
@@ -298,7 +298,7 @@ export function MovimientoRow({
                   style={periodoEditado === periodo.id ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : undefined}
                   onClick={() => setPeriodoEditado(periodo.id)}
                 >
-                  Semana {numeroDeSemana(periodo, periodos)} · {periodo.nombre}
+                  {etiquetaSemanaCobro(periodo.fechaInicio, periodo.fechaFin)}
                 </button>
               ))}
             </div>

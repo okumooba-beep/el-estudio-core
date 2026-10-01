@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { MovimientoRow, type PatchMovimiento } from './MovimientoRow'
 import { etiquetaDia, formatearMonto, mesDe } from './mes'
-import { etiquetaSemanaCobro, fechaCorta, fechaEfectivaSemana, numeroDeSemana, semanasRealesDelMes } from './semanaCobro'
+import { etiquetaSemanaCobro, fechaCorta, fechaEfectivaSemana, semanasRealesDelMes } from './semanaCobro'
 import type { FinanceMovimiento, FinanceIncomePeriod } from '@/types/finance'
 
 export interface NuevoPeriodoInput {
@@ -143,8 +143,9 @@ function PeriodoBlock({
     <li className="finanzas-tarjeta flex flex-col gap-2">
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-col items-start gap-0.5">
-          <span className="font-mono text-[11px] uppercase tracking-wide text-accent">Semana {numeroDeSemana(periodo, periodos)}</span>
-          <span className="text-[13px] text-ink-faint">{periodo.nombre}</span>
+          <span className="font-mono text-[11px] uppercase tracking-wide text-accent">
+            {etiquetaSemanaCobro(periodo.fechaInicio, periodo.fechaFin)}
+          </span>
           {movimientos.length === 0 ? (
             <button
               type="button"
@@ -377,7 +378,6 @@ export function EntroDetalle({
    * un toggle para pasar a dólares, en vez de las dos intercaladas.
    */
   const [monedaDesglose, setMonedaDesglose] = useState<'ars' | 'usd'>('ars')
-  const periodosDelMesActual = periodos.filter((p) => mesDePeriodo(p) === mesActual)
   const desgloseOrdenado = ingresosDelMesActual.slice().sort((a, b) => a.fecha.localeCompare(b.fecha))
 
   const periodosPorMes = new Map<string, FinanceIncomePeriod[]>()
@@ -472,9 +472,7 @@ export function EntroDetalle({
                 <ul className="flex flex-col gap-1.5">
                   {filtrado.map((movimiento) => {
                     const periodo = periodos.find((p) => p.id === movimiento.periodoId)
-                    const etiquetaPeriodo = periodo
-                      ? `Semana ${numeroDeSemana(periodo, periodosDelMesActual)} · ${periodo.nombre}`
-                      : 'Sin período'
+                    const etiquetaPeriodo = periodo ? etiquetaSemanaCobro(periodo.fechaInicio, periodo.fechaFin) : 'Sin período'
                     return (
                       <li key={movimiento.id} className="flex items-center justify-between gap-3 text-[13px]">
                         <span className="flex min-w-0 flex-col">

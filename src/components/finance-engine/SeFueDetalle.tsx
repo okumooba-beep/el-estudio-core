@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { CATEGORIA_COLOR, CATEGORIA_LABEL, type FinanceCategoria } from './categorias'
 import { MovimientoRow, type PatchMovimiento } from './MovimientoRow'
-import { categoriaDe, etiquetaSemana, formatearMonto, resumirSemana, semanasEnMes } from './mes'
+import { categoriaDe, formatearMonto, resumirSemana } from './mes'
+import { etiquetaSemanaCobro, semanasRealesDelMes } from './semanaCobro'
 import type { FinanceMovimiento } from '@/types/finance'
 import type { Moneda } from './extraccion'
 
@@ -11,14 +12,14 @@ interface SeFueDetalleProps {
   mes: string
   /**
    * Todos los movimientos, sin recortar por semana ni por mes: cada
-   * semana filtra lo suyo acá adentro vía `resumirSemana` (mes+moneda+
-   * semana), la misma función ya usada para "Esta semana" — ninguna
-   * lógica de agrupación nueva, solo se llama una vez por semana en vez
-   * de una vez para todo el período.
+   * semana filtra lo suyo acá adentro vía `resumirSemana` (fechaInicio+
+   * fechaFin+moneda), la misma función ya usada para "Esta semana" —
+   * ninguna lógica de agrupación nueva, solo se llama una vez por semana
+   * en vez de una vez para todo el período.
    */
   movimientos: readonly FinanceMovimiento[]
-  /** La semana que arranca expandida — la relevante para la vista que abrió este detalle, para no agregar un toque extra al camino que ya existía. */
-  semanaInicial: number
+  /** La semana (su `fechaInicio`) que arranca expandida — la relevante para la vista que abrió este detalle, para no agregar un toque extra al camino que ya existía. */
+  semanaInicial: string
   /** Al llegar desde el anillo/lista de categorías del resumen, abre directo en esa categoría, dentro de `semanaInicial`. */
   categoriaInicial: FinanceCategoria | null
   /** Sprint 026: corrige la categoría de un movimiento ya existente, sin borrarlo y recrearlo. */
@@ -36,21 +37,22 @@ function etiquetaMesConAnio(mes: string): string {
 }
 
 /**
- * Punto pendiente (Sprint 040) — "Vista semanal para Se fue": replica el
- * patrón que ya tiene Ingresos (EntroDetalle.tsx) de navegar semana por
- * semana, pero para egresos. A propósito NO usa `FinanceIncomePeriod` ni
- * `semanaCobro.ts` — esos son el sistema de Ingresos (semana lunes→domingo
- * real, creada a mano por el usuario); los egresos siguen usando
- * `semanaDelMes` (día 1-7 = semana 1, ...), el sistema que ya tenían desde
- * antes (ver el comentario de semanaCobro.ts). Acá solo se agrega
- * navegación sobre ese mismo sistema, vía `resumirSemana`/`semanasEnMes`/
- * `etiquetaSemana`, ya existentes — nada de agrupación nueva.
+ * "Vista semanal para Se fue" (Sprint 040) — mismo patrón que Ingresos
+ * (EntroDetalle.tsx) de navegar semana por semana, pero para egresos.
+ *
+ * Unificación de semanas (2026-09-30): egresos e ingresos comparten
+ * ahora una sola definición de "semana" (lunes→domingo real, de
+ * `semanaCobro.ts`), así que acá la identidad de cada semana es su
+ * `fechaInicio` (YYYY-MM-DD), no un número de semana del mes.
+ * `semanasRealesDelMes(mes)` da el listado (asignación de mes efectivo,
+ * mismo criterio que usa EntroDetalle para su acordeón por mes) y
+ * `etiquetaSemanaCobro` da la etiqueta por rango, sin número.
  *
  * Tres niveles: semanas del mes (acordeón, con totales) → categorías de la
  * semana abierta (igual que antes) → movimientos de esa categoría (igual
  * que antes). `categoriaAbierta` guarda a qué semana pertenece la
- * categoría que se está mirando, para que "‹ Semana N" vuelva al acordeón
- * con esa semana todavía expandida.
+ * categoría que se está mirando, para que "‹ [etiqueta]" vuelva al
+ * acordeón con esa semana todavía expandida.
  */
 export function SeFueDetalle({
   moneda,
@@ -63,22 +65,25 @@ export function SeFueDetalle({
   onEliminar,
   onCerrar,
 }: SeFueDetalleProps) {
-  const [categoriaAbierta, setCategoriaAbierta] = useState<{ semana: number; categoria: FinanceCategoria } | null>(
-    categoriaInicial ? { semana: semanaInicial, categoria: categoriaInicial } : null,
-  )
-  const [semanasAbiertas, setSemanasAbiertas] = useState<Set<number>>(() => new Set([semanaInicial]))
+  const semanas = semanasRealesDelMes(mes)
+  const [categoriaAbierta, setCategoriaAbierta] = useState<{ semana: { fechaInicio: string; fechaFin: string }; categoria: FinanceCategoria } | null>(() => {
+    if (!categoriaInicial) return null
+    const semana = semanas.find((s) => s.fechaInicio === semanaInicial) ?? semanas[0]
+    return semana ? { semana, categoria: categoriaInicial } : null
+  })
+  const [semanasAbiertas, setSemanasAbiertas] = useState<Set<string>>(() => new Set([semanaInicial]))
 
-  function toggleSemana(semana: number) {
+  function toggleSemana(fechaInicio: string) {
     setSemanasAbiertas((actual) => {
       const siguiente = new Set(actual)
-      if (siguiente.has(semana)) siguiente.delete(semana)
-      else siguiente.add(semana)
+      if (siguiente.has(fechaInicio)) siguiente.delete(fechaInicio)
+      else siguiente.add(fechaInicio)
       return siguiente
     })
   }
 
   if (categoriaAbierta) {
-    const resumenSemana = resumirSemana(movimientos, mes, categoriaAbierta.semana, moneda)
+    const resumenSemana = resumirSemana(movimientos, categoriaAbierta.semana.fechaInicio, categoriaAbierta.semana.fechaFin, moneda)
     const deLaCategoria = resumenSemana.movimientos
       .filter((m) => m.tipo === 'egreso' && categoriaDe(m) === categoriaAbierta.categoria)
       .sort((a, b) => a.fecha.localeCompare(b.fecha))
@@ -87,11 +92,11 @@ export function SeFueDetalle({
     return (
       <div className="flex flex-col gap-6">
         <button type="button" className="idea-destino self-start" onClick={() => setCategoriaAbierta(null)}>
-          ‹ Semana {categoriaAbierta.semana}
+          ‹ {etiquetaSemanaCobro(categoriaAbierta.semana.fechaInicio, categoriaAbierta.semana.fechaFin)}
         </button>
         <section className="finanzas-tarjeta flex flex-col items-center gap-1">
           <p className="font-mono text-[11px] text-ink-faint">
-            Semana {categoriaAbierta.semana} · {etiquetaSemana(mes, categoriaAbierta.semana)}
+            {etiquetaSemanaCobro(categoriaAbierta.semana.fechaInicio, categoriaAbierta.semana.fechaFin)}
           </p>
           <p className="font-mono text-[11px] uppercase tracking-wide text-accent">{CATEGORIA_LABEL[categoriaAbierta.categoria]}</p>
           <p className="font-mono text-[28px] text-critical">{formatearMonto(totalCategoria, moneda)}</p>
@@ -112,8 +117,10 @@ export function SeFueDetalle({
     )
   }
 
-  const semanas = Array.from({ length: semanasEnMes(mes) }, (_, i) => i + 1)
-  const resumenesPorSemana = semanas.map((semana) => resumirSemana(movimientos, mes, semana, moneda))
+  const resumenesPorSemana = semanas.map((semana) => ({
+    semana,
+    ...resumirSemana(movimientos, semana.fechaInicio, semana.fechaFin, moneda),
+  }))
   const totalMes = resumenesPorSemana.reduce((suma, r) => suma + r.seFue, 0)
 
   return (
@@ -128,18 +135,19 @@ export function SeFueDetalle({
       </section>
       <ul className="flex flex-col gap-3">
         {resumenesPorSemana.map((resumenSemana) => {
-          const abierta = semanasAbiertas.has(resumenSemana.semana)
+          const abierta = semanasAbiertas.has(resumenSemana.semana.fechaInicio)
           return (
-            <li key={resumenSemana.semana} className="finanzas-tarjeta flex flex-col gap-2">
+            <li key={resumenSemana.semana.fechaInicio} className="finanzas-tarjeta flex flex-col gap-2">
               <button
                 type="button"
                 className="flex w-full appearance-none items-start justify-between gap-3 bg-transparent p-0 text-left"
                 aria-expanded={abierta}
-                onClick={() => toggleSemana(resumenSemana.semana)}
+                onClick={() => toggleSemana(resumenSemana.semana.fechaInicio)}
               >
                 <span className="flex flex-col items-start gap-0.5">
-                  <span className="font-mono text-[11px] uppercase tracking-wide text-accent">Semana {resumenSemana.semana}</span>
-                  <span className="text-[13px] text-ink-faint">{etiquetaSemana(mes, resumenSemana.semana)}</span>
+                  <span className="font-mono text-[11px] uppercase tracking-wide text-accent">
+                    {etiquetaSemanaCobro(resumenSemana.semana.fechaInicio, resumenSemana.semana.fechaFin)}
+                  </span>
                 </span>
                 <span className="flex items-center gap-2">
                   <span className="font-mono text-[15px] text-critical">{formatearMonto(resumenSemana.seFue, moneda)}</span>
