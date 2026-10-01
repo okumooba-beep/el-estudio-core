@@ -43,6 +43,8 @@ interface MovimientoRow {
   monto: number
   categoria: string | null
   fecha: string
+  cuota_total: number | null
+  gasto_fijo_id: string | null
 }
 
 /** Lunes 00:00 de la semana que contiene `fecha`, en UTC — mismo criterio de semana que HabitosScreen.tsx (fechasSemanaActual: lunes a domingo). */
@@ -58,9 +60,14 @@ function isoFecha(fecha: Date): string {
   return fecha.toISOString().slice(0, 10)
 }
 
-function sumaGastos(movimientos: MovimientoRow[], desde: Date, hasta: Date): { total: number; porCategoria: Map<string, number> } {
+function sumaGastos(
+  movimientos: MovimientoRow[],
+  desde: Date,
+  hasta: Date,
+): { total: number; porCategoria: Map<string, number>; recurrente: number } {
   const porCategoria = new Map<string, number>()
   let total = 0
+  let recurrente = 0
   for (const m of movimientos) {
     if (m.tipo !== 'egreso') continue
     const f = new Date(m.fecha)
@@ -68,8 +75,13 @@ function sumaGastos(movimientos: MovimientoRow[], desde: Date, hasta: Date): { t
     total += Number(m.monto)
     const cat = m.categoria ?? 'sin categoría'
     porCategoria.set(cat, (porCategoria.get(cat) ?? 0) + Number(m.monto))
+    // Cuota (cuota_total no nulo) o gasto fijo (gasto_fijo_id no nulo):
+    // esperable y recurrente, no un gasto puntual — ver generarNotas.
+    if (m.cuota_total != null || m.gasto_fijo_id != null) {
+      recurrente += Number(m.monto)
+    }
   }
-  return { total, porCategoria }
+  return { total, porCategoria, recurrente }
 }
 
 async function calcularMetricas(userId: string, inicioSemana: Date) {
@@ -123,13 +135,13 @@ async function calcularMetricas(userId: string, inicioSemana: Date) {
   // Finanzas: gasto total y por categoría, semana actual vs. anterior.
   const { data: movimientos } = await supabase
     .from('finance_movimientos')
-    .select('tipo, monto, categoria, fecha')
+    .select('tipo, monto, categoria, fecha, cuota_total, gasto_fijo_id')
     .eq('user_id', userId)
     .is('deleted_at', null)
     .gte('fecha', inicioSemanaAnterior.toISOString())
     .lt('fecha', finSemana.toISOString())
   const movimientosRow = (movimientos ?? []) as MovimientoRow[]
-  const { total: gastoSemana, porCategoria } = sumaGastos(movimientosRow, inicioSemana, finSemana)
+  const { total: gastoSemana, porCategoria, recurrente: gastoSemanaRecurrente } = sumaGastos(movimientosRow, inicioSemana, finSemana)
   const { total: gastoSemanaAnterior } = sumaGastos(movimientosRow, inicioSemanaAnterior, inicioSemana)
 
   return {
@@ -138,6 +150,7 @@ async function calcularMetricas(userId: string, inicioSemana: Date) {
     finanzas: {
       gastoSemana,
       gastoSemanaAnterior,
+      gastoSemanaRecurrente,
       porCategoria: Object.fromEntries(porCategoria),
     },
   }
@@ -158,7 +171,7 @@ async function generarNotas(metricas: Metricas): Promise<{ misiones: string; hab
 
 Misiones: ${metricas.misiones.completadas} completadas de ${metricas.misiones.total} esta semana.
 Hábitos: ${metricas.habitos.completadas} de ${metricas.habitos.totalCeldas} prácticas marcadas${metricas.habitos.porcentaje !== null ? ` (${metricas.habitos.porcentaje}%)` : ' (sin hábitos cargados)'}.
-Finanzas: gastó ${formatMonto(metricas.finanzas.gastoSemana)} esta semana vs. ${formatMonto(metricas.finanzas.gastoSemanaAnterior)} la semana anterior. Por categoría: ${JSON.stringify(porCategoriaFormateado)}.
+Finanzas: gastó ${formatMonto(metricas.finanzas.gastoSemana)} esta semana vs. ${formatMonto(metricas.finanzas.gastoSemanaAnterior)} la semana anterior. Por categoría: ${JSON.stringify(porCategoriaFormateado)}. De ese gasto, ${formatMonto(metricas.finanzas.gastoSemanaRecurrente)} corresponde a cuotas o gastos fijos. Los gastos en cuotas o fijos son esperables y recurrentes; no los señales como anómalos ni como gasto puntual, mencionálos solo si aportan contexto.
 Escribí los montos exactamente como vienen dados, sin reformatearlos.
 
 Devolvé SOLO un JSON válido con esta forma exacta, sin texto alrededor:
