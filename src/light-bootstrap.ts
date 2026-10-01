@@ -1,5 +1,5 @@
 import { applyLight } from '@world/light/applyLight'
-import { aplicarFondo, leerFondoGuardado, aplicarPosicionX, leerPosicionXGuardada } from '@/lib/room/roomBackgrounds'
+import { aplicarFondo, leerFondoGuardado, aplicarPosicionX, leerPosicionXGuardada, urlDeFondo } from '@/lib/room/roomBackgrounds'
 
 // Se ejecuta antes que main.tsx (ver el orden de los <script> en index.html)
 // para que la habitación nunca haga un flash de la luz equivocada al abrir.
@@ -9,8 +9,22 @@ applyLight()
 // primer paint, leyendo solo localStorage — la confirmación contra
 // Supabase (otros dispositivos del mismo usuario) llega después, ya con
 // sesión resuelta, ver App.tsx.
-aplicarFondo(leerFondoGuardado())
+const fondoGuardado = leerFondoGuardado()
+aplicarFondo(fondoGuardado)
 aplicarPosicionX(leerPosicionXGuardada())
+
+// Bug reportado (2026-10-01): el fondo (ahora WebP, ~150-250KB en vez
+// de ~2.5MB en PNG) tardaba en llegar y a veces se veía "a medias" —
+// el navegador recién lo pedía cuando el CSS con --room-photo se
+// aplicaba, nunca antes. Un <link rel="preload"> explícito, inyectado
+// en el mismo tick que aplicarFondo() (antes del primer paint de
+// React), adelanta ese pedido lo más posible; el navegador lo
+// deduplica solo si el <style> termina pidiendo la misma URL.
+const preloadFondo = document.createElement('link')
+preloadFondo.rel = 'preload'
+preloadFondo.as = 'image'
+preloadFondo.href = urlDeFondo(fondoGuardado)
+document.head.appendChild(preloadFondo)
 
 // La clase que bloquea toda transición (ver src/index.css) se saca recién
 // ahora, en el mismo tick en el que la luz real ya quedó escrita — así la
@@ -122,6 +136,38 @@ function abreTecladoNativo(el: EventTarget | null): boolean {
 document.addEventListener('focusin', (event) => {
   if (abreTecladoNativo(event.target)) document.documentElement.classList.add('teclado-abierto')
 })
+
+// Bug reportado (2026-10-01): al cerrar el teclado a veces queda un
+// hueco arriba y la pantalla no vuelve a bajar — mismo asentamiento
+// tardío de WKWebView que ramaDeMediciones() ya cubre al abrir la PWA,
+// pero acá no hay ningún evento que dispare una nueva medición: si el
+// cierre del teclado no emite 'resize' de visualViewport (o lo emite
+// con un valor todavía transitorio), --vh-real queda clavado en la
+// altura achicada. El timeout espera a que el teclado termine de
+// cerrarse de verdad antes de remedir; comprobar que el foco no haya
+// pasado a otro campo evita remedir de más cuando el usuario solo
+// tabuló al siguiente input (ahí sigue habiendo teclado, no hay hueco
+// que corregir). scrollTo(0, 0) corrige el caso en que el documento
+// quedó desplazado mientras el teclado empujaba el contenido.
 document.addEventListener('focusout', (event) => {
-  if (abreTecladoNativo(event.target)) document.documentElement.classList.remove('teclado-abierto')
+  if (!abreTecladoNativo(event.target)) return
+  document.documentElement.classList.remove('teclado-abierto')
+  window.setTimeout(() => {
+    if (abreTecladoNativo(document.activeElement)) return
+    ramaDeMediciones()
+    window.scrollTo(0, 0)
+  }, 300)
 })
+
+// Bug reportado (2026-10-01): la ráfaga de ramaDeMediciones() cubre los
+// primeros ~1s de vida de la página, pero el asentamiento tardío de
+// WKWebView al lanzar/reanudar la PWA instalada a veces excede esa
+// ventana sin emitir 'resize'. En vez de alargar la ráfaga a ciegas, se
+// suma una remedición única en el primer touchstart o scroll reales
+// del usuario — la misma señal que antes "arreglaba sola" el hueco al
+// scrollear, pero ahora disparando medirVhReal() directo en vez de
+// depender de que ese gesto arrastre un resize de regalo. once: true
+// porque solo hace falta cubrir ese primer instante; medirVhReal() ya
+// sigue viva para siempre vía el listener de resize.
+window.addEventListener('touchstart', medirVhReal, { once: true, passive: true })
+window.addEventListener('scroll', medirVhReal, { once: true, passive: true })

@@ -29,28 +29,30 @@ function fondoDeBanco(id: string, label: string, archivo: string): FondoOption {
 }
 
 export const FONDOS: FondoOption[] = [
-  fondoDeBanco('brutalismo_minimalismo_1', 'Brutalismo minimalista', 'brutalismo_minimalismo_1.png'),
-  fondoDeBanco('brutalismo_noche', 'Brutalismo — noche', 'brutalismo_noche.png'),
-  fondoDeBanco('campo_3', 'Campo', 'campo_3.png'),
-  fondoDeBanco('ciudad_1_dia', 'Ciudad — día', 'ciudad_1_dia.png'),
-  fondoDeBanco('ciudad_2_noche', 'Ciudad — noche', 'ciudad_2_noche.png'),
-  fondoDeBanco('ciudad_noche_3', 'Ciudad de noche', 'ciudad_noche_3.png'),
-  fondoDeBanco('costa_1_dia', 'Costa — día', 'costa_1_dia.png'),
-  fondoDeBanco('desierto_1', 'Desierto', 'desierto_1.png'),
-  fondoDeBanco('futurista_1', 'Futurista', 'futurista_1.png'),
-  fondoDeBanco('minimal_zen_1', 'Minimal zen', 'minimal_zen_1.png'),
-  fondoDeBanco('montana_2', 'Montaña', 'montana_2.png'),
-  fondoDeBanco('naturaleza_1', 'Naturaleza', 'naturaleza_1.png'),
-  fondoDeBanco('piedra_natural_1', 'Piedra natural', 'piedra_natural_1.png'),
-  fondoDeBanco('playa_1', 'Playa', 'playa_1.png'),
+  fondoDeBanco('brutalismo_minimalismo_1', 'Brutalismo minimalista', 'brutalismo_minimalismo_1.webp'),
+  fondoDeBanco('brutalismo_noche', 'Brutalismo — noche', 'brutalismo_noche.webp'),
+  fondoDeBanco('campo_3', 'Campo', 'campo_3.webp'),
+  fondoDeBanco('ciudad_1_dia', 'Ciudad — día', 'ciudad_1_dia.webp'),
+  fondoDeBanco('ciudad_2_noche', 'Ciudad — noche', 'ciudad_2_noche.webp'),
+  fondoDeBanco('ciudad_noche_3', 'Ciudad de noche', 'ciudad_noche_3.webp'),
+  fondoDeBanco('costa_1_dia', 'Costa — día', 'costa_1_dia.webp'),
+  fondoDeBanco('desierto_1', 'Desierto', 'desierto_1.webp'),
+  fondoDeBanco('futurista_1', 'Futurista', 'futurista_1.webp'),
+  fondoDeBanco('minimal_zen_1', 'Minimal zen', 'minimal_zen_1.webp'),
+  fondoDeBanco('montana_2', 'Montaña', 'montana_2.webp'),
+  fondoDeBanco('naturaleza_1', 'Naturaleza', 'naturaleza_1.webp'),
+  fondoDeBanco('piedra_natural_1', 'Piedra natural', 'piedra_natural_1.webp'),
+  fondoDeBanco('playa_1', 'Playa', 'playa_1.webp'),
   /*
     Sprint "Room / Ajustes: 4 cambios puntuales" (§2) — '33' es la North
     Star original (Sprint 020, ver comentario de .room-layer-photo en
     src/index.css): apunta directo a /room/estudio-hero.png, la
     composición protegida, no a la copia que el banco de 15 fondos había
-    guardado en backgrounds/33.png.
+    guardado en backgrounds/33.webp. estudio-hero.png no se tocó en la
+    conversión a WebP (2026-10-01): es la composición protegida, no
+    parte del banco de 15.
   */
-  { id: '33', label: '33', archivo: '33.png', ruta: '/room/estudio-hero.png' },
+  { id: '33', label: '33', archivo: '33.webp', ruta: '/room/estudio-hero.png' },
 ]
 
 /** North Star: el fondo por defecto cuando el usuario nunca eligió uno. */
@@ -58,7 +60,8 @@ export const FONDO_DEFAULT = '33'
 
 const CLAVE_LOCAL = 'room.fondo'
 
-function urlDeFondo(id: string): string {
+/** Expuesta para light-bootstrap.ts: resuelve el id guardado a la URL real que va a pedirse, para preload del fondo activo antes del primer paint. */
+export function urlDeFondo(id: string): string {
   const fondo = FONDOS.find((f) => f.id === id) ?? FONDOS.find((f) => f.id === FONDO_DEFAULT)
   return fondo!.ruta
 }

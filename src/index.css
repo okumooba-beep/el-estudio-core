@@ -429,7 +429,15 @@ html.teclado-abierto .nav-inferior {
   */
   background-position: 40% center, var(--room-photo-position-x, center) center;
   background-size: cover, cover;
-  background-color: var(--canvas);
+  /*
+    Bug reportado (2026-10-01): el fondo a veces se veía "a medias"
+    mientras cargaba. var(--canvas) no alcanzaba como respaldo porque
+    deriva de luz (ver applyLight.ts) y puede aclararse durante el día
+    — un literal fijo y oscuro no depende de esa deriva, así que el
+    hueco antes de que la foto llegue (o mientras carga) siempre se ve
+    oscuro, nunca con el tono de luz del momento.
+  */
+  background-color: #120f0c;
 }
 
 /*
