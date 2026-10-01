@@ -14,6 +14,9 @@ let lineaViva = ''
 let intervalo: number | undefined
 let ultimoPorTipo = new Map<string, string>()
 let escuchando = false
+let abajo = false
+let transparente = false
+let ultimoToqueY: number | null = null
 
 function leerFlag(): boolean {
   try {
@@ -58,12 +61,17 @@ function safeAreas(): string {
 function medicion(): string {
   const vv = window.visualViewport
   const de = document.documentElement
-  const vhReal = de.style.getPropertyValue('--vh-real') || '—'
+  const altoBase = de.style.getPropertyValue('--alto-base') || '—'
+  const altoTeclado = de.style.getPropertyValue('--alto-teclado') || '—'
+  const teclado = de.classList.contains('teclado-abierto') ? 'SI' : 'no'
+  const activo = document.activeElement
+  const campo = activo && activo !== document.body ? activo.getBoundingClientRect() : null
   return [
     `iH${window.innerHeight} oH${window.outerHeight} vvH${n(vv?.height)} vvTop${n(vv?.offsetTop)} vvPageTop${n(vv?.pageTop)} scrH${screen.height} cH${de.clientHeight} sH${de.scrollHeight} sY${n(window.scrollY)}`,
     `  html ${rect('html')} | body ${rect('body')} | #root ${rect('#root')}`,
     `  shell ${rect('.h-dvh-safe')} | main ${rect('main')} | nav ${rect('.nav-inferior')}`,
-    `  fondo ${rect('.room-layer-photo')} | safe ${safeAreas()} | --vh-real ${vhReal}`,
+    `  fondo ${rect('.room-layer-photo')} | safe ${safeAreas()}`,
+    `  --alto-base ${altoBase} | teclado ${teclado} --alto-teclado ${altoTeclado} | campo ${campo ? `${activo?.tagName} y${n(campo.top)} b${n(campo.bottom)}` : '—'} | toqueY ${n(ultimoToqueY)}`,
   ].join('\n')
 }
 
@@ -113,6 +121,27 @@ function boton(texto: string, onClick: () => void): HTMLButtonElement {
   return b
 }
 
+/**
+ * "mover": arriba (bajo la barra de estado) o abajo, pegado al borde
+ * inferior del área visible — con el teclado abierto eso es justo arriba
+ * del teclado, así el formulario queda a la vista. "transp.": el panel se
+ * vuelve casi transparente y deja pasar los toques (salvo la barra de
+ * botones).
+ */
+function ubicarPanel(): void {
+  if (!panel) return
+  const vv = window.visualViewport
+  if (abajo && vv) {
+    panel.style.maxHeight = `${Math.round(vv.height * 0.4)}px`
+    panel.style.top = `${Math.round(vv.offsetTop + vv.height - panel.offsetHeight - 4)}px`
+  } else {
+    panel.style.maxHeight = '55vh'
+    panel.style.top = 'calc(env(safe-area-inset-top) + 4px)'
+  }
+  panel.style.opacity = transparente ? '0.35' : '1'
+  panel.style.pointerEvents = transparente ? 'none' : 'auto'
+}
+
 function abrirPanel(etiqueta: string): void {
   if (panel) return
   panel = document.createElement('div')
@@ -123,8 +152,16 @@ function abrirPanel(etiqueta: string): void {
     'font:10px/1.35 ui-monospace,Menlo,monospace;padding:6px;border-radius:6px;' +
     '-webkit-user-select:text;user-select:text;transition:none'
   const barra = document.createElement('div')
-  barra.style.marginBottom = '4px'
+  barra.style.cssText = 'margin-bottom:4px;pointer-events:auto'
   barra.append(
+    boton('mover', () => {
+      abajo = !abajo
+      ubicarPanel()
+    }),
+    boton('transp.', () => {
+      transparente = !transparente
+      ubicarPanel()
+    }),
     boton('copiar', () => {
       const texto = panel?.querySelector('pre')?.textContent ?? ''
       void navigator.clipboard?.writeText(texto).catch(() => undefined)
@@ -142,6 +179,7 @@ function abrirPanel(etiqueta: string): void {
   const vivo = () => {
     lineaViva = medicion()
     render()
+    ubicarPanel()
   }
   vivo()
   intervalo = window.setInterval(vivo, 250)
@@ -184,6 +222,7 @@ function escucharToqueLargo(): void {
     'touchstart',
     (e) => {
       const t = e.touches[0]
+      if (t) ultimoToqueY = t.clientY
       if (e.touches.length !== 1 || !t || t.clientY > 90) return
       timer = window.setTimeout(() => {
         if (panel) {

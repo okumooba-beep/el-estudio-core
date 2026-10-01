@@ -35,84 +35,63 @@ document.head.appendChild(preloadFondo)
 // 60s vuelve a estar disponible para cuando el tiempo pase de verdad.
 document.documentElement.classList.remove('light-boot')
 
-// --vh-real (ver .h-dvh-safe en src/index.css): ni dvh ni svh resolvieron
-// el hueco bajo la pill del nav al abrir la PWA instalada en iOS — ahí no
-// hay barra de direcciones que "asiente" después del primer render (no es
-// el mecanismo de Safari con pestañas), así que la altura real solo se
-// conoce midiendo. visualViewport.height es más preciso que innerHeight
-// cuando existe soporte; si no, innerHeight es el único dato disponible.
-// Corre acá (antes de que React monte, mismo motivo que applyLight/
-// aplicarFondo arriba) para que el contenedor raíz de AppShell ya nazca
-// con la altura correcta en el primer paint, en vez de heredar un valor
-// de CSS que todavía no asentó.
-function medirVhReal(): void {
-  const alto = window.visualViewport?.height ?? window.innerHeight
-  document.documentElement.style.setProperty('--vh-real', `${alto}px`)
-}
-medirVhReal()
-
-// Solo 'resize', nunca 'scroll': ese fue exactamente el desfasaje que
-// causaba useNavAncladaAlViewportVisual (Sprint "eliminar motor de luz"),
-// que medía en cada scroll y terminaba peleando con el propio scroll del
-// teclado. 'resize' solo dispara ante un cambio real de tamaño — el
-// asentamiento tardío de WKWebView al lanzar la PWA standalone incluido
-// — y se mantiene escuchando toda la vida de la página (no solo la
-// primera vez) porque el mismo evento también cubre rotación de
-// pantalla y apertura/cierre de teclado.
-window.visualViewport?.addEventListener('resize', medirVhReal)
-
-// Bug reportado: al abrir la PWA instalada (standalone, sin barra de
-// direcciones) queda un hueco vacío bajo el nav hasta que el usuario hace
-// scroll — y ese scroll no "arregla" nada por sí mismo, solo dispara el
-// resize de visualViewport de arriba, que es lo que en realidad corrige
-// --vh-real. La causa: WKWebView a veces termina de asentar su tamaño
-// real *después* de que medirVhReal() ya corrió una vez, sin emitir ese
-// resize — el evento cubre teclado y rotación de forma confiable, pero no
-// siempre ese asentamiento tardío del lanzamiento. En vez de depender de
-// un scroll manual del usuario para heredar el resize "gratis", se remide
-// unas pocas veces más durante el primer segundo de vida de la página:
-// barato (un setProperty, no fuerza reflow) y sin efecto una vez que el
-// valor ya convergió.
-function ramaDeMediciones(): void {
-  ;[0, 100, 300, 600, 1000].forEach((ms) => window.setTimeout(medirVhReal, ms))
-}
-ramaDeMediciones()
-
-// Bug reportado de nuevo (2026-09-24) tras lo de arriba: la ráfaga inicial
-// solo corre una vez, en el primer load real de la página — pero la PWA
-// instalada en iOS casi nunca hace un load real al "abrirse" desde el
-// ícono: la mayoría de las veces el sistema solo reanuda un WKWebView que
-// ya estaba suspendido en background, y esa reanudación puede cambiar el
-// tamaño real disponible (rotación, cambio de safe-area, etc. mientras
-// estaba en segundo plano) sin disparar 'resize' de visualViewport — es
-// el mismo asentamiento tardío de arriba, pero en el momento de volver, no
-// en el de abrir por primera vez. 'visibilitychange' (se vuelve visible) y
-// 'pageshow' (con bfcache, `persisted: true`) son los dos eventos que sí
-// cubren esa reanudación — repetir acá la misma ráfaga corta de
-// mediciones hace que "volver a la app" quede cubierto igual que "abrirla
-// por primera vez", sin que el usuario tenga que scrollear para heredar
-// el resize "gratis".
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') ramaDeMediciones()
-})
-window.addEventListener('pageshow', ramaDeMediciones)
-
-/**
- * .nav-inferior es position:absolute con bottom:0 contra este mismo
- * contenedor de --vh-real (ver .h-dvh-safe/.nav-inferior en index.css):
- * al abrir el teclado, --vh-real se achica al alto visible arriba de él,
- * así que la pill deja de estar al borde real de la pantalla y pasa a
- * flotar en la mitad del formulario, tapando los campos que siguen
- * (bug reportado: la pill Hoy/Misiones/Hábitos/Finanzas/Espacios
- * apareciendo entre "Efectivo/Transferencia" y las categorías mientras
- * se escribe el monto). Se oculta mientras hay foco en un campo que de
- * verdad dispara el teclado nativo — excluye checkbox/radio/date/etc,
- * que abren su propio picker y no reducen visualViewport de la misma
- * forma — y vuelve a aparecer al perder el foco. focusin/focusout
- * delegados en document (nunca por input individual) para cubrir
- * cualquier input que se monte después, mismo criterio "corre una sola
- * vez, para toda la vida de la página" que medirVhReal arriba.
+/*
+ * Altura base del layout (ver body/#root en src/index.css). Medido con el
+ * panel de src/lib/debug/viewportDebug.ts en la PWA instalada en iPhone:
+ * al abrir en frío, WKWebView reporta el layout viewport más corto por
+ * exactamente safe-area-inset-top (873 en vez de 932) — innerHeight,
+ * visualViewport.height y todas las unidades vh/dvh/svh heredan ese
+ * error, y ningún evento lo corrige hasta el primer scroll del documento.
+ * outerHeight (y screen.height) sí son correctos desde el ms 0, así que
+ * la altura base sale de ahí y nunca de visualViewport.
+ *
+ * Solo en iOS standalone (navigator.standalone es exclusivo de iOS): en
+ * Safari con pestañas, Android o escritorio outerHeight incluye el chrome
+ * del navegador, y ahí el fallback 100dvh del CSS ya es correcto.
+ *
+ * Se mide una vez y se vuelve a medir solo cuando cambia el ancho
+ * (rotación): 'orientationchange' dispara antes de que WebKit actualice
+ * las dimensiones, mientras que el 'resize' de la rotación ya llega con
+ * outerHeight nuevo — y el teclado nunca cambia el ancho, así que no
+ * puede colarse acá.
  */
+const html = document.documentElement
+const esIosStandalone = (navigator as { standalone?: boolean }).standalone === true
+let altoBase = 0
+let anchoMedido = 0
+
+function medirAltoBase(): void {
+  anchoMedido = window.innerWidth
+  if (!esIosStandalone) return
+  altoBase = Math.max(window.outerHeight, window.innerHeight)
+  html.style.setProperty('--alto-base', `${altoBase}px`)
+}
+medirAltoBase()
+
+window.addEventListener('resize', () => {
+  if (window.innerWidth !== anchoMedido) medirAltoBase()
+})
+
+/** Alto completo contra el que se compara visualViewport para detectar el teclado. */
+function altoDeReferencia(): number {
+  return esIosStandalone ? altoBase : window.innerHeight
+}
+
+/*
+ * Teclado: visualViewport se usa SOLO para esto. Abierto = el alto visible
+ * quedó más de 120px por debajo del alto base (el desfasaje de 59px del
+ * arranque en frío nunca alcanza) y no hay pinch-zoom de por medio.
+ * Con el teclado abierto el layout NO se achica: body, la habitación y el
+ * shell siguen a altura completa; solo se oculta la pill
+ * (html.teclado-abierto .nav-inferior) y el <main> scrolleable suma
+ * --alto-teclado de padding-bottom (.scroll-principal) para que los
+ * últimos campos (la Nota de Nuevo movimiento incluida) puedan subir por
+ * encima del teclado. Después se centra el campo activo dentro del área
+ * visible.
+ */
+const UMBRAL_TECLADO = 120
+let tecladoAbierto = false
+
 const TIPOS_SIN_TECLADO = new Set([
   'checkbox',
   'radio',
@@ -129,48 +108,56 @@ const TIPOS_SIN_TECLADO = new Set([
   'week',
 ])
 
-function abreTecladoNativo(el: EventTarget | null): boolean {
+function abreTecladoNativo(el: EventTarget | null): el is HTMLElement {
   if (!(el instanceof HTMLElement)) return false
   if (el instanceof HTMLTextAreaElement) return true
   if (el instanceof HTMLInputElement) return !TIPOS_SIN_TECLADO.has(el.type)
   return el.isContentEditable
 }
 
+function contenedorScrolleable(el: HTMLElement): HTMLElement | null {
+  for (let actual = el.parentElement; actual && actual !== document.body; actual = actual.parentElement) {
+    const { overflowY } = getComputedStyle(actual)
+    if ((overflowY === 'auto' || overflowY === 'scroll') && actual.scrollHeight > actual.clientHeight) return actual
+  }
+  return null
+}
+
+/**
+ * Lleva el campo activo al centro del área visible sobre el teclado
+ * (coordenadas del layout viewport: vv.offsetTop cubre el caso en que iOS
+ * paneó el viewport visual). Un campo más alto que media pantalla (un
+ * textarea crecido) se alinea por arriba en vez de por el centro.
+ */
+function centrarCampoActivo(): void {
+  const vv = window.visualViewport
+  const campo = document.activeElement
+  if (!vv || !tecladoAbierto || !abreTecladoNativo(campo)) return
+  const contenedor = contenedorScrolleable(campo)
+  if (!contenedor) return
+  const r = campo.getBoundingClientRect()
+  const altoCampo = Math.min(r.height, vv.height * 0.5)
+  const arribaDeseado = vv.offsetTop + (vv.height - altoCampo) / 2
+  const delta = r.top - arribaDeseado
+  if (Math.abs(delta) > 4) contenedor.scrollTop += delta
+}
+
+function actualizarTeclado(): void {
+  const vv = window.visualViewport
+  if (!vv) return
+  const base = altoDeReferencia()
+  const abierto = Math.abs(vv.scale - 1) < 0.01 && vv.height < base - UMBRAL_TECLADO
+  html.style.setProperty('--alto-teclado', abierto ? `${Math.round(base - vv.height)}px` : '0px')
+  html.classList.toggle('teclado-abierto', abierto)
+  tecladoAbierto = abierto
+  // En el frame siguiente: los reencuadres propios de NoteForm/Misiones
+  // (scrollIntoView en este mismo evento) corren antes, y este gana.
+  if (abierto) window.requestAnimationFrame(centrarCampoActivo)
+}
+window.visualViewport?.addEventListener('resize', actualizarTeclado)
+
+// Pasar de un campo a otro con el teclado ya abierto (Monto → Nota) no
+// cambia el alto visible, así que no hay resize que lo cubra.
 document.addEventListener('focusin', (event) => {
-  if (abreTecladoNativo(event.target)) document.documentElement.classList.add('teclado-abierto')
+  if (tecladoAbierto && abreTecladoNativo(event.target)) window.requestAnimationFrame(centrarCampoActivo)
 })
-
-// Bug reportado (2026-10-01): al cerrar el teclado a veces queda un
-// hueco arriba y la pantalla no vuelve a bajar — mismo asentamiento
-// tardío de WKWebView que ramaDeMediciones() ya cubre al abrir la PWA,
-// pero acá no hay ningún evento que dispare una nueva medición: si el
-// cierre del teclado no emite 'resize' de visualViewport (o lo emite
-// con un valor todavía transitorio), --vh-real queda clavado en la
-// altura achicada. El timeout espera a que el teclado termine de
-// cerrarse de verdad antes de remedir; comprobar que el foco no haya
-// pasado a otro campo evita remedir de más cuando el usuario solo
-// tabuló al siguiente input (ahí sigue habiendo teclado, no hay hueco
-// que corregir). scrollTo(0, 0) corrige el caso en que el documento
-// quedó desplazado mientras el teclado empujaba el contenido.
-document.addEventListener('focusout', (event) => {
-  if (!abreTecladoNativo(event.target)) return
-  document.documentElement.classList.remove('teclado-abierto')
-  window.setTimeout(() => {
-    if (abreTecladoNativo(document.activeElement)) return
-    ramaDeMediciones()
-    window.scrollTo(0, 0)
-  }, 300)
-})
-
-// Bug reportado (2026-10-01): la ráfaga de ramaDeMediciones() cubre los
-// primeros ~1s de vida de la página, pero el asentamiento tardío de
-// WKWebView al lanzar/reanudar la PWA instalada a veces excede esa
-// ventana sin emitir 'resize'. En vez de alargar la ráfaga a ciegas, se
-// suma una remedición única en el primer touchstart o scroll reales
-// del usuario — la misma señal que antes "arreglaba sola" el hueco al
-// scrollear, pero ahora disparando medirVhReal() directo en vez de
-// depender de que ese gesto arrastre un resize de regalo. once: true
-// porque solo hace falta cubrir ese primer instante; medirVhReal() ya
-// sigue viva para siempre vía el listener de resize.
-window.addEventListener('touchstart', medirVhReal, { once: true, passive: true })
-window.addEventListener('scroll', medirVhReal, { once: true, passive: true })

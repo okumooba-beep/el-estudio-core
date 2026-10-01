@@ -62,8 +62,13 @@
       ya trae su propia luz y atmósfera. room-layer-photo sigue siendo la
       única base visual, ahora elegible desde Ajustes (ver
       src/lib/room/roomBackgrounds.ts).
+
+      absolute (no fixed) contra <body>, que es el contenedor fijo con la
+      altura base real (ver body en src/index.css): un fixed inset-0 se
+      resolvía contra el layout viewport corto del arranque en frío de la
+      PWA en iOS y dejaba la franja de abajo sin foto.
     -->
-    <div aria-hidden class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+    <div aria-hidden class="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
       <div class="room-layer-photo absolute inset-0"></div>
       <div class="room-layer-grain absolute inset-0"></div>
     </div>

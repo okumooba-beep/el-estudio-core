@@ -467,7 +467,6 @@ export function NuevoMovimiento({
           <textarea
             value={nota}
             onChange={(event) => setNota(event.target.value)}
-            onFocus={(event) => event.currentTarget.scrollIntoView({ block: 'center' })}
             placeholder="Agregá una nota…"
             aria-label="Nota"
             rows={2}

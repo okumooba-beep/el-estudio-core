@@ -69,9 +69,14 @@
   --radius-lg: var(--radius-lg);
 }
 
+/*
+  Literal oscuro (el mismo de .room-layer-photo y del manifest), no
+  var(--canvas): es lo único que puede asomar en cualquier borde que la
+  habitación no cubra, y --canvas deriva con la luz del día.
+*/
 html {
   color-scheme: light dark;
-  background: var(--canvas);
+  background: #120f0c;
   overscroll-behavior-y: contain;
 }
 
@@ -86,9 +91,37 @@ html {
   antes del primer paint — el de acá era una copia redundante que
   además tapaba en silencio la ventana y la lámpara detrás de todo:
   ninguna de las dos se veía nunca, en ningún sprint anterior.
+
+  Eso dejó de aplicar cuando <body> pasó a ser el contenedor fijo (abajo):
+  position:fixed lo vuelve contexto de apilamiento propio, y el fondo de
+  un contexto pinta debajo de sus hijos con z-index negativo — la
+  habitación (-z-10) ahora vive adentro de body y queda por encima.
+
+  Contenedor fijo del layout (bug del hueco bajo la nav en la PWA de
+  iOS, medido con src/lib/debug/viewportDebug.ts): al abrir en frío,
+  WKWebView reporta el layout viewport más corto por safe-area-inset-top
+  (873 en vez de 932) hasta el primer scroll del documento, y con él
+  todas las unidades vh/dvh/svh, inset:0 y bottom de cualquier
+  position:fixed. --alto-base (light-bootstrap.ts, sale de outerHeight,
+  correcto desde el ms 0) fija la altura a mano; fuera de iOS standalone
+  no se escribe y vale 100dvh. top/left/right + height explícito, nunca
+  inset:0: bottom se resolvería contra el viewport corto.
+
+  El contenedor es body y no #root porque un position:fixed también aísla
+  los mix-blend-mode de adentro (.cuaderno-luz, los overlay): con #root
+  fijo dejarían de mezclarse con la foto, que vive afuera de #root.
+  Sin contenido en flujo el documento no puede scrollear, así que iOS
+  tampoco puede dejarlo desplazado al cerrar el teclado.
 */
 body {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--alto-base, 100dvh);
+  overflow: hidden;
   margin: 0;
+  background-color: #120f0c;
   color: var(--ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
@@ -134,42 +167,25 @@ html[data-gaze="escritorio"] body {
   transform: none;
 }
 
+/*
+  Llena body (que ya tiene la altura base) y scrollea por su cuenta para
+  las pantallas fuera de AppShell (login, registro); dentro de AppShell
+  el que scrollea es <main>.
+*/
 #root {
   position: relative;
-  min-height: 100dvh;
+  height: 100%;
+  overflow-y: auto;
 }
 
 /*
-  Reemplaza el viejo anclaje por JS del nav inferior (useNavAncladaAlViewportVisual,
-  AppShell.tsx): en vez de compensar a mano el desfasaje entre el layout
-  viewport y visualViewport cuando el teclado abre, el contenedor raíz de
-  AppShell mide directo el viewport y la pill flotante (.nav-inferior) pasa
-  a anclarse contra ese contenedor, no contra el viewport crudo — el
-  navegador ya reacomoda esa altura solo.
-
-  Ni dvh ni svh alcanzaron: dvh recién converge a su valor final una vez
-  que el navegador "asienta" el chrome dinámico después del primer
-  render, y svh (pensado para asumir desde el primer frame que la barra
-  de direcciones ya está visible) tampoco resolvió el hueco al abrir la
-  PWA instalada en iOS (probado en dispositivo real) — ahí no hay barra
-  de direcciones de por medio, así que la causa es otra rareza del
-  WKWebView de standalone, no la ya conocida de Safari con pestañas.
-
-  --vh-real (src/light-bootstrap.ts, corre antes del primer paint de
-  React — mismo mecanismo que applyLight/aplicarFondo ahí mismo) mide
-  visualViewport.height en JS y lo escribe en :root como píxeles
-  exactos. Se recalcula en cada evento visualViewport.resize, nunca
-  scroll (eso era justo lo que desfasaba a useNavAncladaAlViewportVisual),
-  para cubrir tanto el primer render como el instante posterior en el
-  que WKWebView termina de asentar el tamaño real. 100vh como valor por
-  default de var(), no como declaración duplicada de `height`: el
-  minificador de Vite ya demostró (ver commit 87b6859) que colapsa dos
-  declaraciones de la misma propiedad a "la última gana" y descarta la
-  primera — el fallback adentro de var() no tiene ese problema porque
-  es un solo valor computado, no dos declaraciones en cascada.
+  Contenedor raíz de AppShell: 100% de #root, o sea --alto-base (ver
+  body arriba). Nunca depende de visualViewport — con el teclado abierto
+  no se achica; .nav-inferior (absolute, bottom:0) queda siempre al
+  borde real de la pantalla.
 */
 .h-dvh-safe {
-  height: var(--vh-real, 100vh);
+  height: 100%;
 }
 
 * {
@@ -302,14 +318,18 @@ textarea,
 }
 
 /*
-  Ver light-bootstrap.ts (teclado-abierto): mientras hay foco en un
-  campo que dispara el teclado nativo, --vh-real se achica al alto
-  visible arriba de él y bottom:0 (arriba) empuja esta pill al medio
-  del contenido en vez del borde real de la pantalla — se oculta hasta
-  que el foco se va.
+  Ver light-bootstrap.ts (teclado-abierto, detectado solo por
+  visualViewport): el layout no se achica con el teclado, así que la
+  pill quedaría tapada debajo de él — se oculta, y <main>
+  (.scroll-principal, AppShell.tsx) suma el alto del teclado como
+  colchón para que el último campo pueda subir por encima.
 */
 html.teclado-abierto .nav-inferior {
   display: none;
+}
+
+html.teclado-abierto .scroll-principal {
+  padding-bottom: calc(var(--alto-teclado, 0px) + 1.5rem);
 }
 
 .nav-inferior::before {
@@ -468,7 +488,9 @@ html.teclado-abierto .nav-inferior {
 #root::before {
   content: '';
   position: fixed;
-  inset: 0;
+  /* Alto explícito, nunca bottom:0 — ver el comentario de body. */
+  inset: 0 0 auto 0;
+  height: var(--alto-base, 100dvh);
   z-index: -1;
   pointer-events: none;
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.2) 0%, transparent 18%, transparent 62%, rgba(0, 0, 0, 0.38) 100%);
@@ -3791,7 +3813,9 @@ html.teclado-abierto .nav-inferior {
 */
 .cuaderno-luz {
   position: fixed;
-  inset: 0;
+  /* Alto explícito, nunca bottom:0 — ver el comentario de body. */
+  inset: 0 0 auto 0;
+  height: var(--alto-base, 100dvh);
   z-index: -1;
   /*
     Sprint 029 (§10): color-mix produce un color sólido y opaco — sin
@@ -4052,10 +4076,17 @@ html.teclado-abierto .nav-inferior {
   opaca (.finanzas-tarjeta) para que el texto se lea igual sin importar
   qué parte de la foto quede detrás. No es una solución global: ninguna
   otra ruta toca `.room-layer-*` ni recibe `.finanzas-tarjeta`.
+
+  Con body como contenedor fijo (ver su comentario) la habitación ya no
+  se mueve nunca al scrollear; se mantiene el fixed pero con alto
+  explícito: con inset:0 se resolvía contra el layout viewport corto del
+  arranque en frío de iOS y dejaba la franja de abajo sin foto.
 */
 html[data-route='finanzas'] .room-layer-photo,
 html[data-route='notas'] .room-layer-photo {
   position: fixed;
+  inset: 0 0 auto 0;
+  height: var(--alto-base, 100dvh);
 }
 
 /*

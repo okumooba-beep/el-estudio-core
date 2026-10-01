@@ -110,15 +110,16 @@ export function AppShell({ espaciosOcultos }: AppShellProps) {
         hermanos (y la propia pill) hace que el colchón seleccion real del
         dispositivo, en vez de asumir un número fijo que puede no alcanzar.
       */}
-      <main className="min-h-0 flex-1 overflow-y-auto pt-[calc(1.5rem+env(safe-area-inset-top))] pr-[calc(1.25rem+env(safe-area-inset-right))] pb-[calc(5rem+env(safe-area-inset-bottom))] pl-[calc(1.25rem+env(safe-area-inset-left))] md:px-8 md:pb-10 md:pt-8">
+      <main className="scroll-principal min-h-0 flex-1 overflow-y-auto pt-[calc(1.5rem+env(safe-area-inset-top))] pr-[calc(1.25rem+env(safe-area-inset-right))] pb-[calc(5rem+env(safe-area-inset-bottom))] pl-[calc(1.25rem+env(safe-area-inset-left))] md:px-8 md:pb-10 md:pt-8">
         <Outlet />
       </main>
 
       {/*
         Pill flotante: position:absolute (ver .nav-inferior en index.css)
-        contra el propio div raíz de AppShell (`relative`, altura real vía
-        --vh-real/.h-dvh-safe, medida en JS por src/light-bootstrap.ts) —
-        nunca contra el viewport crudo con position:fixed. Al ser
+        contra el propio div raíz de AppShell (`relative`, altura base real
+        vía body/.h-dvh-safe, ver src/index.css y src/light-bootstrap.ts) —
+        nunca contra el viewport crudo con position:fixed, que en el
+        arranque en frío de la PWA en iOS mide 59px de menos. Al ser
         absolute, deja de participar del flex del padre — por eso ya no
         lleva `shrink-0` ni el padding de safe-area que antes tenía (ahora
         vive en .nav-inferior como margin-bottom/left/right).
