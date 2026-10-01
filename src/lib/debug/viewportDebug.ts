@@ -78,7 +78,22 @@ function medicion(): string {
     `  shell ${rect('.h-dvh-safe')} | main ${rect('main')} | nav ${rect('.nav-inferior')}`,
     `  fondo ${rect('.room-layer-photo')} | safe ${safeAreas()}`,
     `  --alto-base ${altoBase} | teclado ${teclado} --alto-teclado ${altoTeclado} | campo ${campo ? `${activo?.tagName} y${n(campo.top)} b${n(campo.bottom)}` : '—'} | toqueY ${n(ultimoToqueY)}`,
+    `  ${scrollMain()}`,
   ].join('\n')
+}
+
+function scrollMain(): string {
+  const main = document.querySelector<HTMLElement>('.scroll-principal')
+  if (!main) return 'main —'
+  return `main sT${n(main.scrollTop)} sH${main.scrollHeight} cH${main.clientHeight} pb${getComputedStyle(main).paddingBottom}`
+}
+
+/** Línea libre en la lista de eventos (usada por el centrado del teclado en light-bootstrap). */
+export function registrarDebug(texto: string): void {
+  if (!panel) return
+  eventos.push(`+${Math.round(performance.now())} ${texto}`)
+  if (eventos.length > MAX_EVENTOS) eventos = eventos.slice(-MAX_EVENTOS)
+  render()
 }
 
 function render(): void {
@@ -112,7 +127,8 @@ function programarSnapshots(etiqueta: string): void {
 
 function registrar(tipo: string): void {
   const vv = window.visualViewport
-  const valores = `iH${window.innerHeight} vvH${n(vv?.height)} vvTop${n(vv?.offsetTop)} sY${n(window.scrollY)} shell ${rect('.h-dvh-safe')}`
+  const main = document.querySelector<HTMLElement>('.scroll-principal')
+  const valores = `iH${window.innerHeight} vvH${n(vv?.height)} vvTop${n(vv?.offsetTop)} sY${n(window.scrollY)} mainST${n(main?.scrollTop)} shell ${rect('.h-dvh-safe')}`
   if ((tipo === 'scroll' || tipo === 'vv.scroll') && ultimoPorTipo.get(tipo) === valores) return
   ultimoPorTipo.set(tipo, valores)
   eventos.push(`+${Math.round(performance.now())} ${tipo} ${valores}`)

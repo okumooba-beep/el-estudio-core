@@ -1,6 +1,6 @@
 import { applyLight } from '@world/light/applyLight'
 import { aplicarFondo, leerFondoGuardado, aplicarPosicionX, leerPosicionXGuardada, urlDeFondo } from '@/lib/room/roomBackgrounds'
-import { iniciarDebugViewport } from '@/lib/debug/viewportDebug'
+import { iniciarDebugViewport, registrarDebug } from '@/lib/debug/viewportDebug'
 
 iniciarDebugViewport()
 
@@ -89,10 +89,9 @@ function altoDeReferencia(): number {
  * Con el teclado abierto el layout NO se achica: body, la habitación y el
  * shell siguen a altura completa; solo se oculta la pill
  * (html.teclado-abierto .nav-inferior) y el <main> scrolleable suma
- * --alto-teclado de padding-bottom (.scroll-principal) para que los
- * últimos campos (la Nota de Nuevo movimiento incluida) puedan subir por
- * encima del teclado. Después se centra el campo activo dentro del área
- * visible.
+ * padding-bottom (.scroll-principal) para que los últimos campos (la Nota
+ * de Nuevo movimiento incluida) puedan subir hasta el centro de la franja
+ * visible. Después se centra el campo activo dentro de esa franja.
  */
 const UMBRAL_TECLADO = 120
 let tecladoAbierto = false
@@ -139,12 +138,64 @@ function centrarCampoActivo(): void {
   const campo = document.activeElement
   if (!vv || !tecladoAbierto || !abreTecladoNativo(campo)) return
   const contenedor = contenedorScrolleable(campo)
-  if (!contenedor) return
+  if (!contenedor) {
+    registrarDebug(`centrar ${campo.tagName}: sin contenedor scrolleable`)
+    return
+  }
   const r = campo.getBoundingClientRect()
   const altoCampo = Math.min(r.height, vv.height * 0.5)
   const arribaDeseado = vv.offsetTop + (vv.height - altoCampo) / 2
   const delta = r.top - arribaDeseado
-  if (Math.abs(delta) > 4) contenedor.scrollTop += delta
+  if (Math.abs(delta) <= 4) return
+  const antes = contenedor.scrollTop
+  contenedor.scrollTop += delta
+  registrarDebug(
+    `centrar ${campo.tagName} y${Math.round(r.top)} banda ${Math.round(vv.offsetTop)}–${Math.round(vv.offsetTop + vv.height)} ` +
+      `delta${Math.round(delta)} ${contenedor.tagName}.scrollTop ${Math.round(antes)}→${Math.round(contenedor.scrollTop)}`,
+  )
+}
+
+/*
+ * El centrado corre cuando el viewport visual ya se asentó, nunca en el
+ * primer evento: iOS emite el resize del teclado al EMPEZAR a abrirlo y
+ * después hace su propio "revelar campo" paneando el viewport visual
+ * (vv.scroll), lo que corre la banda visible después de cualquier
+ * centrado temprano — era lo que dejaba la Nota de Nuevo movimiento
+ * debajo del teclado, con "Cuándo" a la vista. Cada resize/scroll con el
+ * teclado abierto reprograma el centrado, así que corre una vez que iOS
+ * terminó de moverse, y gana sobre los reencuadres propios de
+ * NoteForm/Misiones. Centrar es idempotente (sin cambio si ya está a
+ * ±4px), así que el pase de seguridad posterior al foco no mueve nada
+ * si no hace falta. vv.scroll solo cuenta dentro de una ventana corta
+ * tras el foco/apertura: un paneo manual posterior no devuelve el campo
+ * al centro.
+ */
+const ESPERA_CENTRADO_MS = 150
+const PASE_SEGURIDAD_MS = 650
+const VENTANA_REVELADO_MS = 1200
+let temporizadorCentrado: number | undefined
+let reveladoHasta = 0
+
+function abrirVentanaRevelado(): void {
+  reveladoHasta = performance.now() + VENTANA_REVELADO_MS
+}
+
+function programarCentrado(): void {
+  window.clearTimeout(temporizadorCentrado)
+  temporizadorCentrado = window.setTimeout(centrarCampoActivo, ESPERA_CENTRADO_MS)
+}
+
+/**
+ * Al cerrar el teclado, si iOS dejó la página desplazada por su propio
+ * "revelar campo" (sY o vvTop distintos de 0), el contenido queda corrido
+ * y aparece un hueco: se vuelve al origen una sola vez, disparado por el
+ * cierre medido en visualViewport (no por focusout), y solo si hace falta.
+ */
+function restaurarPaginaTrasCierre(): void {
+  const vv = window.visualViewport
+  if (tecladoAbierto || (window.scrollY === 0 && (vv?.offsetTop ?? 0) === 0)) return
+  registrarDebug(`cierre: sY${Math.round(window.scrollY)} vvTop${Math.round(vv?.offsetTop ?? 0)} → scrollTo(0,0)`)
+  window.scrollTo(0, 0)
 }
 
 function actualizarTeclado(): void {
@@ -152,17 +203,26 @@ function actualizarTeclado(): void {
   if (!vv) return
   const base = altoDeReferencia()
   const abierto = Math.abs(vv.scale - 1) < 0.01 && vv.height < base - UMBRAL_TECLADO
+  const estabaAbierto = tecladoAbierto
   html.style.setProperty('--alto-teclado', abierto ? `${Math.round(base - vv.height)}px` : '0px')
   html.classList.toggle('teclado-abierto', abierto)
   tecladoAbierto = abierto
-  // En el frame siguiente: los reencuadres propios de NoteForm/Misiones
-  // (scrollIntoView en este mismo evento) corren antes, y este gana.
-  if (abierto) window.requestAnimationFrame(centrarCampoActivo)
+  if (abierto) {
+    if (!estabaAbierto) abrirVentanaRevelado()
+    programarCentrado()
+  } else if (estabaAbierto) window.setTimeout(restaurarPaginaTrasCierre, ESPERA_CENTRADO_MS * 2)
 }
 window.visualViewport?.addEventListener('resize', actualizarTeclado)
+window.visualViewport?.addEventListener('scroll', () => {
+  if (tecladoAbierto && performance.now() < reveladoHasta) programarCentrado()
+})
 
 // Pasar de un campo a otro con el teclado ya abierto (Monto → Nota) no
-// cambia el alto visible, así que no hay resize que lo cubra.
+// cambia el alto visible, así que no hay resize que lo cubra; el pase de
+// seguridad cubre el caso en que iOS revela el campo sin emitir vv.scroll.
 document.addEventListener('focusin', (event) => {
-  if (tecladoAbierto && abreTecladoNativo(event.target)) window.requestAnimationFrame(centrarCampoActivo)
+  if (!abreTecladoNativo(event.target)) return
+  abrirVentanaRevelado()
+  if (tecladoAbierto) programarCentrado()
+  window.setTimeout(centrarCampoActivo, PASE_SEGURIDAD_MS)
 })

@@ -308,15 +308,18 @@ textarea,
   Ver light-bootstrap.ts (teclado-abierto, detectado solo por
   visualViewport): el layout no se achica con el teclado, así que la
   pill quedaría tapada debajo de él — se oculta, y <main>
-  (.scroll-principal, AppShell.tsx) suma el alto del teclado como
-  colchón para que el último campo pueda subir por encima.
+  (.scroll-principal, AppShell.tsx) suma un colchón para que el último
+  campo pueda subir por encima. El colchón es teclado + media franja
+  visible ((base + teclado) / 2): con solo el alto del teclado, la Nota
+  de Nuevo movimiento (último campo antes de Guardar) llegaba al borde
+  del teclado pero nunca al centro de la franja visible.
 */
 html.teclado-abierto .nav-inferior {
   display: none;
 }
 
 html.teclado-abierto .scroll-principal {
-  padding-bottom: calc(var(--alto-teclado, 0px) + 1.5rem);
+  padding-bottom: calc((var(--alto-base, 100dvh) + var(--alto-teclado, 0px)) / 2);
 }
 
 .nav-inferior::before {
