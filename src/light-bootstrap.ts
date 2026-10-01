@@ -1,5 +1,8 @@
 import { applyLight } from '@world/light/applyLight'
 import { aplicarFondo, leerFondoGuardado, aplicarPosicionX, leerPosicionXGuardada, urlDeFondo } from '@/lib/room/roomBackgrounds'
+import { iniciarDebugViewport } from '@/lib/debug/viewportDebug'
+
+iniciarDebugViewport()
 
 // Se ejecuta antes que main.tsx (ver el orden de los <script> en index.html)
 // para que la habitación nunca haga un flash de la luz equivocada al abrir.
