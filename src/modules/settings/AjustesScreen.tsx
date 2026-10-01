@@ -115,6 +115,9 @@ export function AjustesScreen({
   const [fondoConError, setFondoConError] = useState<string | null>(null)
   const [grillaFondosAbierta, setGrillaFondosAbierta] = useState(false)
   const [modulosAbierto, setModulosAbierto] = useState(false)
+  // Avanzado: las re-sincronizaciones forzadas son herramientas de
+  // recuperación, no ajustes de uso diario — colapsadas por defecto.
+  const [avanzadoAbierto, setAvanzadoAbierto] = useState(false)
   const [estadoPosicionX, setEstadoPosicionX] = useState<EstadoPosicionX>('idle')
   /** Posición en vivo mientras se arrastra la caja sobre la miniatura — `null` cuando no se está arrastrando, y el control cae a `posicionXActiva` (la ya guardada). Evita disparar el guardado remoto en cada pointermove. */
   const [posicionArrastre, setPosicionArrastre] = useState<number | null>(null)
@@ -679,7 +682,27 @@ export function AjustesScreen({
         )}
       </section>
 
-      {onForceNotesResync && (
+      {(onForceNotesResync || onForceAgendaResync) && (
+        <section className="flex flex-col gap-2">
+          <button
+            type="button"
+            className="flex items-center justify-between gap-2 text-left"
+            aria-expanded={avanzadoAbierto}
+            onClick={() => setAvanzadoAbierto((abierto) => !abierto)}
+          >
+            <h2 className="font-mono text-[11px] uppercase tracking-wide text-accent">Avanzado</h2>
+            <span aria-hidden className="font-mono text-[11px] text-ink-dim">
+              {avanzadoAbierto ? '−' : '+'}
+            </span>
+          </button>
+          <p className="text-[13px] text-ink-dim">
+            Solo si algo no coincide entre tus dispositivos y la sincronización normal no lo arregla. No hace falta
+            tocarlo en el uso diario.
+          </p>
+        </section>
+      )}
+
+      {avanzadoAbierto && onForceNotesResync && (
         <section className="flex flex-col gap-2">
           <h2 className="font-mono text-[11px] uppercase tracking-wide text-accent">Notas — forzar re-sincronización (temporal)</h2>
           <p className="text-[13px] text-ink-dim">
@@ -704,7 +727,7 @@ export function AjustesScreen({
         </section>
       )}
 
-      {onForceAgendaResync && (
+      {avanzadoAbierto && onForceAgendaResync && (
         <section className="flex flex-col gap-2">
           <h2 className="font-mono text-[11px] uppercase tracking-wide text-accent">Agenda — forzar re-sincronización</h2>
           <p className="text-[13px] text-ink-dim">
