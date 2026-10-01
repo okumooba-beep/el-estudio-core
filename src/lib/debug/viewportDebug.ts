@@ -1,6 +1,7 @@
 // Panel temporal de depuración del viewport (hueco bajo la nav en la PWA de iOS).
 // Se activa con ?debug=1 (persiste en localStorage; ?debug=0 lo apaga) o con un
-// toque largo (~0,8s) en la franja superior de la pantalla.
+// toque largo (~0,8s) en la franja superior de la pantalla — solo para el dueño
+// (ver esDueno); a cualquier otro usuario se le borra el flag al arrancar.
 
 const CLAVE = 'debug.viewport'
 const TIEMPOS = [0, 500, 1500, 3000]
@@ -23,6 +24,37 @@ let indiceAltoHtml = 0
 const MAX_PRUEBAS = 24
 const CLAVE_BARRA = 'debug.statusBar'
 const ALTOS_HTML = ['100vh', '100%', '-webkit-fill-available', '']
+
+// Solo el dueño de la app puede activar el panel. Se compara un hash FNV-1a
+// del email (no el email en claro: el bundle es público) contra la sesión
+// que Supabase persiste en localStorage (sb-<ref>-auth-token), leída de
+// forma síncrona para que el panel siga pudiendo abrirse en el arranque en
+// frío, antes de que React y el cliente de Supabase existan.
+const HASH_EMAIL_DUENO = 0x52beaad8
+
+function hashFnv1a(texto: string): number {
+  let h = 0x811c9dc5
+  for (let i = 0; i < texto.length; i++) {
+    h ^= texto.charCodeAt(i)
+    h = Math.imul(h, 0x01000193) >>> 0
+  }
+  return h
+}
+
+function esDueno(): boolean {
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const clave = localStorage.key(i)
+      if (!clave || !/^sb-.+-auth-token(-user)?$/.test(clave)) continue
+      const datos = JSON.parse(localStorage.getItem(clave) ?? 'null') as { user?: { email?: string }; email?: string } | null
+      const email = datos?.user?.email ?? datos?.email
+      if (email && hashFnv1a(email.trim().toLowerCase()) === HASH_EMAIL_DUENO) return true
+    }
+  } catch {
+    /* sin storage o sesión ilegible: no es el dueño */
+  }
+  return false
+}
 
 function leerFlag(): boolean {
   try {
@@ -374,6 +406,7 @@ function escucharToqueLargo(): void {
       const t = e.touches[0]
       if (t) ultimoToqueY = t.clientY
       if (e.touches.length !== 1 || !t || t.clientY > 90) return
+      if (!panel && !esDueno()) return
       timer = window.setTimeout(() => {
         if (panel) {
           cerrarPanel(true)
@@ -391,9 +424,15 @@ function escucharToqueLargo(): void {
 }
 
 export function iniciarDebugViewport(): void {
+  // El toque largo se escucha igual (registra toqueY y vuelve a chequear al
+  // dueño en cada toque: puede loguearse después del arranque).
+  escucharToqueLargo()
+  if (!esDueno()) {
+    escribirFlag(false)
+    return
+  }
   const param = new URLSearchParams(window.location.search).get('debug')
   if (param === '1') escribirFlag(true)
   if (param === '0') escribirFlag(false)
-  escucharToqueLargo()
   if (leerFlag()) abrirPanel('frío')
 }
