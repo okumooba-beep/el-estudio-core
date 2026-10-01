@@ -5,7 +5,9 @@
 
 const CLAVE = 'debug.viewport'
 const TIEMPOS = [0, 500, 1500, 3000]
-const MAX_EVENTOS = 15
+// 40: con 15, la ráfaga de scroll/vv.scroll de iOS al abrir el teclado
+// podía empujar fuera las líneas del centrado antes de poder leerlas.
+const MAX_EVENTOS = 40
 
 let panel: HTMLDivElement | null = null
 let sonda: HTMLDivElement | null = null

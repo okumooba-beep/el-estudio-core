@@ -119,7 +119,16 @@ function abreTecladoNativo(el: EventTarget | null): el is HTMLElement {
   return el.isContentEditable
 }
 
+/**
+ * El <main> del shell (.scroll-principal) es el único scroller real de la
+ * app, así que va primero cuando contiene al campo. La búsqueda por
+ * overflow queda solo para un scroller propio fuera de <main>: un ancestro
+ * con overflow-x-hidden computa overflow-y 'auto' aunque no scrollee, y
+ * podía ganarle a <main> por un píxel de diferencia de alto.
+ */
 function contenedorScrolleable(el: HTMLElement): HTMLElement | null {
+  const principal = document.querySelector<HTMLElement>('.scroll-principal')
+  if (principal?.contains(el)) return principal
   for (let actual = el.parentElement; actual && actual !== document.body; actual = actual.parentElement) {
     const { overflowY } = getComputedStyle(actual)
     if ((overflowY === 'auto' || overflowY === 'scroll') && actual.scrollHeight > actual.clientHeight) return actual
@@ -132,27 +141,48 @@ function contenedorScrolleable(el: HTMLElement): HTMLElement | null {
  * (coordenadas del layout viewport: vv.offsetTop cubre el caso en que iOS
  * paneó el viewport visual). Un campo más alto que media pantalla (un
  * textarea crecido) se alinea por arriba en vez de por el centro.
+ * Cada rama de salida deja una línea en el panel (registrarDebug no hace
+ * nada sin panel abierto).
  */
-function centrarCampoActivo(): void {
-  const vv = window.visualViewport
-  const campo = document.activeElement
-  if (!vv || !tecladoAbierto || !abreTecladoNativo(campo)) return
-  const contenedor = contenedorScrolleable(campo)
-  if (!contenedor) {
-    registrarDebug(`centrar ${campo.tagName}: sin contenedor scrolleable`)
-    return
+function centrarCampoActivo(origen: string): void {
+  try {
+    const vv = window.visualViewport
+    const campo = document.activeElement
+    const etiqueta = `centrar[${origen}]`
+    if (!vv) return registrarDebug(`${etiqueta}: sin visualViewport`)
+    if (!tecladoAbierto) {
+      return registrarDebug(`${etiqueta}: teclado cerrado (vvH${Math.round(vv.height)} base${Math.round(altoDeReferencia())})`)
+    }
+    if (!abreTecladoNativo(campo)) {
+      const tipo = campo instanceof HTMLInputElement ? `/${campo.type}` : ''
+      return registrarDebug(`${etiqueta}: activo ${campo?.tagName ?? 'null'}${tipo} no abre teclado`)
+    }
+    const contenedor = contenedorScrolleable(campo)
+    if (!contenedor) return registrarDebug(`${etiqueta} ${campo.tagName}: sin contenedor scrolleable`)
+    const r = campo.getBoundingClientRect()
+    const altoCampo = Math.min(r.height, vv.height * 0.5)
+    const arribaDeseado = vv.offsetTop + (vv.height - altoCampo) / 2
+    const delta = r.top - arribaDeseado
+    const banda = `banda ${Math.round(vv.offsetTop)}–${Math.round(vv.offsetTop + vv.height)}`
+    if (Math.abs(delta) <= 4) return registrarDebug(`${etiqueta} ${campo.tagName} y${Math.round(r.top)} ${banda}: ya centrado`)
+    const antes = contenedor.scrollTop
+    const objetivo = antes + delta
+    contenedor.scrollTop = objetivo
+    const despues = contenedor.scrollTop
+    registrarDebug(
+      `${etiqueta} ${campo.tagName} y${Math.round(r.top)} ${banda} delta${Math.round(delta)} ` +
+        `${contenedor.tagName}.sT ${Math.round(antes)}→${Math.round(despues)} (máx ${contenedor.scrollHeight - contenedor.clientHeight})`,
+    )
+    // Si algo (iOS o un reencuadre propio) pisa el scroll en el frame
+    // siguiente, queda registrado con el valor que dejó.
+    requestAnimationFrame(() => {
+      if (Math.abs(contenedor.scrollTop - despues) > 2) {
+        registrarDebug(`${etiqueta}: sT pisado ${Math.round(despues)}→${Math.round(contenedor.scrollTop)}`)
+      }
+    })
+  } catch (error) {
+    registrarDebug(`centrar[${origen}] error: ${error instanceof Error ? error.message : String(error)}`)
   }
-  const r = campo.getBoundingClientRect()
-  const altoCampo = Math.min(r.height, vv.height * 0.5)
-  const arribaDeseado = vv.offsetTop + (vv.height - altoCampo) / 2
-  const delta = r.top - arribaDeseado
-  if (Math.abs(delta) <= 4) return
-  const antes = contenedor.scrollTop
-  contenedor.scrollTop += delta
-  registrarDebug(
-    `centrar ${campo.tagName} y${Math.round(r.top)} banda ${Math.round(vv.offsetTop)}–${Math.round(vv.offsetTop + vv.height)} ` +
-      `delta${Math.round(delta)} ${contenedor.tagName}.scrollTop ${Math.round(antes)}→${Math.round(contenedor.scrollTop)}`,
-  )
 }
 
 /*
@@ -165,13 +195,16 @@ function centrarCampoActivo(): void {
  * teclado abierto reprograma el centrado, así que corre una vez que iOS
  * terminó de moverse, y gana sobre los reencuadres propios de
  * NoteForm/Misiones. Centrar es idempotente (sin cambio si ya está a
- * ±4px), así que el pase de seguridad posterior al foco no mueve nada
+ * ±4px), así que los pases fijos posteriores al foco no mueven nada
  * si no hace falta. vv.scroll solo cuenta dentro de una ventana corta
  * tras el foco/apertura: un paneo manual posterior no devuelve el campo
  * al centro.
  */
 const ESPERA_CENTRADO_MS = 150
-const PASE_SEGURIDAD_MS = 650
+// Pases fijos tras el foco, independientes de la ventana de vv.scroll y de
+// que iOS emita o no eventos: el centrado del 55450b8 dependía solo de
+// esos eventos y en el iPhone la Nota nunca llegó a moverse.
+const PASES_FOCO_MS = [100, 350, 700, 1100]
 const VENTANA_REVELADO_MS = 1200
 let temporizadorCentrado: number | undefined
 let reveladoHasta = 0
@@ -180,9 +213,9 @@ function abrirVentanaRevelado(): void {
   reveladoHasta = performance.now() + VENTANA_REVELADO_MS
 }
 
-function programarCentrado(): void {
+function programarCentrado(origen: string): void {
   window.clearTimeout(temporizadorCentrado)
-  temporizadorCentrado = window.setTimeout(centrarCampoActivo, ESPERA_CENTRADO_MS)
+  temporizadorCentrado = window.setTimeout(() => centrarCampoActivo(origen), ESPERA_CENTRADO_MS)
 }
 
 /**
@@ -207,22 +240,29 @@ function actualizarTeclado(): void {
   html.style.setProperty('--alto-teclado', abierto ? `${Math.round(base - vv.height)}px` : '0px')
   html.classList.toggle('teclado-abierto', abierto)
   tecladoAbierto = abierto
+  if (abierto !== estabaAbierto) {
+    registrarDebug(`teclado ${abierto ? 'abierto' : 'cerrado'} vvH${Math.round(vv.height)} base${Math.round(base)}`)
+  }
   if (abierto) {
     if (!estabaAbierto) abrirVentanaRevelado()
-    programarCentrado()
+    programarCentrado('vv.resize')
   } else if (estabaAbierto) window.setTimeout(restaurarPaginaTrasCierre, ESPERA_CENTRADO_MS * 2)
 }
 window.visualViewport?.addEventListener('resize', actualizarTeclado)
 window.visualViewport?.addEventListener('scroll', () => {
-  if (tecladoAbierto && performance.now() < reveladoHasta) programarCentrado()
+  if (tecladoAbierto && performance.now() < reveladoHasta) programarCentrado('vv.scroll')
 })
 
 // Pasar de un campo a otro con el teclado ya abierto (Monto → Nota) no
-// cambia el alto visible, así que no hay resize que lo cubra; el pase de
-// seguridad cubre el caso en que iOS revela el campo sin emitir vv.scroll.
+// cambia el alto visible, así que no hay resize que lo cubra; los pases
+// fijos cubren eso y el caso en que iOS revela el campo sin emitir eventos.
 document.addEventListener('focusin', (event) => {
-  if (!abreTecladoNativo(event.target)) return
+  const objetivo = event.target
+  if (!abreTecladoNativo(objetivo)) {
+    if (objetivo instanceof HTMLElement) registrarDebug(`focusin ${objetivo.tagName}: no abre teclado, sin centrado`)
+    return
+  }
+  registrarDebug(`focusin ${objetivo.tagName}: teclado ${tecladoAbierto ? 'SI' : 'no'}, pases ${PASES_FOCO_MS.join('/')}ms`)
   abrirVentanaRevelado()
-  if (tecladoAbierto) programarCentrado()
-  window.setTimeout(centrarCampoActivo, PASE_SEGURIDAD_MS)
+  for (const espera of PASES_FOCO_MS) window.setTimeout(() => centrarCampoActivo(`foco+${espera}`), espera)
 })
