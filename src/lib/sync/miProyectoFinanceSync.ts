@@ -53,6 +53,7 @@ interface MovimientoRow {
   monto_original: number | null
   periodo_id: string | null
   carpeta_id: string | null
+  nota: string | null
 }
 
 interface GoalRow {
@@ -134,6 +135,7 @@ const movimientosSync: TableSync<FinanceMovimiento, MovimientoRow> = {
     monto_original: m.montoOriginal ?? null,
     periodo_id: m.periodoId ?? null,
     carpeta_id: m.carpetaId ?? null,
+    nota: m.nota ?? null,
   }),
   fromRow: (row) => ({
     id: row.id,
@@ -155,6 +157,7 @@ const movimientosSync: TableSync<FinanceMovimiento, MovimientoRow> = {
     ...(row.monto_original != null ? { montoOriginal: row.monto_original } : {}),
     ...(row.periodo_id ? { periodoId: row.periodo_id } : {}),
     ...(row.carpeta_id ? { carpetaId: row.carpeta_id } : {}),
+    ...(row.nota ? { nota: row.nota } : {}),
   }),
 }
 

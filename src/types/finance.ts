@@ -112,6 +112,8 @@ export interface FinanceMovimiento {
    * un egreso normal). `undefined` = movimiento sin relación a un gasto fijo.
    */
   gastoFijoId?: string
+  /** Nota libre opcional del movimiento, cargada en el formulario junto con "Cuándo". `undefined` = sin nota. */
+  nota?: string
 }
 
 /**

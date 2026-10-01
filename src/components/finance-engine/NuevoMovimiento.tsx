@@ -82,6 +82,7 @@ export function NuevoMovimiento({
   const [moneda, setMoneda] = useState<Moneda>(monedaDefault)
   const [medio, setMedio] = useState<Medio>('transferencia')
   const [cuotas, setCuotas] = useState('1')
+  const [nota, setNota] = useState('')
   const [guardando, setGuardando] = useState(false)
   /**
    * Bug reportado: el selector de semana mostraba TODAS las semanas de
@@ -180,6 +181,7 @@ export function NuevoMovimiento({
           medio: balde.medio,
           fecha: fechaEfectiva,
           ...(periodoElegidoId ? { periodoId: periodoElegidoId } : {}),
+          ...(nota.trim() ? { nota: nota.trim() } : {}),
         })
       }
     } else if (esCompraEnCuotas) {
@@ -201,6 +203,7 @@ export function NuevoMovimiento({
         moneda,
         medio,
         fecha: fechaEfectiva,
+        ...(nota.trim() ? { nota: nota.trim() } : {}),
       })
     }
   }
@@ -458,6 +461,18 @@ export function NuevoMovimiento({
             </div>
           </div>
         ) : null}
+
+        <label className="flex flex-col gap-1">
+          <span className="text-[12.5px] text-ink-faint">Nota (opcional)</span>
+          <textarea
+            value={nota}
+            onChange={(event) => setNota(event.target.value)}
+            placeholder="Agregá una nota…"
+            aria-label="Nota"
+            rows={2}
+            className="resize-none border-b border-border/60 bg-transparent px-1 py-2 text-[13.5px] text-ink outline-none placeholder:text-ink-dim"
+          />
+        </label>
       </div>
 
       <button

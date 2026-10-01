@@ -52,6 +52,8 @@ export interface NuevaFinanceMovimiento {
   periodoId?: string
   /** Gastos fijos mensuales — a qué gasto fijo paga, cuando nace ya asociado a uno (checklist "tildar"). */
   gastoFijoId?: string
+  /** Nota libre opcional, cargada en "Cuándo" del formulario. `undefined` = sin nota. */
+  nota?: string
 }
 
 /**
@@ -266,6 +268,7 @@ export function createFinanceEngineRepositories(
         ...(input.ideaId ? { ideaId: input.ideaId } : {}),
         ...(input.periodoId ? { periodoId: input.periodoId } : {}),
         ...(input.gastoFijoId ? { gastoFijoId: input.gastoFijoId } : {}),
+        ...(input.nota?.trim() ? { nota: input.nota.trim() } : {}),
         fecha: input.fecha ?? fechaLocalISO(now),
         createdAt: now.toISOString(),
         updatedAt: now.toISOString(),

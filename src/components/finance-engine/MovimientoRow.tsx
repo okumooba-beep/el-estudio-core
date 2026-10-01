@@ -156,6 +156,7 @@ export function MovimientoRow({
             Cuota {movimiento.cuotaNumero}/{movimiento.cuotaTotal}
           </span>
         ) : null}
+        {movimiento.nota ? <span className="text-[11.5px] italic text-ink-faint">{movimiento.nota}</span> : null}
       </span>
       <span className={`shrink-0 font-mono text-[14px] ${signo === '+' ? 'text-good' : 'text-ink-dim'}`}>
         {signo}
