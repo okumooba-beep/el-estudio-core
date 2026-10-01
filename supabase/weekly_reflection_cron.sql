@@ -42,3 +42,28 @@ select cron.schedule(
 --   select cron.unschedule('weekly-reflection-domingo-15utc');
 -- Para ver corridas:
 --   select * from cron.job_run_details order by start_time desc limit 20;
+
+-- Cambio de horario (2026-10-01): domingo 21:00 ART = lunes 00:00 UTC,
+-- en vez de domingo 12:00 ART = domingo 15:00 UTC. Corré esto en el SQL
+-- Editor para mover el cron ya creado arriba — primero desprograma el
+-- job viejo, después programa el nuevo horario con un nombre que lo
+-- refleja (mismo job, mismo secret de URL, misma llamada).
+select cron.unschedule('weekly-reflection-domingo-15utc');
+
+select cron.schedule(
+  'weekly-reflection-domingo-21art',
+  '0 0 * * 1',
+  $$
+  select net.http_post(
+    url := (select decrypted_secret from vault.decrypted_secrets where name = 'weekly_reflection_url'),
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'dispatch_reminders_service_role_key')
+    ),
+    body := '{}'::jsonb
+  );
+  $$
+);
+
+-- Para pausar/desactivar el nuevo horario:
+--   select cron.unschedule('weekly-reflection-domingo-21art');

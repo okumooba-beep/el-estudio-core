@@ -92,12 +92,13 @@ async function calcularMetricas(userId: string, inicioSemana: Date) {
 
   // Misiones: completadas en la semana, contra las que quedaron sin
   // terminar — mismos dos valores de estado que seleccionarPrincipales.ts.
-  const { data: misiones } = await supabase
+  const { data: misiones, error: misionesError } = await supabase
     .from('missions')
     .select('estado, deleted_at')
     .eq('user_id', userId)
     .gte('updated_at', inicioSemana.toISOString())
     .lt('updated_at', finSemana.toISOString())
+  if (misionesError) throw misionesError
   const misionesRow = (misiones ?? []) as MissionRow[]
   const misionesCompletadas = misionesRow.filter(
     (m) => !m.deleted_at && (m.estado === 'terminada' || m.estado === 'completada'),
@@ -105,12 +106,13 @@ async function calcularMetricas(userId: string, inicioSemana: Date) {
   const misionesTotal = misionesRow.filter((m) => !m.deleted_at).length
 
   // Hábitos: misma fórmula que HabitosScreen.tsx (completadas / (hábitos × 7)).
-  const { data: habitosIdeas } = await supabase
+  const { data: habitosIdeas, error: habitosIdeasError } = await supabase
     .from('ideas')
     .select('id')
     .eq('user_id', userId)
     .eq('destino', 'habitos')
     .is('deleted_at', null)
+  if (habitosIdeasError) throw habitosIdeasError
   const habitIds = new Set((habitosIdeas ?? []).map((h: HabitIdeaRow) => h.id))
 
   const diasSemana = Array.from({ length: 7 }, (_, i) => {
@@ -120,11 +122,12 @@ async function calcularMetricas(userId: string, inicioSemana: Date) {
   })
   const diasSemanaSet = new Set(diasSemana)
 
-  const { data: checks } = await supabase
+  const { data: checks, error: checksError } = await supabase
     .from('habit_checks')
     .select('habit_id, fecha, checked')
     .eq('user_id', userId)
     .in('fecha', diasSemana)
+  if (checksError) throw checksError
   const checksRow = (checks ?? []) as HabitCheckRow[]
   const completadasHabitos = checksRow.filter(
     (c) => c.checked && diasSemanaSet.has(c.fecha) && habitIds.has(c.habit_id),
@@ -133,13 +136,20 @@ async function calcularMetricas(userId: string, inicioSemana: Date) {
   const porcentajeHabitos = totalCeldas > 0 ? Math.round((completadasHabitos / totalCeldas) * 100) : null
 
   // Finanzas: gasto total y por categoría, semana actual vs. anterior.
-  const { data: movimientos } = await supabase
+  // Bug reportado (tras 3c8aa6c): el select nunca revisaba `error` — al
+  // sumar `gasto_fijo_id` (depende de una migración manual, igual que
+  // `nota` hoy) una falla silenciosa dejaba `data` undefined, caía a
+  // `[]` y mostraba "no gastaste nada" en las dos semanas aunque hubiera
+  // egresos reales. Ahora cualquier error de estas 4 consultas se
+  // propaga y queda en `errores`, nunca disfrazado de "cero gastos".
+  const { data: movimientos, error: movimientosError } = await supabase
     .from('finance_movimientos')
     .select('tipo, monto, categoria, fecha, cuota_total, gasto_fijo_id')
     .eq('user_id', userId)
     .is('deleted_at', null)
     .gte('fecha', inicioSemanaAnterior.toISOString())
     .lt('fecha', finSemana.toISOString())
+  if (movimientosError) throw movimientosError
   const movimientosRow = (movimientos ?? []) as MovimientoRow[]
   const { total: gastoSemana, porCategoria, recurrente: gastoSemanaRecurrente } = sumaGastos(movimientosRow, inicioSemana, finSemana)
   const { total: gastoSemanaAnterior } = sumaGastos(movimientosRow, inicioSemanaAnterior, inicioSemana)
