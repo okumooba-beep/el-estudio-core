@@ -77,35 +77,58 @@ function isoFecha(fecha: Date): string {
   return fecha.toISOString().slice(0, 10)
 }
 
+// Bug reportado (2026-10-01): la nota de Finanzas comparaba "gastaste $X
+// esta semana vs. $Y la semana pasada" sobre el total crudo, que mezcla
+// pagos de tarjeta/cuotas/alquiler/servicios (compromisos programados,
+// no una variación real) con gasto discrecional (lo único donde una
+// suba semana contra semana es un hallazgo real) — el resultado era
+// relleno ("gastaste un poco menos... y todo fue en tarjeta de
+// crédito"). Categorías de pago fijo por naturaleza (tarjeta, alquiler,
+// servicios) + cualquier movimiento marcado como cuota o gasto fijo
+// (cuota_total/gasto_fijo_id no nulos, sea cual sea su categoría) se
+// tratan como "no discrecional" — nunca se comparan ni se mencionan
+// como hallazgo (ver generarNotas).
+const CATEGORIAS_NO_DISCRECIONALES = new Set(['tarjeta_credito', 'alquiler', 'servicios'])
+
+function esNoDiscrecional(m: MovimientoRow): boolean {
+  return m.cuota_total != null || m.gasto_fijo_id != null || CATEGORIAS_NO_DISCRECIONALES.has(m.categoria ?? '')
+}
+
 function sumaGastos(
   movimientos: MovimientoRow[],
   desde: Date,
   hasta: Date,
-): { total: number; porCategoria: Map<string, number>; recurrente: number } {
-  const porCategoria = new Map<string, number>()
+): { total: number; porCategoriaDiscrecional: Map<string, number>; discrecional: number; noDiscrecional: number } {
+  const porCategoriaDiscrecional = new Map<string, number>()
   let total = 0
-  let recurrente = 0
+  let discrecional = 0
+  let noDiscrecional = 0
   for (const m of movimientos) {
     if (m.tipo !== 'egreso') continue
     const f = new Date(m.fecha)
     if (f < desde || f >= hasta) continue
-    total += Number(m.monto)
-    const cat = m.categoria ?? 'sin categoría'
-    porCategoria.set(cat, (porCategoria.get(cat) ?? 0) + Number(m.monto))
-    // Cuota (cuota_total no nulo) o gasto fijo (gasto_fijo_id no nulo):
-    // esperable y recurrente, no un gasto puntual — ver generarNotas.
-    if (m.cuota_total != null || m.gasto_fijo_id != null) {
-      recurrente += Number(m.monto)
+    const monto = Number(m.monto)
+    total += monto
+    if (esNoDiscrecional(m)) {
+      noDiscrecional += monto
+    } else {
+      discrecional += monto
+      const cat = m.categoria ?? 'sin categoría'
+      porCategoriaDiscrecional.set(cat, (porCategoriaDiscrecional.get(cat) ?? 0) + monto)
     }
   }
-  return { total, porCategoria, recurrente }
+  return { total, porCategoriaDiscrecional, discrecional, noDiscrecional }
 }
 
 async function calcularMetricas(userId: string, inicioSemana: Date) {
   const finSemana = new Date(inicioSemana)
   finSemana.setUTCDate(finSemana.getUTCDate() + 7)
-  const inicioSemanaAnterior = new Date(inicioSemana)
-  inicioSemanaAnterior.setUTCDate(inicioSemanaAnterior.getUTCDate() - 7)
+  // Las 4 semanas previas a la actual (nunca la semana en curso, para no
+  // promediar un gasto discrecional contra sí mismo) dan la base real de
+  // "subió mucho" que pide generarNotas — sin esto la IA no tenía con qué
+  // comparar y lo hubiera inventado.
+  const inicioPromedio = new Date(inicioSemana)
+  inicioPromedio.setUTCDate(inicioPromedio.getUTCDate() - 28)
 
   // Misiones: completadas en la semana, contra las que quedaron sin
   // terminar — mismos dos valores de estado que seleccionarPrincipales.ts.
@@ -152,7 +175,10 @@ async function calcularMetricas(userId: string, inicioSemana: Date) {
   const totalCeldas = habitIds.size * 7
   const porcentajeHabitos = totalCeldas > 0 ? Math.round((completadasHabitos / totalCeldas) * 100) : null
 
-  // Finanzas: gasto total y por categoría, semana actual vs. anterior.
+  // Finanzas: gasto discrecional por categoría de esta semana, más el
+  // promedio de esa misma categoría en las 4 semanas previas (ver
+  // sumaGastos/esNoDiscrecional) — el rango de la consulta ahora cubre
+  // esas 4 semanas además de la actual.
   // Bug reportado (tras 3c8aa6c): el select nunca revisaba `error` — al
   // sumar `gasto_fijo_id` (depende de una migración manual, igual que
   // `nota` hoy) una falla silenciosa dejaba `data` undefined, caía a
@@ -169,22 +195,29 @@ async function calcularMetricas(userId: string, inicioSemana: Date) {
     .select('tipo, monto, categoria, fecha, cuota_total, gasto_fijo_id')
     .eq('user_id', userId)
     .is('deleted_at', null)
-    .gte('fecha', inicioSemanaAnterior.toISOString())
+    .gte('fecha', inicioPromedio.toISOString())
     .lt('fecha', finSemana.toISOString())
     .lte('fecha', ahoraIso)
   if (movimientosError) throw movimientosError
   const movimientosRow = (movimientos ?? []) as MovimientoRow[]
-  const { total: gastoSemana, porCategoria, recurrente: gastoSemanaRecurrente } = sumaGastos(movimientosRow, inicioSemana, finSemana)
-  const { total: gastoSemanaAnterior } = sumaGastos(movimientosRow, inicioSemanaAnterior, inicioSemana)
+  const { discrecional: gastoSemanaDiscrecional, noDiscrecional: gastoSemanaNoDiscrecional, porCategoriaDiscrecional } = sumaGastos(
+    movimientosRow,
+    inicioSemana,
+    finSemana,
+  )
+  const { porCategoriaDiscrecional: porCategoria4Semanas } = sumaGastos(movimientosRow, inicioPromedio, inicioSemana)
+  const promedioPorCategoriaDiscrecional = new Map(
+    [...porCategoria4Semanas].map(([categoria, monto]) => [categoria, monto / 4]),
+  )
 
   return {
     misiones: { completadas: misionesCompletadas, total: misionesTotal },
     habitos: { completadas: completadasHabitos, totalCeldas, porcentaje: porcentajeHabitos },
     finanzas: {
-      gastoSemana,
-      gastoSemanaAnterior,
-      gastoSemanaRecurrente,
-      porCategoria: Object.fromEntries(porCategoria),
+      gastoSemanaDiscrecional,
+      gastoSemanaNoDiscrecional,
+      porCategoriaDiscrecional: Object.fromEntries(porCategoriaDiscrecional),
+      promedioPorCategoriaDiscrecional: Object.fromEntries(promedioPorCategoriaDiscrecional),
     },
   }
 }
@@ -197,7 +230,10 @@ function formatMonto(monto: number): string {
 
 async function generarNotas(metricas: Metricas): Promise<{ misiones: string; habitos: string; finanzas: string }> {
   const porCategoriaFormateado = Object.fromEntries(
-    Object.entries(metricas.finanzas.porCategoria).map(([categoria, monto]) => [categoria, formatMonto(monto)]),
+    Object.entries(metricas.finanzas.porCategoriaDiscrecional).map(([categoria, monto]) => [categoria, formatMonto(monto)]),
+  )
+  const promedioFormateado = Object.fromEntries(
+    Object.entries(metricas.finanzas.promedioPorCategoriaDiscrecional).map(([categoria, monto]) => [categoria, formatMonto(monto)]),
   )
 
   const prompt = `Sos la voz interna de "El Estudio", una app personal de organización. Generá hasta 3 notas (misiones, hábitos, finanzas), en español, tono cercano y directo, sin emojis. Basate SOLO en estos números reales, no inventes nada.
@@ -207,12 +243,12 @@ Reglas estrictas:
 - Escribí algo solo si hay un dato concreto y útil: un cambio real, un patrón, un monto relevante.
 - Prohibido: frases motivacionales, generalidades, o decir lo obvio (ej. "no hay movimientos para analizar").
 - Si no hay nada relevante que decir en un espacio, devolvé exactamente "" (string vacío) para ese campo — no inventes algo para llenarlo.
-- Cuotas, gastos fijos y pagos de tarjeta son esperables, no son una anomalía: mencionalos solo si cambian el panorama de la semana, nunca como algo a corregir.
 - Los montos van exactamente como vienen dados acá, sin reformatearlos.
+- Para finanzas en particular: los pagos de tarjeta, cuotas y gastos fijos son compromisos programados: no los compares semana contra semana ni los menciones como hallazgo. Analizá solo el gasto discrecional. Hablá solo si hay algo accionable: una categoría discrecional que subió mucho respecto de su promedio, un gasto atípico grande, o ritmo de gasto del mes que comprometa los ingresos. Si no hay nada así, devolvé exactamente "" para ese campo.
 
 Misiones: ${metricas.misiones.completadas} completadas de ${metricas.misiones.total} esta semana.
 Hábitos: ${metricas.habitos.completadas} de ${metricas.habitos.totalCeldas} prácticas marcadas${metricas.habitos.porcentaje !== null ? ` (${metricas.habitos.porcentaje}%)` : ' (sin hábitos cargados)'}.
-Finanzas: gastó ${formatMonto(metricas.finanzas.gastoSemana)} esta semana vs. ${formatMonto(metricas.finanzas.gastoSemanaAnterior)} la semana anterior. Por categoría: ${JSON.stringify(porCategoriaFormateado)}. De ese gasto, ${formatMonto(metricas.finanzas.gastoSemanaRecurrente)} corresponde a cuotas, gastos fijos o pagos de tarjeta (esperable, no es anomalía).
+Finanzas — gasto discrecional de esta semana por categoría: ${JSON.stringify(porCategoriaFormateado)}. Promedio de las últimas 4 semanas por esa misma categoría: ${JSON.stringify(promedioFormateado)}. (Aparte, ${formatMonto(metricas.finanzas.gastoSemanaNoDiscrecional)} en pagos de tarjeta/cuotas/alquiler/servicios esta semana — esperable, no lo compares ni lo menciones.)
 
 Devolvé SOLO un JSON válido con esta forma exacta, sin texto alrededor:
 {"misiones": "...", "habitos": "...", "finanzas": "..."}`
