@@ -47,13 +47,30 @@ interface MovimientoRow {
   gasto_fijo_id: string | null
 }
 
-/** Lunes 00:00 de la semana que contiene `fecha`, en UTC — mismo criterio de semana que HabitosScreen.tsx (fechasSemanaActual: lunes a domingo). */
+// ART es UTC-3 todo el año (Argentina no usa horario de verano, ver
+// weekly_reflection_cron.sql) — fijo, nunca varía con la fecha.
+const ART_OFFSET_MS = 3 * 60 * 60 * 1000
+
+/**
+ * Instante UTC real de la medianoche ART del lunes de la semana que
+ * contiene `fecha`, en vez de la medianoche UTC — mismo criterio de
+ * semana que HabitosScreen.tsx (fechasSemanaActual: lunes a domingo),
+ * pero en el día del calendario de Buenos Aires. Bug reportado
+ * (2026-10-01): calcular el lunes con getUTCDay()/getUTCDate() directo
+ * sobre `fecha` usaba el día UTC, no el día ART — a las 21:00-23:59 ART
+ * ya es el día siguiente en UTC, así que cerca de esa franja el corte de
+ * semana quedaba corrido respecto del calendario real. Restar el offset
+ * antes de leer año/mes/día/día-de-semana da el calendario ART; sumarlo
+ * de vuelta al final devuelve el instante UTC real que corresponde a esa
+ * medianoche ART, comparable directo contra `fecha` (timestamptz).
+ */
 function lunesDe(fecha: Date): Date {
-  const dia = fecha.getUTCDay()
+  const art = new Date(fecha.getTime() - ART_OFFSET_MS)
+  const dia = art.getUTCDay()
   const offset = dia === 0 ? -6 : 1 - dia
-  const lunes = new Date(Date.UTC(fecha.getUTCFullYear(), fecha.getUTCMonth(), fecha.getUTCDate()))
-  lunes.setUTCDate(lunes.getUTCDate() + offset)
-  return lunes
+  const lunesArt = new Date(Date.UTC(art.getUTCFullYear(), art.getUTCMonth(), art.getUTCDate()))
+  lunesArt.setUTCDate(lunesArt.getUTCDate() + offset)
+  return new Date(lunesArt.getTime() + ART_OFFSET_MS)
 }
 
 function isoFecha(fecha: Date): string {
@@ -142,6 +159,11 @@ async function calcularMetricas(userId: string, inicioSemana: Date) {
   // `[]` y mostraba "no gastaste nada" en las dos semanas aunque hubiera
   // egresos reales. Ahora cualquier error de estas 4 consultas se
   // propaga y queda en `errores`, nunca disfrazado de "cero gastos".
+  // Bug reportado (2026-10-01): "$54.167 esta semana" en vez de los
+  // $549.000 reales — faltaba `lte fecha <= ahora`, así que una cuota ya
+  // cargada con fecha futura (programada, todavía no ocurrida) podía
+  // colarse en el rango de la semana sin haber pasado de verdad todavía.
+  const ahoraIso = new Date().toISOString()
   const { data: movimientos, error: movimientosError } = await supabase
     .from('finance_movimientos')
     .select('tipo, monto, categoria, fecha, cuota_total, gasto_fijo_id')
@@ -149,6 +171,7 @@ async function calcularMetricas(userId: string, inicioSemana: Date) {
     .is('deleted_at', null)
     .gte('fecha', inicioSemanaAnterior.toISOString())
     .lt('fecha', finSemana.toISOString())
+    .lte('fecha', ahoraIso)
   if (movimientosError) throw movimientosError
   const movimientosRow = (movimientos ?? []) as MovimientoRow[]
   const { total: gastoSemana, porCategoria, recurrente: gastoSemanaRecurrente } = sumaGastos(movimientosRow, inicioSemana, finSemana)
@@ -177,12 +200,19 @@ async function generarNotas(metricas: Metricas): Promise<{ misiones: string; hab
     Object.entries(metricas.finanzas.porCategoria).map(([categoria, monto]) => [categoria, formatMonto(monto)]),
   )
 
-  const prompt = `Sos la voz interna de "El Estudio", una app personal de organización. Generá una reflexión semanal breve (2-3 frases cada una), en español, tono cercano y directo, sin emojis, sin exclamaciones excesivas. Basate SOLO en estos números reales, no inventes nada:
+  const prompt = `Sos la voz interna de "El Estudio", una app personal de organización. Generá hasta 3 notas (misiones, hábitos, finanzas), en español, tono cercano y directo, sin emojis. Basate SOLO en estos números reales, no inventes nada.
+
+Reglas estrictas:
+- Máximo 2 frases cortas por nota.
+- Escribí algo solo si hay un dato concreto y útil: un cambio real, un patrón, un monto relevante.
+- Prohibido: frases motivacionales, generalidades, o decir lo obvio (ej. "no hay movimientos para analizar").
+- Si no hay nada relevante que decir en un espacio, devolvé exactamente "" (string vacío) para ese campo — no inventes algo para llenarlo.
+- Cuotas, gastos fijos y pagos de tarjeta son esperables, no son una anomalía: mencionalos solo si cambian el panorama de la semana, nunca como algo a corregir.
+- Los montos van exactamente como vienen dados acá, sin reformatearlos.
 
 Misiones: ${metricas.misiones.completadas} completadas de ${metricas.misiones.total} esta semana.
 Hábitos: ${metricas.habitos.completadas} de ${metricas.habitos.totalCeldas} prácticas marcadas${metricas.habitos.porcentaje !== null ? ` (${metricas.habitos.porcentaje}%)` : ' (sin hábitos cargados)'}.
-Finanzas: gastó ${formatMonto(metricas.finanzas.gastoSemana)} esta semana vs. ${formatMonto(metricas.finanzas.gastoSemanaAnterior)} la semana anterior. Por categoría: ${JSON.stringify(porCategoriaFormateado)}. De ese gasto, ${formatMonto(metricas.finanzas.gastoSemanaRecurrente)} corresponde a cuotas o gastos fijos. Los gastos en cuotas o fijos son esperables y recurrentes; no los señales como anómalos ni como gasto puntual, mencionálos solo si aportan contexto.
-Escribí los montos exactamente como vienen dados, sin reformatearlos.
+Finanzas: gastó ${formatMonto(metricas.finanzas.gastoSemana)} esta semana vs. ${formatMonto(metricas.finanzas.gastoSemanaAnterior)} la semana anterior. Por categoría: ${JSON.stringify(porCategoriaFormateado)}. De ese gasto, ${formatMonto(metricas.finanzas.gastoSemanaRecurrente)} corresponde a cuotas, gastos fijos o pagos de tarjeta (esperable, no es anomalía).
 
 Devolvé SOLO un JSON válido con esta forma exacta, sin texto alrededor:
 {"misiones": "...", "habitos": "...", "finanzas": "..."}`
@@ -229,10 +259,17 @@ Deno.serve(async (req: Request) => {
     })
   }
 
+  // Bug reportado (2026-10-01): este -7 asumía que el cron corría recién
+  // el lunes, después de que la semana Mon-Sun ya había cerrado del todo
+  // — pero el cron siempre disparó un domingo (12:00 ART antes, 21:00 ART
+  // ahora, ver weekly_reflection_cron.sql), que todavía es parte de la
+  // semana en curso, no la que "recién terminó". Con el -7 de más, la
+  // reflexión miraba la semana anterior a la real y se perdía todo lo
+  // cargado en los propios días de la semana en curso (el caso reportado:
+  // un pago de tarjeta de $549.000 del domingo quedaba afuera). Sin el
+  // -7, inicioSemana es el lunes de la semana que está terminando hoy.
   const ahora = new Date()
   const inicioSemana = lunesDe(ahora)
-  // La reflexión es sobre la semana que recién terminó, no la que empieza hoy.
-  inicioSemana.setUTCDate(inicioSemana.getUTCDate() - 7)
 
   const { data: usuarios, error: usuariosError } = await supabase
     .from('push_subscriptions')
