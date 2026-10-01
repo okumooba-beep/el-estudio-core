@@ -47,7 +47,10 @@ export default defineConfig({
     // permanente del bundle real (235.4 KB medido) — el presupuesto anterior
     // de 235 KB era de antes de esa feature, mismo criterio que la nota que
     // este comentario reemplaza (230 KB → 235 KB por "Gastos fijos mensuales").
-    bundleSizeBudget(238 * 1024),
+    // 239 KB: margen TEMPORAL para el panel de depuración del viewport
+    // (src/lib/debug/viewportDebug.ts, 238.2 KB medido) — vuelve a 238 KB
+    // cuando se saque el panel.
+    bundleSizeBudget(239 * 1024),
     VitePWA({
       registerType: 'autoUpdate',
       // Fase 1 (push real): 'generateSW' (el default anterior) autogenera el
