@@ -14,6 +14,12 @@ import { gzipSync } from 'node:zlib'
  * que el navegador descarga en la primera visita (gzip, que es lo que
  * viaja por red); el service worker/workbox de VitePWA queda fuera a
  * propósito — es infraestructura de cache, no parte de esa descarga.
+ *
+ * PENDIENTE (mantenimiento): hoy suma TODOS los chunks, incluidos los de
+ * carga diferida, así que no mide la primera visita como dice arriba — un
+ * React.lazy hace crecer el número en vez de bajarlo. Corregirlo para que
+ * cuente solo el chunk de entrada + sus imports estáticos + CSS, y
+ * recalibrar el presupuesto con ese valor medido.
  */
 function bundleSizeBudget(budgetBytes: number): Plugin {
   return {
@@ -56,7 +62,11 @@ export default defineConfig({
     // 243 KB: sync de Umbral + Cuaderno (pull incremental + tombstones en
     // ideasSync.ts, 242.7 KB medido) suma ~1 KB permanente — al sacar el
     // panel la base pasa a ser 241 KB, no 240.
-    bundleSizeBudget(243 * 1024),
+    // 244 KB: ojito de ver/ocultar contraseña en las pantallas de auth
+    // (PasswordInput.tsx) + aviso en vivo de contraseñas que no coinciden en
+    // Registro (243.1 KB medido) — al sacar el panel la base pasa a ser
+    // 242 KB.
+    bundleSizeBudget(244 * 1024),
     VitePWA({
       registerType: 'autoUpdate',
       // Fase 1 (push real): 'generateSW' (el default anterior) autogenera el

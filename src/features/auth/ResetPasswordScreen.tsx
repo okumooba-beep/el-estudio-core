@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/lib/auth/AuthContext'
-import { AuthLayout, authInputClass } from './AuthLayout'
+import { AuthLayout } from './AuthLayout'
+import { PasswordInput } from './PasswordInput'
 
 /**
  * Se llega acá desde el link del email de recuperación — el cliente de
@@ -55,25 +56,21 @@ export function ResetPasswordScreen() {
   return (
     <AuthLayout title="Restablecer contraseña">
       <form onSubmit={(event) => void handleSubmit(event)} className="flex flex-col gap-4">
-        <input
-          type="password"
+        <PasswordInput
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           placeholder="Contraseña nueva"
           aria-label="Contraseña nueva"
           autoComplete="new-password"
           required
-          className={authInputClass}
         />
-        <input
-          type="password"
+        <PasswordInput
           value={confirmPassword}
           onChange={(event) => setConfirmPassword(event.target.value)}
           placeholder="Repetir contraseña"
           aria-label="Repetir contraseña"
           autoComplete="new-password"
           required
-          className={authInputClass}
         />
         {error && <p className="text-[13px] text-critical">{error}</p>}
         <button type="submit" disabled={enviando} className="accion-primaria self-start px-4 py-2 text-[14px] disabled:opacity-40">

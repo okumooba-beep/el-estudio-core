@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/lib/auth/AuthContext'
 import { AuthLayout, authInputClass } from './AuthLayout'
+import { PasswordInput } from './PasswordInput'
+
+const AVISO_NO_COINCIDEN = 'Las contraseñas no coinciden. Fijate que sean iguales antes de crear la cuenta.'
 
 export function RegisterScreen() {
   const { signUp, user } = useAuth()
@@ -24,10 +27,20 @@ export function RegisterScreen() {
     if (enviado && user) navigate('/', { replace: true })
   }, [enviado, user, navigate])
 
+  /**
+   * Aviso en vivo, antes de enviar: no salta mientras "Repetir contraseña"
+   * todavía es el comienzo de la contraseña (el usuario sigue escribiendo),
+   * sí apenas se desvía o la iguala en largo sin coincidir.
+   */
+  const noCoinciden =
+    confirmPassword.length > 0 &&
+    confirmPassword !== password &&
+    (confirmPassword.length >= password.length || !password.startsWith(confirmPassword))
+
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
     if (password !== confirmPassword) {
-      setError('Las contraseñas no coinciden.')
+      setError(AVISO_NO_COINCIDEN)
       return
     }
     if (password.length < 6) {
@@ -72,27 +85,30 @@ export function RegisterScreen() {
           required
           className={authInputClass}
         />
-        <input
-          type="password"
+        <PasswordInput
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           placeholder="Contraseña"
           aria-label="Contraseña"
           autoComplete="new-password"
           required
-          className={authInputClass}
         />
-        <input
-          type="password"
+        <PasswordInput
           value={confirmPassword}
           onChange={(event) => setConfirmPassword(event.target.value)}
           placeholder="Repetir contraseña"
           aria-label="Repetir contraseña"
           autoComplete="new-password"
+          aria-invalid={noCoinciden}
+          aria-describedby={noCoinciden ? 'aviso-no-coinciden' : undefined}
           required
-          className={authInputClass}
         />
-        {error && <p className="text-[13px] text-critical">{error}</p>}
+        {noCoinciden && (
+          <p id="aviso-no-coinciden" role="alert" className="text-[13px] text-critical">
+            {AVISO_NO_COINCIDEN}
+          </p>
+        )}
+        {error && !noCoinciden && <p className="text-[13px] text-critical">{error}</p>}
         <button type="submit" disabled={enviando} className="accion-primaria self-start px-4 py-2 text-[14px] disabled:opacity-40">
           {enviando ? 'Creando…' : 'Crear cuenta'}
         </button>

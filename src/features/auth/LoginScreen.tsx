@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/lib/auth/AuthContext'
 import { AuthLayout, authInputClass } from './AuthLayout'
+import { PasswordInput } from './PasswordInput'
 
 export function LoginScreen() {
   const { signIn } = useAuth()
@@ -37,15 +38,13 @@ export function LoginScreen() {
           required
           className={authInputClass}
         />
-        <input
-          type="password"
+        <PasswordInput
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           placeholder="Contraseña"
           aria-label="Contraseña"
           autoComplete="current-password"
           required
-          className={authInputClass}
         />
         {error && <p className="text-[13px] text-critical">{error}</p>}
         <button type="submit" disabled={enviando} className="accion-primaria self-start px-4 py-2 text-[14px] disabled:opacity-40">
