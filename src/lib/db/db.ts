@@ -1,5 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie'
-import type { Idea } from '@/types/idea'
+import type { Idea, IdeaDestino } from '@/types/idea'
 import type { Operacion } from '@/types/operacion'
 import type { HabitCheck } from '@/types/habitCheck'
 import type { FinanceAccount, FinanceMovimiento, FinanceGoal, FinanceIncomePeriod, FinanceGastoFijo } from '@/types/finance'
@@ -35,8 +35,9 @@ export interface SyncMeta {
    * 'auditoria-sync' = Auditoría (rupturas + premortems + correcciones +
    * config), 'recordatorios-sync' = Recordatorios (Fase 2, push real),
    * 'miproyecto-sync' = Mi Proyecto (carpetas + notas),
-   * 'miproyecto-finanzas-sync' = Finanzas propia de Mi Proyecto — una
-   * fila propia por módulo sincronizado.
+   * 'miproyecto-finanzas-sync' = Finanzas propia de Mi Proyecto,
+   * 'diario-sync' = Umbral + Cuaderno (ideas 'hoy'/'archivo', pull
+   * incremental) — una fila propia por módulo sincronizado.
    */
   id:
     | 'sync'
@@ -50,10 +51,21 @@ export interface SyncMeta {
     | 'recordatorios-sync'
     | 'miproyecto-sync'
     | 'miproyecto-finanzas-sync'
+    | 'diario-sync'
   userId: string
   migratedAt: string | null
   migratedTables: string[]
+  /** Solo 'diario-sync': mayor `updated_at` remoto ya aplicado en Dexie — punto de partida del próximo pull incremental. */
+  lastPulledAt?: string
 }
+
+/**
+ * Destinos de `db.ideas` que viajan en la tabla `ideas` de Supabase (ver
+ * src/lib/sync/ideasSync.ts y supabase/ideas_add_hoy_archivo.sql). Vive
+ * acá y no en types/idea.ts porque ideaRepository.ts también lo necesita
+ * en runtime, y db.ts es lo único del árbol de app que un módulo puede importar.
+ */
+export const IDEAS_SYNC_DESTINOS: readonly IdeaDestino[] = ['asuntos', 'biblioteca', 'habitos', 'agenda', 'hoy', 'archivo']
 
 /**
  * La base local del proyecto (Implementación 08). IndexedDB vía Dexie,
@@ -594,6 +606,23 @@ class LifeosDB extends Dexie {
     this.version(25).stores({
       financeGastosFijos: 'id, createdAt',
     })
+
+    /**
+     * Versión 26 (sync Umbral + Cuaderno): 'hoy' y 'archivo' pasan a
+     * sincronizarse vía ideasSync.ts. Toda hoja que ya existía en esos
+     * destinos queda marcada pendiente para que el próximo push la suba.
+     * Sin cambios de schema; corre dentro de la transacción de upgrade
+     * (si falla, la base sigue en v25 intacta y se reintenta al abrir).
+     */
+    this.version(26)
+      .stores({})
+      .upgrade((tx) =>
+        tx
+          .table('ideas')
+          .where('destino')
+          .anyOf(['hoy', 'archivo'])
+          .modify({ pendingSync: true }),
+      )
   }
 }
 

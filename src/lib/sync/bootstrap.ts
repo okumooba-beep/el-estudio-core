@@ -29,7 +29,13 @@ import {
   migrateMissionsOnFirstLogin,
   pushMissionsPending,
 } from './missionsSync'
-import { allIdeasEmpty, hydrateIdeasFromSupabase, migrateIdeasOnFirstLogin, pushIdeasPending } from './ideasSync'
+import {
+  allIdeasEmpty,
+  hydrateIdeasFromSupabase,
+  migrateIdeasOnFirstLogin,
+  pullDiarioIncremental,
+  pushIdeasPending,
+} from './ideasSync'
 import { allHabitsEmpty, hydrateHabitsFromSupabase, migrateHabitsOnFirstLogin, pushHabitsPending } from './habitsSync'
 import {
   allTradingEmpty,
@@ -97,6 +103,7 @@ let missionsBootstrappedUserId: string | null = null
 
 let ideasPushIntervalId: ReturnType<typeof setInterval> | null = null
 let ideasOnlineListener: (() => void) | null = null
+let ideasVisibilityListener: (() => void) | null = null
 let ideasBootstrappedUserId: string | null = null
 
 let habitsPushIntervalId: ReturnType<typeof setInterval> | null = null
@@ -289,10 +296,23 @@ function startIdeasPushLoop(userId: string): void {
   const push = () => {
     void pushIdeasPending(userId)
   }
+  // Umbral + Cuaderno: pull incremental al arrancar, al volver a primer
+  // plano y al recuperar conexión — nunca por intervalo (ver ideasSync.ts).
+  const pull = () => {
+    void pullDiarioIncremental(userId)
+  }
   ideasPushIntervalId = setInterval(push, PUSH_INTERVAL_MS)
-  ideasOnlineListener = push
+  ideasOnlineListener = () => {
+    push()
+    pull()
+  }
   window.addEventListener('online', ideasOnlineListener)
+  ideasVisibilityListener = () => {
+    if (document.visibilityState === 'visible') pull()
+  }
+  document.addEventListener('visibilitychange', ideasVisibilityListener)
   push()
+  pull()
 }
 
 function startHabitsPushLoop(userId: string): void {
@@ -399,8 +419,10 @@ export function stopMissionsSync(): void {
 export function stopIdeasSync(): void {
   if (ideasPushIntervalId) clearInterval(ideasPushIntervalId)
   if (ideasOnlineListener) window.removeEventListener('online', ideasOnlineListener)
+  if (ideasVisibilityListener) document.removeEventListener('visibilitychange', ideasVisibilityListener)
   ideasPushIntervalId = null
   ideasOnlineListener = null
+  ideasVisibilityListener = null
   ideasBootstrappedUserId = null
 }
 

@@ -1,6 +1,7 @@
 import { useCallback, useSyncExternalStore } from 'react'
 import { ideaRepository, type AddOptions } from './ideaRepository'
 import { buildMovePatch } from './moveSheet'
+import { eventBus } from '@shared-kernel/events/AppEvents'
 import type { Idea } from '@/types/idea'
 import type { FurnitureId } from '@world/studio/furniture'
 
@@ -42,6 +43,25 @@ function setCache(next: Idea[]): void {
   cache = next
   notify()
 }
+
+/**
+ * Sync Umbral + Cuaderno: el pull incremental (ver ideasSync.ts) escribe
+ * directo en Dexie, por fuera de este módulo. Se relee la tabla, pero una
+ * edición optimista todavía en vuelo (más nueva en memoria que en Dexie)
+ * se conserva para que no parpadee hacia atrás.
+ */
+eventBus.on('ideas.pulled', () => {
+  if (!ready) return
+  void ideaRepository.list().then((loaded) => {
+    const enMemoria = new Map(cache.map((idea) => [idea.id, idea]))
+    setCache(
+      loaded.map((idea) => {
+        const local = enMemoria.get(idea.id)
+        return local && local.updatedAt > idea.updatedAt ? local : idea
+      }),
+    )
+  })
+})
 
 function subscribe(listener: () => void): () => void {
   listeners.add(listener)

@@ -100,7 +100,7 @@ function getEstudioSignal(ideas: readonly Idea[], now: Date): VoiceEntry | null 
   const hoy = now.toISOString().slice(0, 10)
   const ayer = new Date(now.getTime() - 86_400_000).toISOString().slice(0, 10)
 
-  if (ideas.some((idea) => idea.destino === 'hoy')) {
+  if (ideas.some((idea) => idea.destino === 'hoy' && !idea.deletedAt)) {
     return { source: 'estudio', text: 'Hay una idea esperando un hogar.' }
   }
 

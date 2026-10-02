@@ -68,7 +68,7 @@ export function DiarioScreen() {
   const paginas = useMemo(() => {
     const porFecha = new Map<string, Idea[]>()
     for (const idea of ideas) {
-      if (idea.destino !== 'hoy') continue
+      if (idea.destino !== 'hoy' || idea.deletedAt) continue
       const entradas = porFecha.get(idea.fecha)
       if (entradas) entradas.push(idea)
       else porFecha.set(idea.fecha, [idea])
@@ -87,7 +87,7 @@ export function DiarioScreen() {
   const paginasArchivadas = useMemo(() => {
     const porFecha = new Map<string, Idea[]>()
     for (const idea of ideas) {
-      if (idea.destino !== 'archivo') continue
+      if (idea.destino !== 'archivo' || idea.deletedAt) continue
       const entradas = porFecha.get(idea.fecha)
       if (entradas) entradas.push(idea)
       else porFecha.set(idea.fecha, [idea])

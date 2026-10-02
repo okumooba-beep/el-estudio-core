@@ -1,4 +1,4 @@
-import { db } from '@/lib/db/db'
+import { db, IDEAS_SYNC_DESTINOS } from '@/lib/db/db'
 import { generateId } from '@shared-kernel/id'
 import type { Repository } from '@shared-kernel/persistence/Repository'
 import { eventBus } from '@shared-kernel/events/AppEvents'
@@ -61,7 +61,19 @@ class DexieIdeaRepository implements IdeaRepository {
   }
 
   async update(id: string, patch: Partial<Omit<Idea, 'id' | 'createdAt'>>): Promise<Idea> {
-    await db.ideas.update(id, { ...patch, updatedAt: new Date().toISOString(), pendingSync: true })
+    // Sync Umbral + Cuaderno: mudar una hoja fuera de la tabla `ideas` de
+    // Supabase deja la fila remota huérfana con el destino viejo — se marca
+    // para que ideasSync.ts le ponga `deleted_at` (ver Idea.tombstoneIdeas).
+    // Volver a entrar la desmarca: el upsert normal ya pisa `deleted_at`.
+    let tombstone: Pick<Idea, 'tombstoneIdeas'> = {}
+    if (patch.destino) {
+      const previa = await db.ideas.get(id)
+      const salia = previa ? IDEAS_SYNC_DESTINOS.includes(previa.destino) : false
+      const entra = IDEAS_SYNC_DESTINOS.includes(patch.destino)
+      if (salia && !entra) tombstone = { tombstoneIdeas: true }
+      else if (entra && previa?.tombstoneIdeas) tombstone = { tombstoneIdeas: false }
+    }
+    await db.ideas.update(id, { ...patch, ...tombstone, updatedAt: new Date().toISOString(), pendingSync: true })
     const updated = await db.ideas.get(id)
     if (!updated) throw new Error(`Idea ${id} no encontrada`)
     return updated

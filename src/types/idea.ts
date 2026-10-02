@@ -133,6 +133,15 @@ export interface Idea {
    */
   deletedAt?: string
   /**
+   * Sync Umbral + Cuaderno: `true` cuando esta hoja se mudó de un destino
+   * que viaja en la tabla `ideas` de Supabase (ver IDEAS_SYNC_DESTINOS en
+   * src/lib/db/db.ts) a
+   * uno que no. La fila remota queda con su destino viejo; el push de
+   * ideasSync.ts le pone `deleted_at` para que los demás dispositivos la
+   * dejen de mostrar, y recién ahí limpia este flag. Ausente = nada pendiente.
+   */
+  tombstoneIdeas?: boolean
+  /**
    * Mi Proyecto — Misiones por espacio (ver MiProyectoScreen.tsx): cuando
    * está presente, esta misión pertenece únicamente a esa carpeta y nunca
    * aparece en el módulo global de Misiones ni en "Misión principal" de

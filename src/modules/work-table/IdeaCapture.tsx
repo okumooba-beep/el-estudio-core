@@ -225,7 +225,7 @@ export function IdeaCapture() {
     return DESTINO_PREVIEW_MESSAGE[destino]
   }, [value])
 
-  const hoyIdeas = ideas.filter((idea) => idea.destino === 'hoy')
+  const hoyIdeas = ideas.filter((idea) => idea.destino === 'hoy' && !idea.deletedAt)
   const propuesta = proposal ? ideas.find((idea) => idea.id === proposal.ideaId) : undefined
   const abierta = openedId ? hoyIdeas.find((idea) => idea.id === openedId) : undefined
   const activa = propuesta ?? abierta ?? hoyIdeas[0]

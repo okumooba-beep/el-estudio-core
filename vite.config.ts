@@ -53,7 +53,10 @@ export default defineConfig({
     // viewport (src/lib/debug/viewportDebug.ts + los registrarDebug del
     // centrado en light-bootstrap.ts; 241.6 KB medido con ambos) — vuelve
     // a 240 KB (no a 238) cuando se saque el panel.
-    bundleSizeBudget(242 * 1024),
+    // 243 KB: sync de Umbral + Cuaderno (pull incremental + tombstones en
+    // ideasSync.ts, 242.7 KB medido) suma ~1 KB permanente — al sacar el
+    // panel la base pasa a ser 241 KB, no 240.
+    bundleSizeBudget(243 * 1024),
     VitePWA({
       registerType: 'autoUpdate',
       // Fase 1 (push real): 'generateSW' (el default anterior) autogenera el

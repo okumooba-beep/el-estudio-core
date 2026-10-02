@@ -8,6 +8,8 @@ import { EventBus } from './EventBus'
  */
 export interface AppEventMap {
   'idea.captured': { id: string; texto: string }
+  /** Sync Umbral + Cuaderno: un pull de Supabase escribió Ideas en Dexie — la cache en memoria de useIdeas tiene que releer. */
+  'ideas.pulled': { count: number }
 }
 
 export const eventBus = new EventBus<AppEventMap>()
