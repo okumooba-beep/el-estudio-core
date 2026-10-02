@@ -29,6 +29,8 @@ import { registrarActividad } from '@/lib/actividad/registrarActividad'
 
 interface AuthResult {
   error: string | null
+  /** Código estable de Supabase (p. ej. 'email_not_confirmed'): el texto de `error` viene en inglés y puede cambiar. */
+  code?: string | null
 }
 
 interface AuthContextValue {
@@ -41,6 +43,7 @@ interface AuthContextValue {
   signOut(): Promise<void>
   resetPasswordRequest(email: string): Promise<AuthResult>
   updatePassword(password: string): Promise<AuthResult>
+  resendConfirmation(email: string): Promise<AuthResult>
 }
 
 const NOT_CONFIGURED = 'Supabase no está configurado en este entorno (faltan VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).'
@@ -150,7 +153,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function signIn(email: string, password: string): Promise<AuthResult> {
     if (!supabase) return { error: NOT_CONFIGURED }
     const { error } = await supabase.auth.signInWithPassword({ email, password })
-    return { error: error?.message ?? null }
+    return { error: error?.message ?? null, code: error?.code ?? null }
+  }
+
+  async function resendConfirmation(email: string): Promise<AuthResult> {
+    if (!supabase) return { error: NOT_CONFIGURED }
+    const { error } = await supabase.auth.resend({ type: 'signup', email })
+    return { error: error?.message ?? null, code: error?.code ?? null }
   }
 
   async function signOut(): Promise<void> {
@@ -174,7 +183,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, session, loading, signUp, signIn, signOut, resetPasswordRequest, updatePassword }}
+      value={{ user, session, loading, signUp, signIn, signOut, resetPasswordRequest, updatePassword, resendConfirmation }}
     >
       {children}
     </AuthContext.Provider>
