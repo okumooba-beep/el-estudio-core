@@ -208,6 +208,23 @@ export function NuevoMovimiento({
     }
   }
 
+  // La Nota va arriba, justo después de Monto/Categoría y antes de Cuota
+  // actual y Cuándo (en egresos, dentro de "Cómo"; en ingresos, al final de
+  // "Qué ingresé"). Mismo estado `nota` y mismo guardado que antes.
+  const campoNota = (
+    <label className="flex flex-col gap-1">
+      <span className="text-[12.5px] text-ink-faint">Nota (opcional)</span>
+      <textarea
+        value={nota}
+        onChange={(event) => setNota(event.target.value)}
+        placeholder="Agregá una nota…"
+        aria-label="Nota"
+        rows={2}
+        className="resize-none border-b border-border/60 bg-transparent px-1 py-2 text-[13.5px] text-ink outline-none placeholder:text-ink-dim"
+      />
+    </label>
+  )
+
   return (
     <form onSubmit={handleSubmit} className="finanzas-tarjeta flex flex-col gap-6">
       <button type="button" className="idea-destino self-start" onClick={onCerrar}>
@@ -303,6 +320,9 @@ export function NuevoMovimiento({
             style={{ color: 'var(--critical)' }}
           />
         )}
+
+        {/* Ingresos no tienen bloque "Cómo": la Nota queda acá, igual antes de "Cuándo". */}
+        {tipo === 'egreso' ? null : campoNota}
       </div>
 
       {/* Bloque 2 — Cómo: Medio + Categoría + Cuota, solo aplica a egresos (mismos campos y condiciones de siempre). */}
@@ -360,6 +380,8 @@ export function NuevoMovimiento({
               </button>
             ))}
           </div>
+
+          {campoNota}
 
           <div className="flex flex-col gap-1">
             <span className="finanzas-form-bloque-titulo">Cuota actual</span>
@@ -462,17 +484,6 @@ export function NuevoMovimiento({
           </div>
         ) : null}
 
-        <label className="flex flex-col gap-1">
-          <span className="text-[12.5px] text-ink-faint">Nota (opcional)</span>
-          <textarea
-            value={nota}
-            onChange={(event) => setNota(event.target.value)}
-            placeholder="Agregá una nota…"
-            aria-label="Nota"
-            rows={2}
-            className="resize-none border-b border-border/60 bg-transparent px-1 py-2 text-[13.5px] text-ink outline-none placeholder:text-ink-dim"
-          />
-        </label>
       </div>
 
       <button
