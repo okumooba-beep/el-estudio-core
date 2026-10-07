@@ -24,8 +24,10 @@ import {
 } from './mes'
 import {
   etiquetaSemanaCobro,
+  fechaEfectivaSemana,
   semanaActual as semanaCobroActual,
   semanasRealesDelMes,
+  sumarSemanas,
 } from './semanaCobro'
 import type { FinanceGastoFijo, FinanceMovimiento } from '@/types/finance'
 import type { NuevaCompraEnCuotas, NuevaFinanceMovimiento } from './financeEngineRepository'
@@ -280,25 +282,33 @@ export function FinanceEngineScreen({ engine, ideaCapture, gastosFijos }: Financ
    * viene del mismo `resumirSemana` recortado a esta semana real.
    */
   const semanaActual = useMemo(() => semanaCobroActual(), [])
+  /**
+   * La semana que "Esta semana" está mostrando — navega con `‹ ›` igual que
+   * `mesSeleccionado`, nunca más allá de `semanaActual`. Solo visualización:
+   * cambiarla no escribe nada.
+   */
+  const [semanaSeleccionada, setSemanaSeleccionada] = useState(semanaActual)
+  const esSemanaActual = semanaSeleccionada.fechaInicio === semanaActual.fechaInicio
   const resumen = useMemo(
     () => resumirMes(movimientos, mesSeleccionado, moneda),
     [movimientos, mesSeleccionado, moneda],
   )
-  /** Siempre la semana real de hoy, no la del mes seleccionado: "Esta semana" no navega. */
   const semanal = useMemo(
-    () => resumirSemana(movimientos, semanaActual.fechaInicio, semanaActual.fechaFin, moneda),
-    [movimientos, semanaActual, moneda],
+    () => resumirSemana(movimientos, semanaSeleccionada.fechaInicio, semanaSeleccionada.fechaFin, moneda),
+    [movimientos, semanaSeleccionada, moneda],
   )
-  const etiquetaSemanaActual = etiquetaSemanaCobro(semanaActual.fechaInicio, semanaActual.fechaFin)
+  const etiquetaSemanaVista = etiquetaSemanaCobro(semanaSeleccionada.fechaInicio, semanaSeleccionada.fechaFin)
+  /** El mes al que pertenece la semana vista (criterio del jueves, ver fechaEfectivaSemana). */
+  const mesDeSemanaVista = fechaEfectivaSemana(semanaSeleccionada.fechaInicio).slice(0, 7)
   const ahorroPct = resumen.ingresado > 0 ? Math.round((resumen.balance / resumen.ingresado) * 100) : 0
 
   /**
    * El selector de moneda solo aparece si de verdad hay dólares: nada sobra
    * por si acaso. Mira el mes que corresponda a la vista activa — el
    * seleccionado en "Este mes" (para poder ver dólares de un mes anterior),
-   * el real de hoy en "Esta semana" (que no navega).
+   * el de la semana vista en "Esta semana".
    */
-  const mesParaDolares = vista === 'mes' ? mesSeleccionado : mesActual
+  const mesParaDolares = vista === 'mes' ? mesSeleccionado : mesDeSemanaVista
   const hayDolares = useMemo(
     () => movimientos.some((movimiento) => movimiento.fecha.startsWith(mesParaDolares) && monedaDe(movimiento) === 'usd'),
     [movimientos, mesParaDolares],
@@ -504,7 +514,7 @@ export function FinanceEngineScreen({ engine, ideaCapture, gastosFijos }: Financ
 
   const nombreMes = new Date(`${mesSeleccionado}-02`).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
   /** Sprint 016.1, punto 15: mismo texto que ya arma el header acá abajo, para que Entró/Se fue nunca pierdan de vista qué período están mostrando al entrar en un detalle. */
-  const periodoLabel = vista === 'semana' ? etiquetaSemanaActual : nombreMes
+  const periodoLabel = vista === 'semana' ? etiquetaSemanaVista : nombreMes
   /**
    * Mini Sprint 035 ya dejó documentado (ver comentario de `editarMovimiento`
    * más arriba) que `resumen` está filtrado por la moneda de la vista — pero
@@ -545,8 +555,8 @@ export function FinanceEngineScreen({ engine, ideaCapture, gastosFijos }: Financ
   const seFue = vista === 'semana' ? semanal.seFue : resumen.gastado
   const teQuedo = vista === 'semana' ? semanal.teQuedo : resumen.balance
   const movimientosDelPeriodo = vista === 'semana' ? semanal.movimientos : resumen.movimientos
-  /** "Esta semana" siempre es el real de hoy (`true`, como antes); "Este mes" solo si el mes seleccionado es el actual. */
-  const registradoHastaHoy = vista === 'semana' ? true : estaEnCurso(mesSeleccionado)
+  /** Solo si el período mostrado es el de hoy: la semana actual en "Esta semana", el mes actual en "Este mes". */
+  const registradoHastaHoy = vista === 'semana' ? esSemanaActual : estaEnCurso(mesSeleccionado)
   /**
    * Sprint 034 (§19/§20) — "Movimientos recientes" responde "¿en qué se
    * fue?", no un timeline general: antes mostraba `movimientosDelPeriodo`
@@ -560,16 +570,20 @@ export function FinanceEngineScreen({ engine, ideaCapture, gastosFijos }: Financ
     /**
      * Sprint 040 — "Vista semanal para Se fue": el mes cuyas semanas se
      * navegan es el mismo que usa "Se fue" en su vista actual (mismo
-     * criterio que `mesParaDolares`, línea de arriba) — `mesActual` en
-     * "Esta semana" (no navega), `mesSeleccionado` en "Este mes". Dentro
-     * de ese mes, la semana que arranca expandida es la relevante para la
-     * vista activa (la de hoy en "Esta semana", o la de hoy solo si el
-     * mes mostrado es el actual — si no, la semana 1) para no agregar un
+     * criterio que `mesParaDolares`, línea de arriba) — el de la semana vista
+     * en "Esta semana", `mesSeleccionado` en "Este mes". Dentro de ese mes,
+     * la semana que arranca expandida es la relevante para la vista activa
+     * (la semana vista en "Esta semana"; en "Este mes", la de hoy solo si
+     * el mes mostrado es el actual — si no, la semana 1) para no agregar un
      * toque extra al camino que ya existía.
      */
-    const mesParaSeFue = vista === 'mes' ? mesSeleccionado : mesActual
+    const mesParaSeFue = vista === 'mes' ? mesSeleccionado : mesDeSemanaVista
     const semanaInicialSeFue =
-      mesParaSeFue === mesActual ? semanaActual.fechaInicio : semanasRealesDelMes(mesParaSeFue)[0]?.fechaInicio ?? semanaActual.fechaInicio
+      vista === 'semana'
+        ? semanaSeleccionada.fechaInicio
+        : mesParaSeFue === mesActual
+          ? semanaActual.fechaInicio
+          : semanasRealesDelMes(mesParaSeFue)[0]?.fechaInicio ?? semanaActual.fechaInicio
     return (
       <div className="mx-auto flex w-full max-w-xl flex-col gap-8 pb-10">
         <SeFueDetalle
@@ -613,8 +627,40 @@ export function FinanceEngineScreen({ engine, ideaCapture, gastosFijos }: Financ
             </button>
           </div>
         ) : (
-          <p className="font-mono text-[11px] uppercase tracking-wide text-accent">{periodoLabel}</p>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              aria-label="Semana anterior"
+              className="font-mono text-[15px] text-accent"
+              onClick={() => setSemanaSeleccionada((actual) => sumarSemanas(actual.fechaInicio, -1))}
+            >
+              ‹
+            </button>
+            <p className="font-mono text-[11px] uppercase tracking-wide text-accent">{periodoLabel}</p>
+            <button
+              type="button"
+              aria-label="Semana siguiente"
+              className="font-mono text-[15px] text-accent disabled:pointer-events-none disabled:opacity-30"
+              disabled={esSemanaActual}
+              onClick={() =>
+                setSemanaSeleccionada((actual) =>
+                  actual.fechaInicio < semanaActual.fechaInicio ? sumarSemanas(actual.fechaInicio, 1) : actual,
+                )
+              }
+            >
+              ›
+            </button>
+          </div>
         )}
+        {vista === 'semana' && !esSemanaActual ? (
+          <button
+            type="button"
+            className="font-mono text-[11px] text-ink-faint underline underline-offset-2"
+            onClick={() => setSemanaSeleccionada(semanaActual)}
+          >
+            Volver a esta semana
+          </button>
+        ) : null}
         {vista === 'mes' && registradoHastaHoy ? (
           <p className="font-mono text-[11px] text-ink-faint">{etiquetaMesEnCurso(mesSeleccionado)} · en curso</p>
         ) : null}
@@ -683,10 +729,10 @@ export function FinanceEngineScreen({ engine, ideaCapture, gastosFijos }: Financ
             <span aria-hidden="true">⚠</span>
             {avisoSemanaExpandido ? (
               <p>
-                Semana {etiquetaSemanaActual} sin ingreso registrado — <strong>este número no incluye el cobro que todavía no cargaste</strong>.
+                Semana {etiquetaSemanaVista} sin ingreso registrado — <strong>este número no incluye el cobro que todavía no cargaste</strong>.
               </p>
             ) : (
-              <p>Semana {etiquetaSemanaActual} sin ingreso registrado.</p>
+              <p>Semana {etiquetaSemanaVista} sin ingreso registrado.</p>
             )}
           </button>
         ) : null}

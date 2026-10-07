@@ -131,9 +131,22 @@ export function etiquetaSemanaCobro(fechaInicio: string, fechaFin: string): stri
   return `${diaInicio} ${mesInicio} – ${diaFin} ${mesFin}`
 }
 
-/** `true` si `fechaISO` cae dentro de [fechaInicio, fechaFin] (comparación lexicográfica, válida porque el formato es YYYY-MM-DD). */
+/** La semana real que está `delta` semanas antes (negativo) o después (positivo) de la que arranca en `fechaInicio`. */
+export function sumarSemanas(fechaInicio: string, delta: number): { fechaInicio: string; fechaFin: string } {
+  const fecha = aFechaLocal(fechaInicio)
+  fecha.setDate(fecha.getDate() + delta * 7)
+  return normalizarSemana(aTextoISO(fecha))
+}
+
+/**
+ * `true` si `fechaISO` cae dentro de [fechaInicio, fechaFin] (comparación
+ * lexicográfica, válida porque el formato es YYYY-MM-DD). `fechaCorta`: un
+ * movimiento sincronizado trae "2026-10-04T00:00:00+00:00", que sin el
+ * recorte queda "después" de un domingo "2026-10-04" y se caía de su semana.
+ */
 export function fechaEnSemana(fechaISO: string, fechaInicio: string, fechaFin: string): boolean {
-  return fechaISO >= fechaInicio && fechaISO <= fechaFin
+  const fecha = fechaCorta(fechaISO)
+  return fecha >= fechaInicio && fecha <= fechaFin
 }
 
 /**
