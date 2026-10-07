@@ -109,17 +109,48 @@ export async function allMissionsEmpty(): Promise<boolean> {
 export async function pushMissionsPending(userId: string): Promise<void> {
   if (!supabase) return
   const pendientes = await readMisionesPendientes()
-  if (pendientes.length === 0) return
-  const rows = pendientes.map((idea) => toRow(userId, idea))
-  const { error } = await supabase.from(SUPABASE_TABLE).upsert(rows, { onConflict: 'id' })
+  if (pendientes.length > 0) {
+    const rows = pendientes.map((idea) => toRow(userId, idea))
+    const { error } = await supabase.from(SUPABASE_TABLE).upsert(rows, { onConflict: 'id' })
+    if (error) {
+      console.error(`[sync] push falló en ${SUPABASE_TABLE}:`, error.message)
+      return
+    }
+    await markSynced(
+      db.ideas,
+      pendientes.map((idea) => idea.id),
+    )
+  }
+  await pushMissionsTombstones()
+}
+
+/**
+ * Misiones que salieron de 'misiones' (completar = mover al archivador, ver
+ * Idea.tombstoneMisiones): la fila remota se marca borrada, nunca se toca
+ * su contenido — la hoja sigue viva en su destino nuevo (y en la tabla
+ * `ideas` si es Archivo). Solo se limpia el flag: `pendingSync` de esas
+ * hojas es de otro sync (ideasSync) y no se toca. Si la misión nunca llegó
+ * a subirse, el update no afecta ninguna fila y el flag igual se limpia.
+ */
+async function pushMissionsTombstones(): Promise<void> {
+  if (!supabase) return
+  const marcadas = await db.ideas.filter((idea) => idea.tombstoneMisiones === true).toArray()
+  if (marcadas.length === 0) return
+  const ids = marcadas.map((idea) => idea.id)
+  const ahora = new Date().toISOString()
+  const { error } = await supabase
+    .from(SUPABASE_TABLE)
+    .update({ deleted_at: ahora, updated_at: ahora })
+    .in('id', ids)
   if (error) {
-    console.error(`[sync] push falló en ${SUPABASE_TABLE}:`, error.message)
+    console.error(`[sync] tombstone falló en ${SUPABASE_TABLE}:`, error.message)
     return
   }
-  await markSynced(
-    db.ideas,
-    pendientes.map((idea) => idea.id),
-  )
+  await db.ideas
+    .where('id')
+    .anyOf(ids)
+    .filter((idea) => idea.tombstoneMisiones === true && idea.destino !== 'misiones')
+    .modify({ tombstoneMisiones: false })
 }
 
 /**
@@ -136,9 +167,12 @@ export async function hydrateMissionsFromSupabase(userId: string): Promise<strin
     console.error(`[sync] hidratación falló en ${SUPABASE_TABLE}:`, error.message)
     return []
   }
-  if (data && data.length > 0) {
-    const ideas = data.map((row) => fromRow(row as MissionRow))
-    await db.ideas.bulkPut(ideas)
+  // Las filas borradas no se traen: una misión completada sigue viva como
+  // hoja de Archivo (tabla `ideas`, mismo id), y ponerla acá como misión
+  // borrada la pisaba si esta hidratación corría después que la de ideas.
+  const vivas = ((data ?? []) as MissionRow[]).filter((row) => !row.deleted_at)
+  if (vivas.length > 0) {
+    await db.ideas.bulkPut(vivas.map(fromRow))
   }
   return [SUPABASE_TABLE]
 }

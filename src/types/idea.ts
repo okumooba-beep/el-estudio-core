@@ -142,6 +142,14 @@ export interface Idea {
    */
   tombstoneIdeas?: boolean
   /**
+   * Mismo mecanismo que `tombstoneIdeas`, para la tabla `missions`: `true`
+   * cuando la hoja salió de 'misiones' (p. ej. completar = mover al
+   * archivador). missionsSync.ts le pone `deleted_at` a la fila remota — si
+   * no, quedaba 'pendiente' y daily-pending-missions la seguía avisando — y
+   * recién ahí limpia este flag. Ausente = nada pendiente.
+   */
+  tombstoneMisiones?: boolean
+  /**
    * Mi Proyecto — Misiones por espacio (ver MiProyectoScreen.tsx): cuando
    * está presente, esta misión pertenece únicamente a esa carpeta y nunca
    * aparece en el módulo global de Misiones ni en "Misión principal" de

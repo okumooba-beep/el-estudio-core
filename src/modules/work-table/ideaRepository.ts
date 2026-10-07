@@ -65,13 +65,17 @@ class DexieIdeaRepository implements IdeaRepository {
     // Supabase deja la fila remota huérfana con el destino viejo — se marca
     // para que ideasSync.ts le ponga `deleted_at` (ver Idea.tombstoneIdeas).
     // Volver a entrar la desmarca: el upsert normal ya pisa `deleted_at`.
-    let tombstone: Pick<Idea, 'tombstoneIdeas'> = {}
+    // Lo mismo con la tabla `missions` al salir de 'misiones' (ver
+    // Idea.tombstoneMisiones).
+    let tombstone: Pick<Idea, 'tombstoneIdeas' | 'tombstoneMisiones'> = {}
     if (patch.destino) {
       const previa = await db.ideas.get(id)
       const salia = previa ? IDEAS_SYNC_DESTINOS.includes(previa.destino) : false
       const entra = IDEAS_SYNC_DESTINOS.includes(patch.destino)
       if (salia && !entra) tombstone = { tombstoneIdeas: true }
       else if (entra && previa?.tombstoneIdeas) tombstone = { tombstoneIdeas: false }
+      if (previa?.destino === 'misiones' && patch.destino !== 'misiones') tombstone.tombstoneMisiones = true
+      else if (patch.destino === 'misiones' && previa?.tombstoneMisiones) tombstone.tombstoneMisiones = false
     }
     await db.ideas.update(id, { ...patch, ...tombstone, updatedAt: new Date().toISOString(), pendingSync: true })
     const updated = await db.ideas.get(id)
