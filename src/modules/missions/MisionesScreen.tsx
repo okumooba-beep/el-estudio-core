@@ -81,6 +81,8 @@ export function MisionesScreen({ carpetaId }: MisionesScreenProps = {}) {
   const [editarProgramacionId, setEditarProgramacionId] = useState<string | null>(null)
   /** Valor del input datetime-local mientras se edita — formato `YYYY-MM-DDTHH:MM`. */
   const [borradorProgramacion, setBorradorProgramacion] = useState('')
+  /** id de la misión cuyo texto se está editando — solo ahí el texto es contentEditable (tocarlo ya no abre el teclado, ver "Editar texto"). */
+  const [editandoTextoId, setEditandoTextoId] = useState<string | null>(null)
   /** Long-press sobre la fila: temporizador + bandera para suprimir el click sintético que el navegador dispara al soltar. */
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const suprimirClick = useRef(false)
@@ -198,6 +200,13 @@ export function MisionesScreen({ carpetaId }: MisionesScreenProps = {}) {
     void sincronizarRecordatorioMision({ ...mision, programadaFecha: fecha, programadaHora: hora })
   }
 
+  /** `null` explícito (no `undefined`): Dexie lo guarda y toRow (missionsSync.ts) lo sube como columna vacía. Sin fecha la alarma no tiene sentido, así que se apaga también. */
+  function handleQuitarProgramacion(mision: Idea) {
+    setEditarProgramacionId(null)
+    void update(mision.id, { programadaFecha: null, programadaHora: null, alarma: false })
+    void cancelarRecordatorio('mision', mision.id)
+  }
+
   const LONG_PRESS_MS = 500
 
   function handleFilaPointerDown(mision: Idea) {
@@ -242,7 +251,30 @@ export function MisionesScreen({ carpetaId }: MisionesScreenProps = {}) {
     setIntentoPrincipal(null)
   }
 
+  /**
+   * El foco tiene que darse dentro del mismo toque (si no, iOS no abre el
+   * teclado), así que se activa contentEditable directo en el DOM antes de
+   * enfocar, sin esperar el re-render; el estado solo lo deja coherente.
+   */
+  function handleEditarTexto(mision: Idea) {
+    setAccionesId(null)
+    const elemento = document.querySelector<HTMLElement>(`[data-mision-texto="${mision.id}"]`)
+    if (!elemento) return
+    elemento.contentEditable = 'true'
+    elemento.focus()
+    const seleccion = window.getSelection()
+    if (seleccion) {
+      const rango = document.createRange()
+      rango.selectNodeContents(elemento)
+      rango.collapse(false)
+      seleccion.removeAllRanges()
+      seleccion.addRange(rango)
+    }
+    setEditandoTextoId(mision.id)
+  }
+
   function handleTextoBlur(mision: Idea, event: React.FocusEvent<HTMLSpanElement>) {
+    setEditandoTextoId(null)
     const texto = event.currentTarget.textContent?.trim() ?? ''
     if (texto && texto !== mision.texto) void update(mision.id, { texto })
     else if (!texto) event.currentTarget.textContent = mision.texto
@@ -313,7 +345,7 @@ export function MisionesScreen({ carpetaId }: MisionesScreenProps = {}) {
             }
           />
         </button>
-        {/* Rediseño Misiones: tocar acá abre el detalle. El texto sigue siendo contentEditable para el rename inline existente, que corta la propagación del click para no abrir el detalle sin querer. */}
+        {/* Rediseño Misiones: tocar acá abre el detalle. Tocar el texto en sí abre las acciones (sin teclado); solo "Editar texto" lo vuelve contentEditable. Corta la propagación del click para no abrir el detalle sin querer. */}
         <span
           className="mision-contenido"
           role="button"
@@ -328,9 +360,13 @@ export function MisionesScreen({ carpetaId }: MisionesScreenProps = {}) {
         >
           <span
             className="mision-texto"
-            contentEditable
+            data-mision-texto={mision.id}
+            contentEditable={editandoTextoId === mision.id}
             suppressContentEditableWarning
-            onClick={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation()
+              if (editandoTextoId !== mision.id) setAccionesId(mision.id)
+            }}
             onBlur={(event) => handleTextoBlur(mision, event)}
             onKeyDown={(event) => {
               event.stopPropagation()
@@ -377,6 +413,9 @@ export function MisionesScreen({ carpetaId }: MisionesScreenProps = {}) {
       {accionesId === mision.id && (
         <li className="mision-fila-acciones">
           <div className="idea-destinos" role="group" aria-label="Acciones de la misión">
+            <button type="button" className="idea-destino" onClick={() => handleEditarTexto(mision)}>
+              Editar texto
+            </button>
             <button
               type="button"
               className="idea-destino"
@@ -460,6 +499,11 @@ export function MisionesScreen({ carpetaId }: MisionesScreenProps = {}) {
               <button type="button" className="idea-destino" onClick={() => handleGuardarProgramacion(mision)}>
                 Guardar
               </button>
+              {mision.programadaFecha && (
+                <button type="button" className="idea-destino" onClick={() => handleQuitarProgramacion(mision)}>
+                  Quitar fecha
+                </button>
+              )}
               <button type="button" className="idea-destino" onClick={() => setEditarProgramacionId(null)}>
                 Cancelar
               </button>
