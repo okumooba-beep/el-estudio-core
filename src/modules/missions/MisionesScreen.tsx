@@ -92,10 +92,9 @@ export function MisionesScreen({ carpetaId }: MisionesScreenProps = {}) {
    * pegado arriba, tapado por la barra de estado, y había que scrollear
    * para verlo — mismo mecanismo ya documentado y resuelto en NoteForm
    * (NotesEngineScreen.tsx): `autoFocus` dispara el scroll-into-view nativo
-   * apenas el input monta, ANTES de que el teclado termine de abrirse — y
-   * --vh-real (light-bootstrap.ts) recién se recalcula en el resize de
-   * visualViewport que el teclado dispara después. El scroll nativo termina
-   * hecho contra el layout viejo, no el final. Se repite acá el mismo
+   * apenas el input monta, ANTES de que el teclado termine de abrirse, y
+   * el scroll nativo termina hecho contra el área visible sin teclado, no
+   * la final. Se repite acá el mismo
    * arreglo: foco manual + reencuadre propio en cada resize real del
    * teclado, en vez de confiar en el timing de autoFocus.
    */

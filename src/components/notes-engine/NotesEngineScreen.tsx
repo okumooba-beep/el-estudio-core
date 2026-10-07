@@ -713,17 +713,13 @@ function NoteForm({ tituloInicial = '', contenidoInicial = '', onGuardar, onCanc
 
   // scroll-mb-28 (colchón contra la pill, ver .nav-inferior/AppShell.tsx) no
   // alcanzaba en Mi Proyecto: `autoFocus` dispara el scroll-into-view nativo
-  // apenas monta, ANTES de que el teclado termine de abrirse — y --vh-real
-  // (light-bootstrap.ts) recién se recalcula en el evento `resize` de
-  // visualViewport que el teclado dispara después, momento en el que
-  // .h-dvh-safe (el contenedor raíz) se achica y la pill (position:absolute;
-  // bottom:0 contra ese contenedor) sube. El scroll ya había quedado hecho
-  // contra el layout viejo (más alto, pill más abajo), así que en formularios
+  // apenas monta, ANTES de que el teclado termine de abrirse, así que el
+  // scroll queda hecho contra el área visible sin teclado. En formularios
   // que aparecen más abajo en la página (este, dentro de una carpeta de Mi
   // Proyecto con el switcher Notas/Finanzas encima) ese desfasaje alcanza a
-  // dejar el input tapado. Acá se repite el scroll a mano una vez que el
-  // resize real del teclado ya se asentó, en vez de confiar en el timing del
-  // autofocus nativo.
+  // dejar el input tapado. Acá se repite el scroll a mano en el evento
+  // `resize` de visualViewport que el teclado dispara después, en vez de
+  // confiar en el timing del autofocus nativo.
   useEffect(() => {
     tituloRef.current?.focus()
     const reencuadrar = () => {

@@ -142,7 +142,7 @@ html[data-gaze="escritorio"] body {
 
 /*
   Altura base del layout (bug del hueco bajo la nav en la PWA de iOS,
-  medido con src/lib/debug/viewportDebug.ts): al abrir en frío, WKWebView
+  medido con un panel de depuración ya retirado): al abrir en frío, WKWebView
   reporta el layout viewport más corto por safe-area-inset-top (873 en
   vez de 932) hasta el primer gesto de scroll, y con él todas las
   unidades vh/dvh/svh, inset:0 y bottom de cualquier position:fixed.

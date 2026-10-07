@@ -55,18 +55,11 @@ export default defineConfig({
     // este comentario reemplaza (230 KB → 235 KB por "Gastos fijos mensuales").
     // 240 KB: base permanente con "Primeros pasos" (OnboardingChecklist.tsx
     // en Hoy, ~2 KB gzip) — antes de esa función la base era 238 KB.
-    // 242 KB: +2 KB de margen TEMPORAL para el panel de depuración del
-    // viewport (src/lib/debug/viewportDebug.ts + los registrarDebug del
-    // centrado en light-bootstrap.ts; 241.6 KB medido con ambos) — vuelve
-    // a 240 KB (no a 238) cuando se saque el panel.
-    // 243 KB: sync de Umbral + Cuaderno (pull incremental + tombstones en
-    // ideasSync.ts, 242.7 KB medido) suma ~1 KB permanente — al sacar el
-    // panel la base pasa a ser 241 KB, no 240.
-    // 244 KB: ojito de ver/ocultar contraseña en las pantallas de auth
-    // (PasswordInput.tsx) + aviso en vivo de contraseñas que no coinciden en
-    // Registro (243.1 KB medido) — al sacar el panel la base pasa a ser
-    // 242 KB.
-    bundleSizeBudget(244 * 1024),
+    // 242 KB: base permanente sin el panel de depuración del viewport (ya
+    // retirado), sumando el sync de Umbral + Cuaderno (ideasSync.ts, ~1 KB),
+    // el ojito de contraseña (PasswordInput.tsx) y el aviso de contraseñas
+    // que no coinciden en Registro.
+    bundleSizeBudget(242 * 1024),
     VitePWA({
       registerType: 'autoUpdate',
       // Fase 1 (push real): 'generateSW' (el default anterior) autogenera el

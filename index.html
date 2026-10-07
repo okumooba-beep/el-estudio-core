@@ -43,13 +43,6 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <!-- Prueba temporal f2 del panel de viewport (src/lib/debug/viewportDebug.ts): barra de estado 'black' desde el arranque. -->
-    <script>
-      try {
-        if (localStorage.getItem('debug.statusBar') === 'black')
-          document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]').setAttribute('content', 'black')
-      } catch (e) {}
-    </script>
     <meta name="apple-mobile-web-app-title" content="El Estudio" />
     <title>El Estudio</title>
   </head>
